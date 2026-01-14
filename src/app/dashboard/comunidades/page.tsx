@@ -1,0 +1,499 @@
+
+'use client';
+
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabaseClient';
+import { toast } from 'react-hot-toast';
+import { Plus, Trash2 } from 'lucide-react';
+import DataTable, { Column } from '@/components/DataTable';
+import { logActivity } from '@/lib/logActivity';
+
+interface Comunidad {
+    id: number;
+    codigo: string;
+    nombre_cdad: string;
+    direccion: string;
+    cp: string;
+    ciudad: string;
+    provincia: string;
+    cif: string;
+    activo: boolean;
+}
+
+export default function ComunidadesPage() {
+    const [comunidades, setComunidades] = useState<Comunidad[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [showForm, setShowForm] = useState(false);
+    const [editingId, setEditingId] = useState<number | null>(null);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deleteEmail, setDeleteEmail] = useState('');
+    const [deletePassword, setDeletePassword] = useState('');
+    const [deleteId, setDeleteId] = useState<number | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const [formData, setFormData] = useState({
+        codigo: '',
+        nombre_cdad: '',
+        direccion: '',
+        cp: '',
+        ciudad: '',
+        provincia: '',
+        cif: ''
+    });
+
+    useEffect(() => {
+        fetchComunidades();
+    }, []);
+
+    const fetchComunidades = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('comunidades')
+                .select('*')
+                .order('id', { ascending: true });
+
+            if (error) throw error;
+            setComunidades(data || []);
+        } catch (error: any) {
+            toast.error('Error cargando comunidades');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (editingId) {
+            // Update existing
+            try {
+                const { error } = await supabase
+                    .from('comunidades')
+                    .update(formData)
+                    .eq('id', editingId);
+
+                if (error) throw error;
+
+                toast.success('Comunidad actualizada correctamente');
+
+                // Log activity
+                await logActivity({
+                    action: 'update',
+                    entityType: 'comunidad',
+                    entityId: editingId,
+                    entityName: formData.nombre_cdad,
+                    details: { codigo: formData.codigo }
+                });
+
+                setShowForm(false);
+                setEditingId(null);
+                setFormData({ codigo: '', nombre_cdad: '', direccion: '', cp: '', ciudad: '', provincia: '', cif: '' });
+                fetchComunidades();
+            } catch (error: any) {
+                toast.error('Error al actualizar: ' + error.message);
+            }
+        } else {
+            // Create new
+            try {
+                const { data, error } = await supabase
+                    .from('comunidades')
+                    .insert([{
+                        ...formData,
+                        activo: true
+                    }])
+                    .select();
+
+                if (error) {
+                    console.error('Supabase error:', error);
+
+                    // Check if it's a duplicate key error
+                    if (error.code === '23505' || error.message?.includes('duplicate') || error.message?.includes('unique')) {
+                        toast.error('El código de comunidad ya existe. Por favor, usa un código diferente.');
+                        setLoading(false);
+                        return;
+                    }
+
+                    throw error;
+                }
+
+                toast.success('Comunidad creada correctamente');
+
+                // Log activity
+                await logActivity({
+                    action: 'create',
+                    entityType: 'comunidad',
+                    entityName: formData.nombre_cdad,
+                    details: { codigo: formData.codigo }
+                });
+
+                setShowForm(false);
+                setFormData({ codigo: '', nombre_cdad: '', direccion: '', cp: '', ciudad: '', provincia: '', cif: '' });
+                fetchComunidades();
+            } catch (error: any) {
+                console.error('Error completo:', error);
+
+                // Check for duplicate key error
+                if (error.code === '23505' || error.message?.includes('duplicate') || error.message?.includes('unique')) {
+                    toast.error('El código de comunidad ya existe. Por favor, usa un código diferente.');
+                } else {
+                    toast.error('Error al crear: ' + (error.message || 'Error desconocido'));
+                }
+            }
+        }
+    };
+
+    const handleDeleteClick = (id: number) => {
+        setDeleteId(id);
+        setShowDeleteModal(true);
+        setDeletePassword('');
+    };
+
+    const handleDeleteConfirm = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (deleteId === null || !deleteEmail || !deletePassword) return;
+
+        setIsDeleting(true);
+        try {
+            const res = await fetch('/api/admin/universal-delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: deleteId,
+                    email: deleteEmail,
+                    password: deletePassword,
+                    type: 'comunidad'
+                })
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) throw new Error(data.error || 'Error al eliminar');
+
+            toast.success('Comunidad eliminada correctamente');
+            setComunidades(comunidades.filter(c => c.id !== deleteId));
+            setShowDeleteModal(false);
+            setDeleteId(null);
+            setDeleteEmail('');
+            setDeletePassword('');
+
+            // Log activity
+            const deleted = comunidades.find(c => c.id === deleteId);
+            await logActivity({
+                action: 'delete',
+                entityType: 'comunidad',
+                entityId: deleteId,
+                entityName: deleted?.nombre_cdad,
+                details: { codigo: deleted?.codigo, deleted_by_admin: deleteEmail }
+            });
+
+        } catch (error: any) {
+            toast.error(error.message);
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
+    const toggleActive = async (id: number, currentStatus: boolean) => {
+        try {
+            const { error } = await supabase
+                .from('comunidades')
+                .update({ activo: !currentStatus })
+                .eq('id', id);
+
+            if (error) throw error;
+
+            toast.success(currentStatus ? 'Comunidad desactivada' : 'Comunidad activada');
+            setComunidades(prev => prev.map(c => c.id === id ? { ...c, activo: !currentStatus } : c));
+
+            // Log activity
+            const comunidad = comunidades.find(c => c.id === id);
+            await logActivity({
+                action: 'toggle_active',
+                entityType: 'comunidad',
+                entityId: id,
+                entityName: comunidad?.nombre_cdad,
+                details: { activo: !currentStatus }
+            });
+        } catch (error: any) {
+            toast.error('Error al actualizar estado');
+        }
+    };
+
+    const handleEdit = (comunidad: Comunidad) => {
+        setEditingId(comunidad.id);
+        setFormData({
+            codigo: comunidad.codigo,
+            nombre_cdad: comunidad.nombre_cdad,
+            direccion: comunidad.direccion || '',
+            cp: comunidad.cp || '',
+            ciudad: comunidad.ciudad || '',
+            provincia: comunidad.provincia || '',
+            cif: comunidad.cif || '',
+        });
+        setShowForm(true);
+    };
+
+    const columns: Column<Comunidad>[] = [
+        {
+            key: 'codigo',
+            label: 'Código',
+            render: (row) => (
+                <div className="flex items-start gap-3">
+                    <span className="mt-1 h-3.5 w-1.5 rounded-full bg-yellow-400" />
+                    <span className="font-semibold">{row.codigo}</span>
+                </div>
+            ),
+        },
+        {
+            key: 'nombre_cdad',
+            label: 'Nombre',
+        },
+        {
+            key: 'direccion',
+            label: 'Dirección',
+            defaultVisible: false,
+        },
+        {
+            key: 'cp',
+            label: 'CP',
+            defaultVisible: false,
+        },
+        {
+            key: 'ciudad',
+            label: 'Ciudad',
+        },
+        {
+            key: 'provincia',
+            label: 'Provincia',
+            defaultVisible: false,
+        },
+        {
+            key: 'cif',
+            label: 'CIF',
+        },
+        {
+            key: 'activo',
+            label: 'Estado',
+            render: (row) => (
+                <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${row.activo
+                    ? 'bg-yellow-400 text-neutral-950'
+                    : 'bg-neutral-900 text-white'
+                    }`}>
+                    {row.activo ? 'Activo' : 'Inactivo'}
+                </span>
+            ),
+        },
+        {
+            key: 'actions',
+            label: 'Acciones',
+            sortable: false,
+            render: (row) => (
+                <div className="flex items-center gap-1">
+                    <button
+                        onClick={() => handleEdit(row)}
+                        className="p-1.5 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                        title="Editar"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                    </button>
+                    <button
+                        onClick={() => toggleActive(row.id, row.activo)}
+                        className={`p-1.5 rounded-full transition-colors ${row.activo
+                            ? 'bg-green-100 text-green-600 hover:bg-green-200'
+                            : 'bg-red-50 text-red-600 hover:bg-red-100' // Or neutral? User used Red for Inactive status badge.
+                            }`}
+                        title={row.activo ? 'Desactivar' : 'Activar'}
+                    >
+                        {row.activo ? (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        ) : (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        )}
+                    </button>
+                    <button
+                        onClick={() => handleDeleteClick(row.id)}
+                        className="p-1.5 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                        title="Eliminar"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                    </button>
+                </div>
+            ),
+        },
+    ];
+
+    return (
+        <div className="space-y-6">
+            <div className="flex justify-between items-center">
+                <h1 className="text-xl font-bold text-neutral-900">Gestión de Comunidades</h1>
+                <button
+                    onClick={() => {
+                        setShowForm(!showForm);
+                        if (showForm) {
+                            setEditingId(null);
+                            setFormData({ codigo: '', nombre_cdad: '', direccion: '', cp: '', ciudad: '', provincia: '', cif: '' });
+                        }
+                    }}
+                    className="bg-yellow-400 hover:bg-yellow-500 text-neutral-950 px-4 py-2 rounded-md flex items-center gap-2 transition font-semibold text-sm"
+                >
+                    <Plus className="w-4 h-4" />
+                    {showForm ? 'Cancelar' : 'Nueva Comunidad'}
+                </button>
+            </div>
+
+            {showForm && (
+                <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
+                    <h2 className="text-lg font-semibold mb-4">
+                        {editingId ? 'Editar Comunidad' : 'Añadir Nueva Comunidad'}
+                    </h2>
+                    <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Código</label>
+                            <input
+                                required
+                                type="text"
+                                className="w-full px-3 py-2 border rounded-lg"
+                                value={formData.codigo}
+                                onChange={e => setFormData({ ...formData, codigo: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Nombre Comunidad</label>
+                            <input
+                                required
+                                type="text"
+                                className="w-full px-3 py-2 border rounded-lg"
+                                value={formData.nombre_cdad}
+                                onChange={e => setFormData({ ...formData, nombre_cdad: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
+                            <input
+                                type="text"
+                                className="w-full px-3 py-2 border rounded-lg"
+                                value={formData.direccion}
+                                onChange={e => setFormData({ ...formData, direccion: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">CP</label>
+                            <input
+                                type="text"
+                                className="w-full px-3 py-2 border rounded-lg"
+                                value={formData.cp}
+                                onChange={e => setFormData({ ...formData, cp: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Ciudad</label>
+                            <input
+                                type="text"
+                                className="w-full px-3 py-2 border rounded-lg"
+                                value={formData.ciudad}
+                                onChange={e => setFormData({ ...formData, ciudad: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Provincia</label>
+                            <input
+                                type="text"
+                                className="w-full px-3 py-2 border rounded-lg"
+                                value={formData.provincia}
+                                onChange={e => setFormData({ ...formData, provincia: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">CIF</label>
+                            <input
+                                type="text"
+                                className="w-full px-3 py-2 border rounded-lg"
+                                value={formData.cif}
+                                onChange={e => setFormData({ ...formData, cif: e.target.value })}
+                            />
+                        </div>
+                        <div className="md:col-span-2 pt-2">
+                            <button type="submit" className="w-full bg-yellow-400 hover:bg-yellow-500 text-neutral-950 py-2 rounded-md font-semibold transition">
+                                Guardar Comunidad
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
+
+            <DataTable
+                data={comunidades}
+                columns={columns}
+                keyExtractor={(row) => row.id}
+                storageKey="comunidades"
+                loading={loading}
+                emptyMessage="No hay comunidades registradas"
+            />
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] backdrop-blur-sm">
+                    <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+                        <h3 className="text-lg font-bold mb-4 text-neutral-900">Confirmar Eliminación</h3>
+                        <p className="text-gray-600 mb-4">
+                            Esta acción no se puede deshacer. Para confirmar, ingresa credenciales de administrador:
+                        </p>
+                        <form onSubmit={handleDeleteConfirm} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Email Administrador</label>
+                                <input
+                                    type="email"
+                                    required
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
+                                    placeholder="admin@ejemplo.com"
+                                    value={deleteEmail}
+                                    onChange={(e) => setDeleteEmail(e.target.value)}
+                                    autoComplete="off"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña Administrador</label>
+                                <input
+                                    type="password"
+                                    required
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
+                                    placeholder="••••••••"
+                                    value={deletePassword}
+                                    onChange={(e) => setDeletePassword(e.target.value)}
+                                    autoComplete="new-password"
+                                />
+                            </div>
+                            <div className="flex gap-3 justify-end pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowDeleteModal(false);
+                                        setDeletePassword('');
+                                        setDeleteEmail('');
+                                        setDeleteId(null);
+                                    }}
+                                    className="px-4 py-2 border border-gray-300 text-neutral-700 rounded-lg hover:bg-gray-50 transition font-medium"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isDeleting}
+                                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium shadow-sm disabled:opacity-50"
+                                >
+                                    {isDeleting ? 'Eliminando...' : 'Eliminar Comunidad'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
