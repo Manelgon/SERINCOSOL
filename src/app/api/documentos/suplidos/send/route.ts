@@ -10,59 +10,59 @@ const resend = new Resend(process.env.RESEND_API_KEY);
  * Body: { submissionId: number, toEmail: string }
  */
 export async function POST(req: Request) {
-    const supabase = supabaseRouteClient();
-    const { data: { user } } = await supabase.auth.getUser();
+  const supabase = await supabaseRouteClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-    if (!user) {
-        return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+  if (!user) {
+    return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+  }
+
+  const body = await req.json().catch(() => null);
+  if (!body?.submissionId || !body?.toEmail) {
+    return NextResponse.json(
+      { error: "Faltan datos (submissionId, toEmail)" },
+      { status: 400 }
+    );
+  }
+
+  try {
+    // Load submission record
+    const sub = await supabase
+      .from("doc_submissions")
+      .select("id, title, pdf_path, payload")
+      .eq("id", body.submissionId)
+      .single();
+
+    if (sub.error || !sub.data) {
+      return NextResponse.json({ error: "No existe ese envío" }, { status: 404 });
     }
 
-    const body = await req.json().catch(() => null);
-    if (!body?.submissionId || !body?.toEmail) {
-        return NextResponse.json(
-            { error: "Faltan datos (submissionId, toEmail)" },
-            { status: 400 }
-        );
+    // Generate signed URL (24 hours)
+    const signed = await supabase.storage
+      .from("documents")
+      .createSignedUrl(sub.data.pdf_path, 60 * 60 * 24);
+
+    if (signed.error) {
+      return NextResponse.json({ error: signed.error.message }, { status: 500 });
     }
 
-    try {
-        // Load submission record
-        const sub = await supabase
-            .from("doc_submissions")
-            .select("id, title, pdf_path, payload")
-            .eq("id", body.submissionId)
-            .single();
+    // Get email sender from env
+    const from = process.env.EMAIL_FROM;
+    if (!from) {
+      return NextResponse.json({ error: "Falta EMAIL_FROM en variables de entorno" }, { status: 500 });
+    }
 
-        if (sub.error || !sub.data) {
-            return NextResponse.json({ error: "No existe ese envío" }, { status: 404 });
-        }
+    // Extract payload info
+    const nombre = sub.data.payload?.["Nombre Cliente"] ?? "";
+    const fecha = sub.data.payload?.["Fecha emisión"] ?? "";
+    const sumaFinal = sub.data.payload?.["Suma final"] ?? "";
 
-        // Generate signed URL (24 hours)
-        const signed = await supabase.storage
-            .from("documents")
-            .createSignedUrl(sub.data.pdf_path, 60 * 60 * 24);
-
-        if (signed.error) {
-            return NextResponse.json({ error: signed.error.message }, { status: 500 });
-        }
-
-        // Get email sender from env
-        const from = process.env.EMAIL_FROM;
-        if (!from) {
-            return NextResponse.json({ error: "Falta EMAIL_FROM en variables de entorno" }, { status: 500 });
-        }
-
-        // Extract payload info
-        const nombre = sub.data.payload?.["Nombre Cliente"] ?? "";
-        const fecha = sub.data.payload?.["Fecha emisión"] ?? "";
-        const sumaFinal = sub.data.payload?.["Suma final"] ?? "";
-
-        // Send email with Resend
-        const { error } = await resend.emails.send({
-            from,
-            to: body.toEmail,
-            subject: `Documento Suplidos ${nombre ? `- ${nombre}` : ""}`.trim(),
-            html: `
+    // Send email with Resend
+    const { error } = await resend.emails.send({
+      from,
+      to: body.toEmail,
+      subject: `Documento Suplidos ${nombre ? `- ${nombre}` : ""}`.trim(),
+      html: `
         <div style="font-family:Arial,sans-serif;line-height:1.6;color:#333">
           <h2 style="margin:0 0 16px;color:#1a1a1a">Documento de Suplidos</h2>
           
@@ -90,16 +90,16 @@ export async function POST(req: Request) {
           </p>
         </div>
       `,
-        });
+    });
 
-        if (error) {
-            console.error("Resend error:", error);
-            return NextResponse.json({ error: error.message }, { status: 502 });
-        }
-
-        return NextResponse.json({ ok: true });
-    } catch (error: any) {
-        console.error("Error sending email:", error);
-        return NextResponse.json({ error: error.message || "Error enviando email" }, { status: 500 });
+    if (error) {
+      console.error("Resend error:", error);
+      return NextResponse.json({ error: error.message }, { status: 502 });
     }
+
+    return NextResponse.json({ ok: true });
+  } catch (error: any) {
+    console.error("Error sending email:", error);
+    return NextResponse.json({ error: error.message || "Error enviando email" }, { status: 500 });
+  }
 }
