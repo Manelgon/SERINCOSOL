@@ -271,7 +271,7 @@ export default function PerfilesPage() {
             // Log activity
             await logActivity({
                 action: 'delete',
-                entityType: 'usuario',
+                entityType: 'profile',
                 entityId: 0,
                 entityName: userToDelete.nombre,
                 details: { deleted_by_admin: deleteEmail }
