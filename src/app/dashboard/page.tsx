@@ -158,7 +158,9 @@ export default function DashboardPage() {
                 // @ts-ignore
                 const profileData = inc.profiles;
 
-                const userName = profileData?.nombre || 'Sin Asignar';
+                // Handle both array and object cases
+                const profile = Array.isArray(profileData) ? profileData[0] : profileData;
+                const userName = profile?.nombre || 'Sin Asignar';
                 const current = userMap.get(userName) || { assigned: 0, resolved: 0 };
                 current.assigned++;
                 if (inc.resuelto) current.resolved++;
