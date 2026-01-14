@@ -6,7 +6,7 @@ import { supabaseRouteClient } from "@/lib/supabase/route";
  * Generate signed URL and redirect to PDF
  */
 export async function GET(req: Request) {
-    const supabase = supabaseRouteClient();
+    const supabase = await supabaseRouteClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
