@@ -599,7 +599,7 @@ export default function SuplidosForm() {
                 <button
                     type="button"
                     onClick={generate}
-                    disabled={status === "generating" || status === "sending"}
+                    disabled={status === "generating"}
                     className="bg-yellow-400 hover:bg-yellow-500 text-neutral-950 px-5 py-2.5 rounded-md text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                     {status === "generating" ? (
