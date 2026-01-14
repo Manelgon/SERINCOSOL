@@ -59,7 +59,7 @@ export async function POST(req: Request) {
     const sumaFinal = sub.data.payload?.["Suma final"] ?? "";
 
     // Send email with Resend
-    const { error } = await resend.emails.send({
+    const { error } = await getResend().emails.send({
       from,
       to: body.toEmail,
       subject: `Documento Suplidos ${nombre ? `- ${nombre}` : ""}`.trim(),
