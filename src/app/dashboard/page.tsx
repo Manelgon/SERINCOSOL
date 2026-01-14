@@ -218,31 +218,31 @@ export default function DashboardPage() {
     const COLORS = ['#00C49F', '#FFBB28', '#FF8042']; // Green, Yellow, Orange/Red
 
     return (
-        <div className="space-y-8 pb-10">
+        <div className="space-y-6 md:space-y-8 pb-10">
             {/* Header / Filter */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">Panel de Control</h1>
+                    <h1 className="text-xl md:text-2xl font-bold text-neutral-900 tracking-tight">Panel de Control</h1>
                     <p className="text-neutral-500 text-sm">Visión general del estado de las comunidades.</p>
                 </div>
-                <div className="flex bg-white rounded-lg p-1 border border-neutral-200 shadow-sm">
+                <div className="flex bg-white rounded-lg p-1 border border-neutral-200 shadow-sm w-full md:w-auto">
                     <button
                         onClick={() => changePeriod('all')}
-                        className={`px-4 py-1.5 text-xs font-medium rounded-md transition ${period === 'all' ? 'bg-yellow-400 text-neutral-950 shadow-sm' : 'text-neutral-600 hover:bg-neutral-50'}`}
+                        className={`flex-1 md:flex-none px-3 md:px-4 py-1.5 text-xs font-medium rounded-md transition ${period === 'all' ? 'bg-yellow-400 text-neutral-950 shadow-sm' : 'text-neutral-600 hover:bg-neutral-50'}`}
                     >
                         Todo
                     </button>
                     <button
                         onClick={() => changePeriod('30')}
-                        className={`px-4 py-1.5 text-xs font-medium rounded-md transition ${period === '30' ? 'bg-yellow-400 text-neutral-950 shadow-sm' : 'text-neutral-600 hover:bg-neutral-50'}`}
+                        className={`flex-1 md:flex-none px-3 md:px-4 py-1.5 text-xs font-medium rounded-md transition ${period === '30' ? 'bg-yellow-400 text-neutral-950 shadow-sm' : 'text-neutral-600 hover:bg-neutral-50'}`}
                     >
-                        Últimos 30 días
+                        30 días
                     </button>
                     <button
                         onClick={() => changePeriod('90')}
-                        className={`px-4 py-1.5 text-xs font-medium rounded-md transition ${period === '90' ? 'bg-yellow-400 text-neutral-950 shadow-sm' : 'text-neutral-600 hover:bg-neutral-50'}`}
+                        className={`flex-1 md:flex-none px-3 md:px-4 py-1.5 text-xs font-medium rounded-md transition ${period === '90' ? 'bg-yellow-400 text-neutral-950 shadow-sm' : 'text-neutral-600 hover:bg-neutral-50'}`}
                     >
-                        Trimestre
+                        90 días
                     </button>
                 </div>
             </div>
@@ -282,12 +282,12 @@ export default function DashboardPage() {
             {/* Charts Row 1 */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Evolution Chart */}
-                <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-neutral-200 shadow-sm">
-                    <h3 className="text-lg font-bold text-neutral-800 mb-6 flex items-center gap-2">
-                        <TrendingUp className="w-5 h-5 text-neutral-400" />
+                <div className="lg:col-span-2 bg-white p-4 md:p-6 rounded-xl border border-neutral-200 shadow-sm">
+                    <h3 className="text-base md:text-lg font-bold text-neutral-800 mb-4 md:mb-6 flex items-center gap-2">
+                        <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-neutral-400" />
                         Evolución de Incidencias
                     </h3>
-                    <div className="h-[300px] w-full">
+                    <div className="h-[200px] md:h-[300px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={chartData.incidenciasEvolution}>
                                 <defs>
@@ -326,9 +326,9 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Urgency Pie Chart */}
-                <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm flex flex-col">
-                    <h3 className="text-lg font-bold text-neutral-800 mb-2">Urgencia</h3>
-                    <div className="flex-1 min-h-[250px] relative">
+                <div className="bg-white p-4 md:p-6 rounded-xl border border-neutral-200 shadow-sm flex flex-col">
+                    <h3 className="text-base md:text-lg font-bold text-neutral-800 mb-2">Urgencia</h3>
+                    <div className="flex-1 min-h-[200px] md:min-h-[250px] relative">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie
@@ -356,9 +356,9 @@ export default function DashboardPage() {
             {/* Charts Row 2 & Stats */}
             <div className="grid grid-cols-1 gap-6">
                 {/* Top Communities Bar Chart */}
-                <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm">
-                    <h3 className="text-lg font-bold text-neutral-800 mb-6">Comunidades con Más Incidencias</h3>
-                    <div className="h-[300px]">
+                <div className="bg-white p-4 md:p-6 rounded-xl border border-neutral-200 shadow-sm">
+                    <h3 className="text-base md:text-lg font-bold text-neutral-800 mb-4 md:mb-6">Comunidades con Más Incidencias</h3>
+                    <div className="h-[250px] md:h-[300px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart
                                 layout="vertical"
@@ -386,12 +386,12 @@ export default function DashboardPage() {
             {/* Debt Analysis Row */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Debt by Community */}
-                <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-neutral-200 shadow-sm">
-                    <h3 className="text-lg font-bold text-neutral-800 mb-6 flex items-center gap-2">
-                        <FileText className="w-5 h-5 text-neutral-400" />
+                <div className="lg:col-span-2 bg-white p-4 md:p-6 rounded-xl border border-neutral-200 shadow-sm">
+                    <h3 className="text-base md:text-lg font-bold text-neutral-800 mb-4 md:mb-6 flex items-center gap-2">
+                        <FileText className="w-4 h-4 md:w-5 md:h-5 text-neutral-400" />
                         Deuda por Comunidad
                     </h3>
-                    <div className="h-[300px]">
+                    <div className="h-[250px] md:h-[300px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart
                                 data={chartData.debtByCommunity}
@@ -411,9 +411,9 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Debt Status */}
-                <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm flex flex-col">
-                    <h3 className="text-lg font-bold text-neutral-800 mb-2">Estado de Deuda</h3>
-                    <div className="flex-1 min-h-[250px] relative">
+                <div className="bg-white p-4 md:p-6 rounded-xl border border-neutral-200 shadow-sm flex flex-col">
+                    <h3 className="text-base md:text-lg font-bold text-neutral-800 mb-2">Estado de Deuda</h3>
+                    <div className="flex-1 min-h-[200px] md:min-h-[250px] relative">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie
@@ -444,8 +444,8 @@ export default function DashboardPage() {
 
             {/* Performance Table */}
             <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
-                <div className="px-6 py-4 border-b border-neutral-100 bg-neutral-50">
-                    <h3 className="text-lg font-bold text-neutral-900">Rendimiento del Equipo</h3>
+                <div className="px-4 md:px-6 py-3 md:py-4 border-b border-neutral-100 bg-neutral-50">
+                    <h3 className="text-base md:text-lg font-bold text-neutral-900">Rendimiento del Equipo</h3>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
