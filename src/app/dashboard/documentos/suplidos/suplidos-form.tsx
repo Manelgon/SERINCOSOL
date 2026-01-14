@@ -411,7 +411,7 @@ export default function SuplidosForm() {
                             disabled={isDisabled}
                             value={values["Código"] ?? ""}
                             onChange={(e) => onChange("Código", e.target.value)}
-                            className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 appearance-none disabled:bg-neutral-100"
+                            className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 appearance-none disabled:bg-neutral-100"
                         >
                             <option value="">Seleccionar código</option>
                             {communities.map((c) => (
@@ -430,7 +430,7 @@ export default function SuplidosForm() {
                             type="text"
                             value={values["Nombre Cliente"] ?? ""}
                             onChange={(e) => onChange("Nombre Cliente", e.target.value)}
-                            className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
+                            className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
                         />
                     </label>
 
