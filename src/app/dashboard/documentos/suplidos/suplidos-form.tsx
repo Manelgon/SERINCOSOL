@@ -284,7 +284,7 @@ export default function SuplidosForm() {
             const rawPayload = { ...values, ...compute(values) };
             // Sanitize: convert empty strings to 0 for the API
             const payload = Object.fromEntries(
-                Object.entries(rawPayload).map(([k, v]) => [k, v === "" ? 0 : v])
+                Object.entries(rawPayload).map(([k, v]) => [k, (v as any) === "" ? 0 : v])
             );
 
             const res = await fetch("/api/documentos/suplidos/generate", {
