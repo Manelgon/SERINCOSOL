@@ -112,55 +112,61 @@ export default function NotificationsBell({ align = 'right' }: NotificationsBell
                 .channel(channelName)
                 .on(
                     'postgres_changes',
-                    { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+                    { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
                     async (payload) => {
                         if (!isMounted) return;
 
-                        const n: any = payload.new;
+                        // HANDLE INSERTS (New Notifications)
+                        if (payload.eventType === 'INSERT') {
+                            const n: any = payload.new;
 
-                        // GLOBAL DEDUPLICATION CHECK
-                        if (processedIds.has(n.id)) {
-                            // console.log("Suppressed duplicate:", n.id);
-                            return;
-                        }
-                        processedIds.set(n.id, Date.now());
-
-                        setUnread(p => p + 1);
-
-                        toast((t) => (
-                            <div className="flex items-start gap-3 pointer-events-auto cursor-pointer" onClick={() => {
-                                window.location.href = `/dashboard/incidencias/${n.entity_id}`;
-                                toast.dismiss(t.id);
-                            }}>
-                                <div>
-                                    <p className="font-bold">Nuevo Aviso</p>
-                                    <p className="text-sm">{n.title}</p>
-                                </div>
-                            </div>
-                        ), { position: 'top-right', duration: 5000 });
-
-                        // Audio Playback with Toast Feedback for Errors
-                        if (soundEnabledRef.current) {
-                            try {
-                                const audio = new Audio("/sounds/notification.mp3");
-                                audio.preload = 'auto';
-
-                                const playPromise = audio.play();
-                                if (playPromise !== undefined) {
-                                    playPromise.catch(error => {
-                                        console.warn("Autoplay blocked/failed:", error);
-                                        // Show toast ONLY if it's an interaction/policy error to inform user
-                                        if (error.name === 'NotAllowedError') {
-                                            toast("Sonido bloqueado por navegador. Haz click en la página para habilitarlo.", {
-                                                icon: '🔇',
-                                                duration: 4000
-                                            });
-                                        }
-                                    });
-                                }
-                            } catch (e) {
-                                console.error("Audio playback error:", e);
+                            // GLOBAL DEDUPLICATION CHECK
+                            if (processedIds.has(n.id)) {
+                                return;
                             }
+                            processedIds.set(n.id, Date.now());
+
+                            setUnread(p => p + 1);
+
+                            toast((t) => (
+                                <div className="flex items-start gap-3 pointer-events-auto cursor-pointer" onClick={() => {
+                                    window.location.href = `/dashboard/incidencias/${n.entity_id}`;
+                                    toast.dismiss(t.id);
+                                }}>
+                                    <div>
+                                        <p className="font-bold">Nuevo Aviso</p>
+                                        <p className="text-sm">{n.title}</p>
+                                    </div>
+                                </div>
+                            ), { position: 'top-right', duration: 5000 });
+
+                            // Audio Playback with Toast Feedback for Errors
+                            if (soundEnabledRef.current) {
+                                try {
+                                    const audio = new Audio("/sounds/notification.mp3");
+                                    audio.preload = 'auto';
+
+                                    const playPromise = audio.play();
+                                    if (playPromise !== undefined) {
+                                        playPromise.catch(error => {
+                                            console.warn("Autoplay blocked/failed:", error);
+                                            if (error.name === 'NotAllowedError') {
+                                                toast("Sonido bloqueado por navegador. Haz click en la página para habilitarlo.", {
+                                                    icon: '🔇',
+                                                    duration: 4000
+                                                });
+                                            }
+                                        });
+                                    }
+                                } catch (e) {
+                                    console.error("Audio playback error:", e);
+                                }
+                            }
+                        }
+                        // HANDLE UPDATES/DELETES (e.g. Marked as read)
+                        else {
+                            // Ideally minimal fetch, but simplest way to stay consistent
+                            await fetchUnread(user.id);
                         }
                     }
                 )
