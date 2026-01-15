@@ -512,7 +512,7 @@ export async function buildPagosAlDiaPdf(payload: any, assets: { logoBytes: Uint
     const p1 =
         `Roberto Díaz Rodríguez, Administrador de Fincas colegiado en el Ilustre Colegio Territorial de ` +
         `Administradores de Fincas de Málaga, actuando en calidad de Secretario–Administrador de la Comunidad de ` +
-        `Propietarios ${comunidad}, sita en ${domicilio} de la comunidad.`;
+        `Propietarios ${comunidad}, sita en ${domicilio}.`;
 
     const p2 =
         `Que, consultados los libros contables de la mencionada comunidad de propietarios, D./Dª ${cliente}, ` +
