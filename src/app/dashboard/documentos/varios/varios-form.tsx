@@ -201,7 +201,7 @@ export default function VariosForm() {
             <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm space-y-4">
                 <h3 className="text-lg font-semibold text-neutral-900 border-b pb-2">Datos Cliente</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <label className="block">
+                    <label className="flex flex-col gap-1.5">
                         <span className="text-sm font-medium text-gray-700">Código</span>
                         <select
                             disabled={isDisabled}
@@ -217,7 +217,7 @@ export default function VariosForm() {
                             ))}
                         </select>
                     </label>
-                    <label className="block">
+                    <label className="flex flex-col gap-1.5">
                         <span className="text-sm font-medium text-gray-700">Cliente / Comunidad</span>
                         <input
                             disabled={isDisabled}
@@ -227,7 +227,7 @@ export default function VariosForm() {
                             onChange={e => handleChange("cliente", e.target.value)}
                         />
                     </label>
-                    <label className="block">
+                    <label className="flex flex-col gap-1.5">
                         <span className="text-sm font-medium text-gray-700">Nombre y Apellidos</span>
                         <input
                             disabled={isDisabled}
@@ -237,7 +237,7 @@ export default function VariosForm() {
                             onChange={e => handleChange("nombre_apellidos", e.target.value)}
                         />
                     </label>
-                    <label className="block">
+                    <label className="flex flex-col gap-1.5">
                         <span className="text-sm font-medium text-gray-700">Tipo Inmueble</span>
                         <select
                             disabled={isDisabled}
@@ -251,7 +251,7 @@ export default function VariosForm() {
                             <option value="Aparcamiento">Aparcamiento</option>
                         </select>
                     </label>
-                    <label className="block">
+                    <label className="flex flex-col gap-1.5">
                         <span className="text-sm font-medium text-gray-700">NIF</span>
                         <input
                             disabled={isDisabled}
@@ -261,7 +261,7 @@ export default function VariosForm() {
                             onChange={e => handleChange("nif", e.target.value)}
                         />
                     </label>
-                    <label className="block">
+                    <label className="flex flex-col gap-1.5">
                         <span className="text-sm font-medium text-gray-700">Domicilio</span>
                         <input
                             disabled={isDisabled}
@@ -271,7 +271,7 @@ export default function VariosForm() {
                             onChange={e => handleChange("domicilio", e.target.value)}
                         />
                     </label>
-                    <label className="block">
+                    <label className="flex flex-col gap-1.5">
                         <span className="text-sm font-medium text-gray-700">C.P</span>
                         <input
                             disabled={isDisabled}
@@ -281,7 +281,7 @@ export default function VariosForm() {
                             onChange={e => handleChange("cp", e.target.value)}
                         />
                     </label>
-                    <label className="block">
+                    <label className="flex flex-col gap-1.5">
                         <span className="text-sm font-medium text-gray-700">Ciudad</span>
                         <input
                             disabled={isDisabled}
@@ -291,7 +291,7 @@ export default function VariosForm() {
                             onChange={e => handleChange("ciudad", e.target.value)}
                         />
                     </label>
-                    <label className="block">
+                    <label className="flex flex-col gap-1.5">
                         <span className="text-sm font-medium text-gray-700">Provincia</span>
                         <input
                             disabled={isDisabled}
@@ -301,7 +301,7 @@ export default function VariosForm() {
                             onChange={e => handleChange("provincia", e.target.value)}
                         />
                     </label>
-                    <label className="block">
+                    <label className="flex flex-col gap-1.5">
                         <span className="text-sm font-medium text-gray-700">Fecha Emisión</span>
                         <input
                             disabled={isDisabled}

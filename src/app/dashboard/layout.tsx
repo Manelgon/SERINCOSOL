@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
+import GlobalNotificationListener from '@/components/GlobalNotificationListener';
 import { Menu } from 'lucide-react';
 
 export default function DashboardLayout({
@@ -14,6 +15,7 @@ export default function DashboardLayout({
 
     return (
         <div className="h-screen bg-neutral-950 text-white overflow-hidden flex">
+            <GlobalNotificationListener />
             {/* Sidebar with mobile state */}
             <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 

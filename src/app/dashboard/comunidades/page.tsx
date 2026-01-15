@@ -348,72 +348,79 @@ export default function ComunidadesPage() {
             </div>
 
             {showForm && (
-                <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
+                <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm space-y-4"> {/* Enhanced container style */}
                     <h2 className="text-lg font-semibold mb-4">
                         {editingId ? 'Editar Comunidad' : 'Añadir Nueva Comunidad'}
                     </h2>
                     <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Código</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Código</label>
                             <input
                                 required
                                 type="text"
-                                className="w-full px-3 py-2 border rounded-lg"
+                                placeholder="e.g. 001"
+                                className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100" // Styled
                                 value={formData.codigo}
                                 onChange={e => setFormData({ ...formData, codigo: e.target.value })}
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Nombre Comunidad</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre Comunidad</label>
                             <input
                                 required
                                 type="text"
-                                className="w-full px-3 py-2 border rounded-lg"
+                                placeholder="e.g. Edificio Central"
+                                className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100" // Styled
                                 value={formData.nombre_cdad}
                                 onChange={e => setFormData({ ...formData, nombre_cdad: e.target.value })}
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Dirección</label>
                             <input
                                 type="text"
-                                className="w-full px-3 py-2 border rounded-lg"
+                                placeholder="e.g. C/ Mayor 123"
+                                className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100" // Styled
                                 value={formData.direccion}
                                 onChange={e => setFormData({ ...formData, direccion: e.target.value })}
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">CP</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">CP</label>
                             <input
                                 type="text"
-                                className="w-full px-3 py-2 border rounded-lg"
+                                placeholder="e.g. 29001"
+                                className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100" // Styled
                                 value={formData.cp}
                                 onChange={e => setFormData({ ...formData, cp: e.target.value })}
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Ciudad</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Ciudad</label>
                             <input
                                 type="text"
-                                className="w-full px-3 py-2 border rounded-lg"
+                                placeholder="e.g. Málaga"
+                                className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100" // Styled
                                 value={formData.ciudad}
                                 onChange={e => setFormData({ ...formData, ciudad: e.target.value })}
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Provincia</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Provincia</label>
                             <input
                                 type="text"
-                                className="w-full px-3 py-2 border rounded-lg"
+                                placeholder="e.g. Málaga"
+                                className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100" // Styled
                                 value={formData.provincia}
                                 onChange={e => setFormData({ ...formData, provincia: e.target.value })}
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">CIF</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">CIF</label>
                             <input
                                 type="text"
-                                className="w-full px-3 py-2 border rounded-lg"
+                                placeholder="e.g. H12345678"
+                                className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100" // Styled
                                 value={formData.cif}
                                 onChange={e => setFormData({ ...formData, cif: e.target.value })}
                             />

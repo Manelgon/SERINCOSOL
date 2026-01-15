@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import KPICard from '@/components/KPICard';
 import { Building, AlertCircle, FileText, CheckCircle, TrendingUp, Users } from 'lucide-react';
@@ -51,13 +51,9 @@ export default function DashboardPage() {
         localStorage.setItem('dashboard_period', newPeriod);
     };
 
-    useEffect(() => {
-        if (isInitialized) {
-            fetchDashboardData();
-        }
-    }, [period, isInitialized]);
 
-    const fetchDashboardData = async () => {
+
+    const fetchDashboardData = useCallback(async () => {
         setLoading(true);
         try {
             // 1. Fetch Basic Counts
@@ -213,7 +209,24 @@ export default function DashboardPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [period]);
+
+    useEffect(() => {
+        if (!isInitialized) return;
+
+        fetchDashboardData();
+
+        const channel = supabase
+            .channel('dashboard-realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'incidencias' }, () => fetchDashboardData())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'morosidad' }, () => fetchDashboardData())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'comunidades' }, () => fetchDashboardData())
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [isInitialized, fetchDashboardData]); // Re-subscribe when fetchDashboardData changes (on period change)
 
     const COLORS = ['#00C49F', '#FFBB28', '#FF8042']; // Green, Yellow, Orange/Red
 

@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { Plus, FileText, Check, Trash2 } from 'lucide-react';
 import DataTable, { Column } from '@/components/DataTable';
+import SearchableSelect from '@/components/SearchableSelect';
 import { logActivity } from '@/lib/logActivity';
 
 interface Morosidad {
@@ -22,7 +23,7 @@ interface Morosidad {
     estado: 'Pendiente' | 'Pagado' | 'En disputa';
     fecha_pago: string;
     gestor: string;
-    aviso: string;
+    aviso?: string | null;
     documento: string;
     created_at: string;
     comunidades?: { nombre_cdad: string };
@@ -54,12 +55,29 @@ export default function MorosidadPage() {
         observaciones: '',
         gestor: '',
         documento: '',
+        aviso: null as string | null,
     });
 
     const [file, setFile] = useState<File | null>(null);
 
     useEffect(() => {
         fetchInitialData();
+
+        // Subscribe to real-time changes
+        const channel = supabase
+            .channel('morosidad-realtime')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'morosidad' },
+                () => {
+                    fetchMorosidad();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, []);
 
     const fetchInitialData = async () => {
@@ -69,7 +87,7 @@ export default function MorosidadPage() {
     };
 
     const fetchComunidades = async () => {
-        const { data } = await supabase.from('comunidades').select('id, nombre_cdad');
+        const { data } = await supabase.from('comunidades').select('id, nombre_cdad, codigo, direccion');
         if (data) setComunidades(data);
     };
 
@@ -168,6 +186,7 @@ export default function MorosidadPage() {
                     observaciones: '',
                     gestor: '',
                     documento: '',
+                    aviso: null,
                 });
                 setFile(null);
                 fetchMorosidad();
@@ -177,12 +196,12 @@ export default function MorosidadPage() {
         } else {
             // Create new
             try {
-                const { error } = await supabase.from('morosidad').insert([{
+                const { data: newDebt, error } = await supabase.from('morosidad').insert([{
                     ...formData,
                     comunidad_id: parseInt(formData.comunidad_id),
                     importe: parseFloat(formData.importe),
                     documento: docUrl,
-                }]);
+                }]).select().single();
 
                 if (error) throw error;
 
@@ -193,6 +212,7 @@ export default function MorosidadPage() {
                 await logActivity({
                     action: 'create',
                     entityType: 'morosidad',
+                    entityId: newDebt.id,
                     entityName: `${formData.nombre_deudor} ${formData.apellidos}`,
                     details: {
                         comunidad: comunidad?.nombre_cdad,
@@ -201,13 +221,19 @@ export default function MorosidadPage() {
                     }
                 });
 
+                const gestorProfile = profiles.find(p => p.user_id === formData.gestor);
+
                 // Trigger Webhook (Fire and forget, don't block UI)
                 fetch('/api/webhooks/trigger-debt', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         ...formData,
+                        id: newDebt.id,
                         comunidad_nombre: comunidad?.nombre_cdad,
+                        comunidad_codigo: comunidad?.codigo,
+                        comunidad_direccion: comunidad?.direccion,
+                        gestor_nombre: gestorProfile?.nombre || 'Desconocido',
                         documento_url: docUrl
                     })
                 }).catch(err => console.error('Webhook trigger error:', err));
@@ -225,6 +251,7 @@ export default function MorosidadPage() {
                     observaciones: '',
                     gestor: '',
                     documento: '',
+                    aviso: null,
                 });
                 setFile(null);
                 fetchMorosidad();
@@ -334,6 +361,7 @@ export default function MorosidadPage() {
             observaciones: moroso.observaciones || '',
             gestor: moroso.gestor || '',
             documento: moroso.documento || '',
+            aviso: moroso.aviso || null,
         });
         setShowForm(true);
     };
@@ -430,6 +458,13 @@ export default function MorosidadPage() {
         {
             key: 'gestor',
             label: 'Gestor',
+            // Lookup name from profiles if gestor contains a UUID
+            render: (row) => {
+                if (!row.gestor) return '-';
+                const p = profiles.find(p => p.user_id === row.gestor);
+                // If found, show name. If not found (maybe legacy data or deleted), show raw value or fallback
+                return p ? p.nombre : (row.gestor.length > 20 ? 'Usuario desconocido' : row.gestor);
+            },
             defaultVisible: false,
         },
         {
@@ -496,6 +531,7 @@ export default function MorosidadPage() {
                                 observaciones: '',
                                 gestor: '',
                                 documento: '',
+                                aviso: null,
                             });
                         }
                     }}
@@ -510,22 +546,20 @@ export default function MorosidadPage() {
                 <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
                     <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Comunidad</label>
-                            <select
-                                required
-                                className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 disabled:bg-neutral-100"
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Comunidad</label>
+                            <SearchableSelect
                                 value={formData.comunidad_id}
-                                onChange={e => setFormData({ ...formData, comunidad_id: e.target.value })}
-                            >
-                                <option value="">Selecciona una comunidad...</option>
-                                {comunidades.map(cd => (
-                                    <option key={cd.id} value={cd.id}>{cd.nombre_cdad}</option>
-                                ))}
-                            </select>
+                                onChange={(val) => setFormData({ ...formData, comunidad_id: String(val) })}
+                                options={comunidades.map(cd => ({
+                                    value: String(cd.id),
+                                    label: cd.codigo ? `${cd.codigo} - ${cd.nombre_cdad}` : cd.nombre_cdad
+                                }))}
+                                placeholder="Selecciona una comunidad..."
+                            />
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Nombre Deudor</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre Deudor</label>
                             <input
                                 required
                                 type="text"
@@ -536,7 +570,7 @@ export default function MorosidadPage() {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Apellidos</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Apellidos</label>
                             <input
                                 type="text"
                                 className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
@@ -546,7 +580,7 @@ export default function MorosidadPage() {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Teléfono</label>
                             <input
                                 type="tel"
                                 className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
@@ -556,7 +590,7 @@ export default function MorosidadPage() {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
                             <input
                                 type="email"
                                 className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
@@ -566,7 +600,7 @@ export default function MorosidadPage() {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Título del Documento</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Título del Documento</label>
                             <input
                                 required
                                 type="text"
@@ -578,7 +612,7 @@ export default function MorosidadPage() {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Notificación</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Fecha de Notificación</label>
                             <input
                                 type="date"
                                 className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
@@ -588,7 +622,7 @@ export default function MorosidadPage() {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Importe (€)</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Importe (€)</label>
                             <input
                                 required
                                 type="number"
@@ -600,20 +634,19 @@ export default function MorosidadPage() {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Gestor</label>
-                            <select
-                                className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 disabled:bg-neutral-100"
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Gestor</label>
+                            <SearchableSelect
                                 value={formData.gestor}
-                                onChange={e => setFormData({ ...formData, gestor: e.target.value })}
-                            >
-                                <option value="">Selecciona un gestor...</option>
-                                {profiles.map(profile => (
-                                    <option key={profile.user_id} value={profile.nombre}>
-                                        {profile.nombre} ({profile.rol})
-                                    </option>
-                                ))}
-                            </select>
+                                onChange={(val) => setFormData({ ...formData, gestor: String(val) })}
+                                options={profiles.map(profile => ({
+                                    value: profile.user_id,
+                                    label: `${profile.nombre} (${profile.rol})`
+                                }))}
+                                placeholder="Selecciona un gestor..."
+                            />
                         </div>
+
+
 
                         <div className="md:col-span-2">
                             <label className="block text-sm font-medium text-gray-700 mb-1">Observaciones</label>
