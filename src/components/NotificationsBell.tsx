@@ -1,200 +1,197 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import Link from "next/link";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "lucide-react";
+import { Bell, BellOff } from 'lucide-react';
 import { supabase } from "@/lib/supabaseClient";
-import { Bell } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
-type Noti = {
-    id: string;
-    title: string;
-    body: string | null;
-    entity_type: string | null;
-    entity_id: number | null;
-    is_read: boolean;
-    created_at: string;
-};
+// Global Deduplication Set (Singleton)
+// This persists even if component unmounts/remounts strictly or by navigation.
+// We store ID -> Timestamp to allow cleanup.
+const processedIds = new Map<string, number>();
 
+// Cleanup interval (optional, but good practice)
+setInterval(() => {
+    const now = Date.now();
+    for (const [id, timestamp] of processedIds.entries()) {
+        if (now - timestamp > 60000) { // Keep explicitly for 1 minute
+            processedIds.delete(id);
+        }
+    }
+}, 30000);
 
 interface NotificationsBellProps {
     align?: 'left' | 'right';
 }
 
 export default function NotificationsBell({ align = 'right' }: NotificationsBellProps) {
-    const [open, setOpen] = useState(false);
-    const [items, setItems] = useState<Noti[]>([]);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+    const userIdRef = useRef<string | null>(null);
+
+    // State for sound preference
+    const [soundEnabled, setSoundEnabled] = useState(false);
+
+    // State for unread count
     const [unread, setUnread] = useState(0);
-    const dropdownRef = useRef<HTMLDivElement>(null);
 
-    const load = async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+    // Load sound preference and audio
+    useEffect(() => {
+        const saved = localStorage.getItem('notification_sound_enabled');
+        if (saved === 'true') {
+            setSoundEnabled(true);
+            soundEnabledRef.current = true;
+        }
 
-        const { data } = await supabase
+        // Initialize audio with error handling
+        const audio = new Audio("/sounds/notification.mp3");
+        audio.preload = "auto";
+        audio.onerror = (e) => {
+            console.error("Audio failed to load:", e);
+        };
+        audioRef.current = audio;
+
+        // Fetch user
+        supabase.auth.getUser().then(({ data }) => {
+            userIdRef.current = data.user?.id || null;
+            if (data.user?.id) fetchUnread(data.user.id);
+        });
+    }, []);
+
+    const fetchUnread = async (uid: string) => {
+        const { count } = await supabase
             .from("notifications")
-            .select("id,title,body,entity_type,entity_id,is_read,created_at")
-            .eq('user_id', user.id)
-            .order("created_at", { ascending: false })
-            .limit(10);
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', uid)
+            .eq('is_read', false);
+        setUnread(count || 0);
+    };
 
-        if (data) {
-            setItems(data as Noti[]);
-            // Count unread from the fetched 10 is not accurate for total count, 
-            // but for "badge" usually we want total unread count.
-            // Let's fetch total count separately or just rely on these 10?
-            // Better to fetch count.
+    // Toggle Sound
+    const toggleSound = async () => {
+        const newState = !soundEnabled;
+        setSoundEnabled(newState);
+        localStorage.setItem('notification_sound_enabled', String(newState));
 
-            const { count } = await supabase
-                .from("notifications")
-                .select('*', { count: 'exact', head: true })
-                .eq('user_id', user.id)
-                .eq('is_read', false);
-
-            setUnread(count || 0);
+        if (newState) {
+            toast.success("Sonido activado 🔔");
+            try {
+                // Immediately create and play a new audio instance to "unlock" the audio capabilities
+                // Browsers whitelist audio playback after a direct user interaction
+                const unlockAudio = new Audio("/sounds/notification.mp3");
+                unlockAudio.volume = 0.5; // Set reasonable volume
+                await unlockAudio.play();
+                // We keep it playing briefly to ensure the browser registers the interaction
+            } catch (e) {
+                console.error("Audio unlock failed", e);
+                // If this fails, then we really have a problem, but it shouldn't on a click handler
+            }
+        } else {
+            toast("Sonido desactivado 🔕", { icon: '🔕' });
         }
     };
 
+    const soundEnabledRef = useRef(soundEnabled);
     useEffect(() => {
-        load();
+        soundEnabledRef.current = soundEnabled;
+    }, [soundEnabled]);
 
-        // click outside to close
-        function handleClickOutside(event: MouseEvent) {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setOpen(false);
-            }
-        }
-        document.addEventListener("mousedown", handleClickOutside);
+    // Realtime Listener
+    useEffect(() => {
+        let channel: any;
+        let isMounted = true;
 
-        // Realtime: nuevos avisos
-        const ch = supabase
-            .channel("notifications_live")
-            .on(
-                "postgres_changes",
-                { event: "INSERT", schema: "public", table: "notifications" },
-                () => load()
-            )
-            .on(
-                "postgres_changes",
-                { event: "UPDATE", schema: "public", table: "notifications" },
-                () => load()
-            )
-            .subscribe();
+        const setup = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user || !isMounted) return;
+
+            // Unique channel name each time to avoid 'already joined' errors during hot reload
+            const channelName = `notifications:global:${user.id}:${Date.now()}`;
+
+            channel = supabase
+                .channel(channelName)
+                .on(
+                    'postgres_changes',
+                    { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+                    async (payload) => {
+                        if (!isMounted) return;
+
+                        const n: any = payload.new;
+
+                        // GLOBAL DEDUPLICATION CHECK
+                        if (processedIds.has(n.id)) {
+                            // console.log("Suppressed duplicate:", n.id);
+                            return;
+                        }
+                        processedIds.set(n.id, Date.now());
+
+                        setUnread(p => p + 1);
+
+                        toast((t) => (
+                            <div className="flex items-start gap-3 pointer-events-auto cursor-pointer" onClick={() => {
+                                window.location.href = `/dashboard/incidencias/${n.entity_id}`;
+                                toast.dismiss(t.id);
+                            }}>
+                                <div>
+                                    <p className="font-bold">Nuevo Aviso</p>
+                                    <p className="text-sm">{n.title}</p>
+                                </div>
+                            </div>
+                        ), { position: 'top-right', duration: 5000 });
+
+                        // Audio Playback with Toast Feedback for Errors
+                        if (soundEnabledRef.current) {
+                            try {
+                                const audio = new Audio("/sounds/notification.mp3");
+                                audio.preload = 'auto';
+
+                                const playPromise = audio.play();
+                                if (playPromise !== undefined) {
+                                    playPromise.catch(error => {
+                                        console.warn("Autoplay blocked/failed:", error);
+                                        // Show toast ONLY if it's an interaction/policy error to inform user
+                                        if (error.name === 'NotAllowedError') {
+                                            toast("Sonido bloqueado por navegador. Haz click en la página para habilitarlo.", {
+                                                icon: '🔇',
+                                                duration: 4000
+                                            });
+                                        }
+                                    });
+                                }
+                            } catch (e) {
+                                console.error("Audio playback error:", e);
+                            }
+                        }
+                    }
+                )
+                .subscribe();
+        };
+
+        setup();
 
         return () => {
-            supabase.removeChannel(ch);
-            document.removeEventListener("mousedown", handleClickOutside);
+            isMounted = false;
+            // Clean up channel on unmount
+            if (channel) {
+                supabase.removeChannel(channel);
+            }
         };
     }, []);
 
-    const markOne = async (id: string) => {
-        // Optimistic update
-        setItems(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
-        setUnread(prev => Math.max(0, prev - 1));
-
-        await fetch("/api/notifications/read", {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({ id }),
-        });
-        // load(); // No need to reload immediately if optimistic is fine, but maybe safer to sync
-    };
-
-    const markAll = async () => {
-        setItems(prev => prev.map(n => ({ ...n, is_read: true })));
-        setUnread(0);
-
-        await fetch("/api/notifications/read-all", { method: "POST" });
-        load();
-    };
 
     return (
-        <div className="relative" ref={dropdownRef}>
-            <button
-                onClick={() => setOpen(v => !v)}
-                className="relative flex h-10 w-10 items-center justify-center rounded-md bg-black text-yellow-400 hover:bg-neutral-900 transition-colors"
-                aria-label="Avisos"
-            >
-                <Bell className="w-5 h-5" />
+        <button
+            onClick={toggleSound}
+            className="relative flex h-10 w-10 items-center justify-center rounded-md bg-black text-yellow-400 hover:bg-neutral-900 transition-colors"
+            title={soundEnabled ? "Desactivar sonido" : "Activar sonido"}
+        >
+            {soundEnabled ? <Bell className="w-5 h-5" /> : <BellOff className="w-5 h-5 opacity-70" />}
 
-                {unread > 0 && (
-                    <span className="absolute -right-1 -top-1 rounded-full bg-yellow-400 px-1.5 py-0.5 text-xs font-bold text-black min-w-[1.25rem]">
-                        {unread}
-                    </span>
-                )}
-            </button>
-
-            {open && (
-                <div className={`absolute mt-2 w-80 md:w-96 overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-xl z-50 ${align === 'left' ? 'left-0' : 'right-0'
-                    }`}>
-                    <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-100 bg-neutral-50">
-                        <div className="text-sm font-bold text-neutral-900">Avisos</div>
-                        {unread > 0 && (
-                            <button
-                                onClick={markAll}
-                                className="text-xs font-semibold text-yellow-600 hover:text-yellow-700 hover:underline"
-                            >
-                                Marcar todo como leído
-                            </button>
-                        )}
-                    </div>
-
-                    <div className="max-h-[28rem] overflow-y-auto">
-                        {items.length === 0 ? (
-                            <div className="px-4 py-8 text-center text-sm text-neutral-500">
-                                No tienes avisos recientes.
-                            </div>
-                        ) : (
-                            items.map((n) => {
-                                const href =
-                                    n.entity_type === "incidencias" && n.entity_id
-                                        ? `/dashboard/incidencias/${n.entity_id}`
-                                        : "#";
-
-                                return (
-                                    <Link
-                                        key={n.id}
-                                        href={href}
-                                        onClick={() => { markOne(n.id); setOpen(false); }}
-                                        className={`block border-b border-neutral-50 px-4 py-3 hover:bg-neutral-50 transition-colors last:border-0 ${n.is_read ? "opacity-60 bg-white" : "bg-yellow-50/30"
-                                            }`}
-                                    >
-                                        <div className="flex items-start gap-3">
-                                            <span
-                                                className={`mt-1.5 h-2 w-2 flex-shrink-0 rounded-full ${n.is_read ? "bg-neutral-300" : "bg-yellow-400"
-                                                    }`}
-                                            />
-                                            <div className="min-w-0 flex-1">
-                                                <div className={`text-sm ${n.is_read ? 'font-medium text-neutral-700' : 'font-bold text-neutral-900'}`}>
-                                                    {n.title}
-                                                </div>
-                                                {n.body && (
-                                                    <div className="mt-1 line-clamp-2 text-xs text-neutral-600">
-                                                        {n.body}
-                                                    </div>
-                                                )}
-                                                <div className="mt-1.5 text-[10px] text-neutral-400 font-medium">
-                                                    {new Date(n.created_at).toLocaleString()}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </Link>
-                                );
-                            })
-                        )}
-                    </div>
-
-                    <div className="border-t border-neutral-200 px-4 py-3 bg-neutral-50">
-                        <Link
-                            href="/dashboard/avisos"
-                            onClick={() => setOpen(false)}
-                            className="block w-full text-center text-sm font-semibold text-neutral-900 hover:text-yellow-600 transition-colors"
-                        >
-                            Ver todos los avisos
-                        </Link>
-                    </div>
-                </div>
+            {unread > 0 && (
+                <span className="absolute -right-1 -top-1 rounded-full bg-yellow-400 px-1.5 py-0.5 text-xs font-bold text-black min-w-[1.25rem]">
+                    {unread}
+                </span>
             )}
-        </div>
+        </button>
     );
 }
-
