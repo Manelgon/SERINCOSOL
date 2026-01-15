@@ -513,7 +513,7 @@ export default function MorosidadPage() {
                             <label className="block text-sm font-medium text-gray-700 mb-1">Comunidad</label>
                             <select
                                 required
-                                className="w-full px-3 py-2 border rounded-lg bg-white"
+                                className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 disabled:bg-neutral-100"
                                 value={formData.comunidad_id}
                                 onChange={e => setFormData({ ...formData, comunidad_id: e.target.value })}
                             >
@@ -529,7 +529,7 @@ export default function MorosidadPage() {
                             <input
                                 required
                                 type="text"
-                                className="w-full px-3 py-2 border rounded-lg"
+                                className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
                                 value={formData.nombre_deudor}
                                 onChange={e => setFormData({ ...formData, nombre_deudor: e.target.value })}
                             />
@@ -539,7 +539,7 @@ export default function MorosidadPage() {
                             <label className="block text-sm font-medium text-gray-700 mb-1">Apellidos</label>
                             <input
                                 type="text"
-                                className="w-full px-3 py-2 border rounded-lg"
+                                className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
                                 value={formData.apellidos}
                                 onChange={e => setFormData({ ...formData, apellidos: e.target.value })}
                             />
@@ -549,7 +549,7 @@ export default function MorosidadPage() {
                             <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
                             <input
                                 type="tel"
-                                className="w-full px-3 py-2 border rounded-lg"
+                                className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
                                 value={formData.telefono_deudor}
                                 onChange={e => setFormData({ ...formData, telefono_deudor: e.target.value })}
                             />
@@ -559,7 +559,7 @@ export default function MorosidadPage() {
                             <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                             <input
                                 type="email"
-                                className="w-full px-3 py-2 border rounded-lg"
+                                className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
                                 value={formData.email_deudor}
                                 onChange={e => setFormData({ ...formData, email_deudor: e.target.value })}
                             />
@@ -571,7 +571,7 @@ export default function MorosidadPage() {
                                 required
                                 type="text"
                                 placeholder="Ej. Recibo de Comunidad"
-                                className="w-full px-3 py-2 border rounded-lg"
+                                className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
                                 value={formData.titulo_documento}
                                 onChange={e => setFormData({ ...formData, titulo_documento: e.target.value })}
                             />
@@ -581,7 +581,7 @@ export default function MorosidadPage() {
                             <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Notificación</label>
                             <input
                                 type="date"
-                                className="w-full px-3 py-2 border rounded-lg"
+                                className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
                                 value={formData.fecha_notificacion}
                                 onChange={e => setFormData({ ...formData, fecha_notificacion: e.target.value })}
                             />
@@ -593,7 +593,7 @@ export default function MorosidadPage() {
                                 required
                                 type="number"
                                 step="0.01"
-                                className="w-full px-3 py-2 border rounded-lg"
+                                className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
                                 value={formData.importe}
                                 onChange={e => setFormData({ ...formData, importe: e.target.value })}
                             />
@@ -602,7 +602,7 @@ export default function MorosidadPage() {
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Gestor</label>
                             <select
-                                className="w-full px-3 py-2 border rounded-lg bg-white"
+                                className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 disabled:bg-neutral-100"
                                 value={formData.gestor}
                                 onChange={e => setFormData({ ...formData, gestor: e.target.value })}
                             >
@@ -619,7 +619,7 @@ export default function MorosidadPage() {
                             <label className="block text-sm font-medium text-gray-700 mb-1">Observaciones</label>
                             <textarea
                                 rows={3}
-                                className="w-full px-3 py-2 border rounded-lg"
+                                className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
                                 value={formData.observaciones}
                                 onChange={e => setFormData({ ...formData, observaciones: e.target.value })}
                             />

@@ -230,13 +230,15 @@ export async function buildFacturaVariosPdf(
     const ciudad = txt(payload["ciudad"] ?? payload["Ciudad"] ?? "");
     const provincia = txt(payload["provincia"] ?? payload["Provincia"] ?? "");
     const nif = txt(payload["nif"] ?? payload["NIF"] ?? "");
+    const nombreApellidos = txt(payload["nombre_apellidos"] ?? "");
 
     const clienteLines = [
-        cliente,
+        // cliente, // Removed as per user request (Community Name should not appear)
+        nombreApellidos,
         domicilio,
         `${cp} ${ciudad} ${provincia}`.trim(),
         `NIF: ${nif}`.trim(),
-    ];
+    ].filter(Boolean);
 
     // Left Block (Emisor)
     const leftBlock = drawYellowBlock({
@@ -498,7 +500,8 @@ export async function buildPagosAlDiaPdf(payload: any, assets: { logoBytes: Uint
     // 3) Construcción texto (usa tus campos reales)
 
     const comunidad = safe(payload["nombre_comunidad"] ?? payload["cliente"] ?? "________________");
-    const cliente = safe(payload["propietario"] ?? payload["cliente"] ?? "________________");
+    const cliente = safe(payload["nombre_apellidos"] ?? payload["cliente"] ?? "________________");
+    const tipoInmueble = safe(payload["tipo_inmueble"] || "inmueble");
 
     const nif = safe(payload["nif"] ?? "");
     const domicilio = safe(payload["domicilio"] ?? "");
@@ -513,9 +516,9 @@ export async function buildPagosAlDiaPdf(payload: any, assets: { logoBytes: Uint
 
     const p2 =
         `Que, consultados los libros contables de la mencionada comunidad de propietarios, D./Dª ${cliente}, ` +
-        `con DNI/NIF ${nif}, figura como propietario/a del inmueble situado en ${domicilio}, ` +
+        `con DNI/NIF ${nif}, figura como propietario/a del ${tipoInmueble} situado en ${domicilio}, ` +
         `código postal ${cp}, en la ciudad de ${ciudad}, certifico, en base al art. 9.1 e) de la Ley 49/1960, ` +
-        `de 21 de Julio, de Propiedad Horizontal, que el inmueble se encuentra, a día de hoy, al corriente de pago de todos los recibos ordinarios ` +
+        `de 21 de Julio, de Propiedad Horizontal, que el ${tipoInmueble} se encuentra, a día de hoy, al corriente de pago de todos los recibos ordinarios ` +
         `o extraordinarios de cuotas de comunidad, salvo devolución bancaria en plazo excepcional.`;
 
     // 4) Render texto con cursor y wrap, respetando footer safe

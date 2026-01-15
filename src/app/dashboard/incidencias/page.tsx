@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { Plus, Check, RotateCcw, Paperclip, Trash2, X } from 'lucide-react';
 import DataTable, { Column } from '@/components/DataTable';
+import SearchableSelect from '@/components/SearchableSelect';
 import { logActivity } from '@/lib/logActivity';
 
 interface Incidencia {
@@ -65,6 +66,24 @@ export default function IncidenciasPage() {
 
     useEffect(() => {
         fetchInitialData();
+
+        // Subscribe to real-time changes
+        const channel = supabase
+            .channel('incidencias-realtime')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'incidencias' },
+                () => {
+                    // Re-fetch all data to ensure joined fields (profiles, etc.) are correct.
+                    // This is simpler and safer than manually merging updates with joined data.
+                    fetchIncidencias();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, []);
 
     const fetchInitialData = async () => {
@@ -79,7 +98,7 @@ export default function IncidenciasPage() {
     };
 
     const fetchComunidades = async () => {
-        const { data } = await supabase.from('comunidades').select('id, nombre_cdad');
+        const { data } = await supabase.from('comunidades').select('id, nombre_cdad, codigo');
         if (data) setComunidades(data);
     };
 
@@ -158,7 +177,7 @@ export default function IncidenciasPage() {
                 // @ts-ignore
                 adjuntos: adjuntos,
                 // @ts-ignore
-                gestor_asignado: formData.gestor_asignado ? profiles.find(p => p.nombre === formData.gestor_asignado)?.user_id : null
+                gestor_asignado: formData.gestor_asignado || null
             }]).select();
 
             if (error) throw error;
@@ -196,9 +215,9 @@ export default function IncidenciasPage() {
                 webhookPayload.append('comunidad_nombre', comunidad?.nombre_cdad || '');
 
                 // Gestor Asignado: UUID and Name
-                const gestorObj = formData.gestor_asignado ? profiles.find(p => p.nombre === formData.gestor_asignado) : null;
-                webhookPayload.append('gestor_asignado', gestorObj?.user_id || '');
-                webhookPayload.append('gestor_asignado_nombre', formData.gestor_asignado || '');
+                const gestorObj = profiles.find(p => p.user_id === formData.gestor_asignado);
+                webhookPayload.append('gestor_asignado', formData.gestor_asignado || '');
+                webhookPayload.append('gestor_asignado_nombre', gestorObj?.nombre || '');
 
                 // Recibido Por: UUID and Name
                 const receptorObj = profiles.find(p => p.user_id === formData.recibido_por);
@@ -539,16 +558,15 @@ export default function IncidenciasPage() {
                         {/* Row 1: Quien lo recibe */}
                         <div className="md:col-span-2">
                             <label className="block text-sm font-medium text-gray-700 mb-1">Quién lo recibe</label>
-                            <select
-                                className="w-full px-3 py-2 border rounded-lg bg-white"
+                            <SearchableSelect
                                 value={formData.recibido_por}
-                                onChange={e => setFormData({ ...formData, recibido_por: e.target.value })}
-                            >
-                                <option value="">Selecciona quién recibe...</option>
-                                {profiles.map(p => (
-                                    <option key={p.user_id} value={p.user_id}>{p.nombre}</option>
-                                ))}
-                            </select>
+                                onChange={(val) => setFormData({ ...formData, recibido_por: String(val) })}
+                                options={profiles.map(p => ({
+                                    value: p.user_id,
+                                    label: p.nombre
+                                }))}
+                                placeholder="Buscar persona..."
+                            />
                         </div>
 
                         {/* Row 2: Teléfono | Nombre Cliente */}
@@ -556,7 +574,7 @@ export default function IncidenciasPage() {
                             <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono Cliente</label>
                             <input
                                 type="tel"
-                                className="w-full px-3 py-2 border rounded-lg"
+                                className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
                                 value={formData.telefono}
                                 onChange={e => setFormData({ ...formData, telefono: e.target.value })}
                             />
@@ -566,7 +584,7 @@ export default function IncidenciasPage() {
                             <input
                                 required
                                 type="text"
-                                className="w-full px-3 py-2 border rounded-lg"
+                                className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
                                 value={formData.nombre_cliente}
                                 onChange={e => setFormData({ ...formData, nombre_cliente: e.target.value })}
                             />
@@ -575,17 +593,15 @@ export default function IncidenciasPage() {
                         {/* Row 3: Comunidad */}
                         <div className="md:col-span-2">
                             <label className="block text-sm font-medium text-gray-700 mb-1">Comunidad</label>
-                            <select
-                                required
-                                className="w-full px-3 py-2 border rounded-lg bg-white"
+                            <SearchableSelect
                                 value={formData.comunidad_id}
-                                onChange={e => setFormData({ ...formData, comunidad_id: e.target.value })}
-                            >
-                                <option value="">Selecciona una comunidad...</option>
-                                {comunidades.map(cd => (
-                                    <option key={cd.id} value={cd.id}>{cd.nombre_cdad}</option>
-                                ))}
-                            </select>
+                                onChange={(val) => setFormData({ ...formData, comunidad_id: String(val) })}
+                                options={comunidades.map(cd => ({
+                                    value: String(cd.id),
+                                    label: cd.codigo ? `${cd.codigo} - ${cd.nombre_cdad}` : cd.nombre_cdad
+                                }))}
+                                placeholder="Buscar comunidad par nombre o código..."
+                            />
                         </div>
 
                         {/* Row 4: Email */}
@@ -593,7 +609,7 @@ export default function IncidenciasPage() {
                             <label className="block text-sm font-medium text-gray-700 mb-1">Email Cliente</label>
                             <input
                                 type="email"
-                                className="w-full px-3 py-2 border rounded-lg"
+                                className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
                                 value={formData.email}
                                 onChange={e => setFormData({ ...formData, email: e.target.value })}
                             />
@@ -605,7 +621,7 @@ export default function IncidenciasPage() {
                             <textarea
                                 required
                                 rows={3}
-                                className="w-full px-3 py-2 border rounded-lg"
+                                className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
                                 value={formData.mensaje}
                                 onChange={e => setFormData({ ...formData, mensaje: e.target.value })}
                             />
@@ -616,16 +632,15 @@ export default function IncidenciasPage() {
                         {/* Row 6: Gestor Asignado */}
                         <div className="md:col-span-2">
                             <label className="block text-sm font-medium text-gray-700 mb-1">Gestor Asignado</label>
-                            <select
-                                className="w-full px-3 py-2 border rounded-lg bg-white"
+                            <SearchableSelect
                                 value={formData.gestor_asignado}
-                                onChange={e => setFormData({ ...formData, gestor_asignado: e.target.value })}
-                            >
-                                <option value="">Selecciona un gestor...</option>
-                                {profiles.map(p => (
-                                    <option key={p.user_id} value={p.nombre}>{p.nombre} ({p.rol})</option>
-                                ))}
-                            </select>
+                                onChange={(val) => setFormData({ ...formData, gestor_asignado: String(val) })}
+                                options={profiles.map(p => ({
+                                    value: p.user_id,
+                                    label: `${p.nombre} (${p.rol})`
+                                }))}
+                                placeholder="Buscar un gestor..."
+                            />
                         </div>
 
                         {/* Row 7: Proveedor (Placeholder) */}
@@ -633,7 +648,7 @@ export default function IncidenciasPage() {
                             <label className="block text-sm font-medium text-gray-700 mb-1">Enviar email a Proveedor</label>
                             <select
                                 disabled
-                                className="w-full px-3 py-2 border rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
+                                className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100 cursor-not-allowed"
                                 value={formData.proveedor}
                                 onChange={e => setFormData({ ...formData, proveedor: e.target.value })}
                             >

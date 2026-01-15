@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { Home, Building, AlertCircle, FileText, LogOut, Activity, Users, Clock, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import NotificationsBell from '@/components/NotificationsBell';
 
 interface SidebarProps {
     isOpen: boolean;
@@ -40,6 +41,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         { name: 'Morosidad', href: '/dashboard/morosidad', icon: FileText },
         { name: 'Fichaje', href: '/dashboard/fichaje', icon: Clock },
         { name: 'Documentos', href: '/dashboard/documentos', icon: FileText },
+        { name: 'Avisos', href: '/dashboard/avisos', icon: AlertCircle },
         ...(isAdmin ? [
             { name: 'Actividad', href: '/dashboard/actividad', icon: Activity },
             { name: 'Perfiles', href: '/dashboard/perfiles', icon: Users }
@@ -71,6 +73,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     <h1 className="text-sm font-bold tracking-wide text-yellow-400">
                         SERINCOSOL PANEL
                     </h1>
+                    <div className="md:block hidden">
+                        <NotificationsBell align="left" />
+                    </div>
                     <button
                         onClick={onClose}
                         className="md:hidden text-white/80 hover:text-white p-1"

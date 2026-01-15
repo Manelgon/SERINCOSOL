@@ -20,7 +20,7 @@ export default function VariosForm() {
     const [values, setValues] = useState<Record<string, any>>({
         // Inicializar filas vacías
         fecha_emision: new Date().toISOString().split('T')[0],
-        iva1: 0, iva2: 0, iva3: 0
+        // iva1: 0, iva2: 0, iva3: 0  <-- REMOVED default initialization with 0
     });
     const [status, setStatus] = useState<"idle" | "generating" | "ready" | "error">("idle");
     const [pdfUrls, setPdfUrls] = useState<{ factura: string; certificado: string } | null>(null);
@@ -70,7 +70,7 @@ export default function VariosForm() {
             if (comunidad) {
                 Object.assign(next, {
                     cliente: comunidad.nombre_cdad,
-                    nif: comunidad.cif,
+                    // nif: comunidad.cif,  <-- REMOVED as per user request
                     domicilio: comunidad.direccion,
                     cp: comunidad.cp,
                     ciudad: comunidad.ciudad,
@@ -207,7 +207,7 @@ export default function VariosForm() {
                             disabled={isDisabled}
                             value={values.codigo || ""}
                             onChange={(e) => handleCommunityChange(e.target.value)}
-                            className="w-full mt-1 border rounded p-2 text-sm bg-white"
+                            className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 appearance-none disabled:bg-neutral-100"
                         >
                             <option value="">Seleccionar código</option>
                             {communities.map((c) => (
@@ -219,38 +219,97 @@ export default function VariosForm() {
                     </label>
                     <label className="block">
                         <span className="text-sm font-medium text-gray-700">Cliente / Comunidad</span>
-                        <input disabled={isDisabled} type="text" className="w-full mt-1 border rounded p-2 text-sm"
-                            value={values.cliente || ""} onChange={e => handleChange("cliente", e.target.value)} />
+                        <input
+                            disabled={isDisabled}
+                            type="text"
+                            className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
+                            value={values.cliente || ""}
+                            onChange={e => handleChange("cliente", e.target.value)}
+                        />
+                    </label>
+                    <label className="block">
+                        <span className="text-sm font-medium text-gray-700">Nombre y Apellidos</span>
+                        <input
+                            disabled={isDisabled}
+                            type="text"
+                            className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
+                            value={values.nombre_apellidos || ""}
+                            onChange={e => handleChange("nombre_apellidos", e.target.value)}
+                        />
+                    </label>
+                    <label className="block">
+                        <span className="text-sm font-medium text-gray-700">Tipo Inmueble</span>
+                        <select
+                            disabled={isDisabled}
+                            className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 appearance-none disabled:bg-neutral-100"
+                            value={values.tipo_inmueble || ""}
+                            onChange={(e) => handleChange("tipo_inmueble", e.target.value)}
+                        >
+                            <option value="">Seleccionar tipo...</option>
+                            <option value="Vivienda">Vivienda</option>
+                            <option value="Trastero">Trastero</option>
+                            <option value="Aparcamiento">Aparcamiento</option>
+                        </select>
                     </label>
                     <label className="block">
                         <span className="text-sm font-medium text-gray-700">NIF</span>
-                        <input disabled={isDisabled} type="text" className="w-full mt-1 border rounded p-2 text-sm"
-                            value={values.nif || ""} onChange={e => handleChange("nif", e.target.value)} />
+                        <input
+                            disabled={isDisabled}
+                            type="text"
+                            className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
+                            value={values.nif || ""}
+                            onChange={e => handleChange("nif", e.target.value)}
+                        />
                     </label>
                     <label className="block">
                         <span className="text-sm font-medium text-gray-700">Domicilio</span>
-                        <input disabled={isDisabled} type="text" className="w-full mt-1 border rounded p-2 text-sm"
-                            value={values.domicilio || ""} onChange={e => handleChange("domicilio", e.target.value)} />
+                        <input
+                            disabled={isDisabled}
+                            type="text"
+                            className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
+                            value={values.domicilio || ""}
+                            onChange={e => handleChange("domicilio", e.target.value)}
+                        />
                     </label>
                     <label className="block">
                         <span className="text-sm font-medium text-gray-700">C.P</span>
-                        <input disabled={isDisabled} type="text" className="w-full mt-1 border rounded p-2 text-sm"
-                            value={values.cp || ""} onChange={e => handleChange("cp", e.target.value)} />
+                        <input
+                            disabled={isDisabled}
+                            type="text"
+                            className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
+                            value={values.cp || ""}
+                            onChange={e => handleChange("cp", e.target.value)}
+                        />
                     </label>
                     <label className="block">
                         <span className="text-sm font-medium text-gray-700">Ciudad</span>
-                        <input disabled={isDisabled} type="text" className="w-full mt-1 border rounded p-2 text-sm"
-                            value={values.ciudad || ""} onChange={e => handleChange("ciudad", e.target.value)} />
+                        <input
+                            disabled={isDisabled}
+                            type="text"
+                            className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
+                            value={values.ciudad || ""}
+                            onChange={e => handleChange("ciudad", e.target.value)}
+                        />
                     </label>
                     <label className="block">
                         <span className="text-sm font-medium text-gray-700">Provincia</span>
-                        <input disabled={isDisabled} type="text" className="w-full mt-1 border rounded p-2 text-sm"
-                            value={values.provincia || ""} onChange={e => handleChange("provincia", e.target.value)} />
+                        <input
+                            disabled={isDisabled}
+                            type="text"
+                            className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
+                            value={values.provincia || ""}
+                            onChange={e => handleChange("provincia", e.target.value)}
+                        />
                     </label>
                     <label className="block">
                         <span className="text-sm font-medium text-gray-700">Fecha Emisión</span>
-                        <input disabled={isDisabled} type="date" className="w-full mt-1 border rounded p-2 text-sm"
-                            value={values.fecha_emision || ""} onChange={e => handleChange("fecha_emision", e.target.value)} />
+                        <input
+                            disabled={isDisabled}
+                            type="date"
+                            className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
+                            value={values.fecha_emision || ""}
+                            onChange={e => handleChange("fecha_emision", e.target.value)}
+                        />
                     </label>
                 </div>
             </div>
@@ -263,28 +322,53 @@ export default function VariosForm() {
                     <div key={i} className="grid grid-cols-12 gap-2 items-center bg-gray-50 p-3 rounded">
                         <div className="col-span-1">
                             <label className="text-xs text-gray-500">Und</label>
-                            <input disabled={isDisabled} type="number" className="w-full border rounded p-1 text-sm"
-                                value={values[`und${i}`] || 0} onChange={e => handleChange(`und${i}`, e.target.value)} />
+                            <input
+                                disabled={isDisabled}
+                                type="number"
+                                className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
+                                value={values[`und${i}`] || ""}
+                                onChange={e => handleChange(`und${i}`, e.target.value)}
+                            />
                         </div>
                         <div className="col-span-5">
                             <label className="text-xs text-gray-500">Descripción {i}</label>
-                            <input disabled={isDisabled} type="text" className="w-full border rounded p-1 text-sm"
-                                value={values[`descripcion${i}`] || ""} onChange={e => handleChange(`descripcion${i}`, e.target.value)} />
+                            <input
+                                disabled={isDisabled}
+                                type="text"
+                                className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
+                                value={values[`descripcion${i}`] || ""}
+                                onChange={e => handleChange(`descripcion${i}`, e.target.value)}
+                            />
                         </div>
                         <div className="col-span-2">
                             <label className="text-xs text-gray-500">Importe</label>
-                            <input disabled={isDisabled} type="number" className="w-full border rounded p-1 text-sm"
-                                value={values[`importe${i}`] || 0} onChange={e => handleChange(`importe${i}`, e.target.value)} />
+                            <input
+                                disabled={isDisabled}
+                                type="number"
+                                className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
+                                value={values[`importe${i}`] || ""}
+                                onChange={e => handleChange(`importe${i}`, e.target.value)}
+                            />
                         </div>
                         <div className="col-span-1">
                             <label className="text-xs text-gray-500">IVA%</label>
-                            <input disabled={isDisabled} type="number" className="w-full border rounded p-1 text-sm"
-                                value={values[`iva${i}`] ?? 0} onChange={e => handleChange(`iva${i}`, e.target.value)} />
+                            <input
+                                disabled={isDisabled}
+                                type="number"
+                                className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
+                                value={values[`iva${i}`] ?? ""}
+                                onChange={e => handleChange(`iva${i}`, e.target.value)}
+                            />
                         </div>
                         <div className="col-span-3">
                             <label className="text-xs text-gray-500">Total (Auto)</label>
-                            <input disabled readOnly type="text" className="w-full bg-gray-100 border rounded p-1 text-sm text-right font-medium"
-                                value={values[`suma${i}`] || 0} />
+                            <input
+                                disabled
+                                readOnly
+                                type="text"
+                                className="w-full rounded-lg border border-neutral-200 bg-neutral-100 px-3 py-2 text-sm text-right font-medium text-neutral-500 focus:outline-none"
+                                value={values[`suma${i}`] || 0}
+                            />
                         </div>
                     </div>
                 ))}

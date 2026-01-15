@@ -135,14 +135,14 @@ const compute = (vals: Record<string, any>) => {
 
 export default function SuplidosForm() {
     const [values, setValues] = useState<Record<string, any>>({
-        "Número de Cartas": 0,
-        "Copias": 0,
-        "Cantidad Sobre normal": 0,
-        "Cantidad Sobre A5": 0,
-        "Papel corporativo": 0,
-        "Etiqueta manipulación": 0,
-        "Imprimir B/N": 0,
-        "Franqueo postal": 0,
+        "Número de Cartas": "",
+        "Copias": "",
+        "Cantidad Sobre normal": "",
+        "Cantidad Sobre A5": "",
+        "Papel corporativo": "",
+        "Etiqueta manipulación": "", // Computed/Locked, but init as empty or 0 is fine. Let's start empty.
+        "Imprimir B/N": "",         // Computed/Locked.
+        "Franqueo postal": "",
     });
     const [status, setStatus] = useState<Status>("idle");
     const [pdfUrl, setPdfUrl] = useState<string>("");
@@ -251,6 +251,8 @@ export default function SuplidosForm() {
             if (label === "Número de Cartas" || label === "Copias") {
                 // AUTOMATION REQUESTED: Imprimir B/N = Total Copias
                 next["Imprimir B/N"] = totalCopias;
+                // AUTOMATION REQUESTED: Etiqueta manipulación = Total Copias
+                next["Etiqueta manipulación"] = totalCopias;
             }
 
             /*
@@ -279,7 +281,11 @@ export default function SuplidosForm() {
 
         try {
             // Ensure all calculated fields are up-to-date before sending
-            const payload = { ...values, ...compute(values) };
+            const rawPayload = { ...values, ...compute(values) };
+            // Sanitize: convert empty strings to 0 for the API
+            const payload = Object.fromEntries(
+                Object.entries(rawPayload).map(([k, v]) => [k, v === "" ? 0 : v])
+            );
 
             const res = await fetch("/api/documentos/suplidos/generate", {
                 method: "POST",
@@ -557,11 +563,11 @@ export default function SuplidosForm() {
                                     <td className="px-4 py-3 font-medium text-neutral-900">{row.label}</td>
                                     <td className="px-4 py-3">
                                         <input
-                                            disabled={isDisabled}
+                                            disabled={isDisabled || row.qty === "Imprimir B/N" || row.qty === "Etiqueta manipulación"} // LOCKED fields
                                             type="number"
                                             value={values[row.qty]}
                                             onChange={(e) => onChange(row.qty, e.target.value, "number")}
-                                            className="w-full rounded border border-neutral-200 px-2 py-1.5 focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
+                                            className={`w-full rounded border border-neutral-200 px-2 py-1.5 focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100 disabled:text-neutral-500 disabled:cursor-not-allowed`}
                                         />
                                     </td>
                                     <td className="px-4 py-3">

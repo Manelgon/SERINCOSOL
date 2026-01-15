@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { FileText, Settings } from 'lucide-react';
+import { FileText, Settings, History } from 'lucide-react';
 import { supabaseServer } from '@/lib/supabase/server';
 
 export default async function DocumentosPage() {
@@ -23,6 +23,7 @@ export default async function DocumentosPage() {
             desc: "Genera el documento de suplidos en PDF (descargar / enviar).",
             href: "/dashboard/documentos/suplidos",
             settingsHref: "/dashboard/documentos/ajustes",
+            historyHref: "/dashboard/documentos/suplidos/historial",
             available: true,
         },
         {
@@ -31,6 +32,7 @@ export default async function DocumentosPage() {
             desc: "Certificado de imputación de rentas (datos económicos y fiscales).",
             href: "/dashboard/documentos/certificado-renta",
             settingsHref: "#",
+            historyHref: "/dashboard/documentos/certificado-renta/historial",
             available: true,
         },
         {
@@ -39,6 +41,7 @@ export default async function DocumentosPage() {
             desc: "Genera facturas varias y certificado de pagos al día en un único PDF.",
             href: "/dashboard/documentos/varios",
             settingsHref: "#",
+            historyHref: "/dashboard/documentos/varios/historial",
             available: true,
         },
     ];
@@ -69,16 +72,29 @@ export default async function DocumentosPage() {
                                 <p className="mt-2 text-sm text-neutral-600">{doc.desc}</p>
                             </div>
 
-                            {/* Settings Icon (Only for Admin) */}
-                            {isAdmin && doc.available && (
-                                <Link
-                                    href={doc.settingsHref}
-                                    title="Ajustes de precios"
-                                    className="p-1.5 rounded-full text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 transition"
-                                >
-                                    <Settings className="w-5 h-5" />
-                                </Link>
-                            )}
+                            <div className="flex items-center gap-1">
+                                {/* History Icon */}
+                                {doc.available && doc.historyHref && (
+                                    <Link
+                                        href={doc.historyHref}
+                                        title="Historial de documentos"
+                                        className="p-1.5 rounded-full text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 transition"
+                                    >
+                                        <History className="w-5 h-5" />
+                                    </Link>
+                                )}
+
+                                {/* Settings Icon (Only for Admin) */}
+                                {isAdmin && doc.available && (
+                                    <Link
+                                        href={doc.settingsHref}
+                                        title="Ajustes de precios"
+                                        className="p-1.5 rounded-full text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 transition"
+                                    >
+                                        <Settings className="w-5 h-5" />
+                                    </Link>
+                                )}
+                            </div>
                         </div>
 
                         <div className="mt-6">
