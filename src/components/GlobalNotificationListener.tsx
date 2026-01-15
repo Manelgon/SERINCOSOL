@@ -7,10 +7,16 @@ import { Bell } from 'lucide-react';
 
 export default function GlobalNotificationListener() {
     const audioRef = useRef<HTMLAudioElement | null>(null);
+    const userIdRef = useRef<string | null>(null);
 
     useEffect(() => {
         // Pre-load audio
         audioRef.current = new Audio('/sounds/notification.mp3');
+
+        // Fetch user once
+        supabase.auth.getUser().then(({ data }) => {
+            userIdRef.current = data.user?.id || null;
+        });
 
         // Setup listener
         const channel = supabase
@@ -21,15 +27,21 @@ export default function GlobalNotificationListener() {
                 async (payload) => {
                     const newNoti = payload.new as any;
 
-                    // Verify if it's for current user
-                    const { data: { user } } = await supabase.auth.getUser();
-                    if (!user || user.id !== newNoti.user_id) return;
+                    // Verify if it's for current user using ref
+                    if (!userIdRef.current || userIdRef.current !== newNoti.user_id) return;
 
                     // Play sound
                     try {
                         if (audioRef.current) {
                             audioRef.current.currentTime = 0;
-                            await audioRef.current.play();
+                            // User interaction requirement might block this, but for internal dashboards often works
+                            // if the user has interacted with the document at least once.
+                            const playPromise = audioRef.current.play();
+                            if (playPromise !== undefined) {
+                                playPromise.catch((error) => {
+                                    console.log("Audio play blocked (user interation needed):", error);
+                                });
+                            }
                         }
                     } catch (e) {
                         console.error("Audio play failed", e);
@@ -37,7 +49,7 @@ export default function GlobalNotificationListener() {
 
                     // Show custom toast
                     toast((t) => (
-                        <div className="flex items-start gap-3 w-full max-w-sm">
+                        <div className="flex items-start gap-3 w-full max-w-sm pointer-events-auto">
                             <div className="flex-shrink-0 pt-0.5">
                                 <div className="h-8 w-8 rounded-full bg-yellow-100 flex items-center justify-center">
                                     <Bell className="h-5 w-5 text-yellow-600" />
