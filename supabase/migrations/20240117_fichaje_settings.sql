@@ -1,4 +1,5 @@
 -- Update function to return details of closed sessions
+drop function if exists public.auto_close_stale_sessions();
 create or replace function public.auto_close_stale_sessions()
 returns table(id bigint, user_id uuid, start_at timestamptz)
 language plpgsql
