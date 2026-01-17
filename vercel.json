@@ -2,7 +2,7 @@
     "crons": [
         {
             "path": "/api/cron/fichaje-autoclose",
-            "schedule": "*/10 * * * *"
+            "schedule": "0 17 * * *"
         }
     ]
 }

@@ -49,7 +49,8 @@ export default function FichajeAdminPage() {
     const [settings, setSettings] = useState({
         auto_close_enabled: true,
         max_hours_duration: 12,
-        max_minutes_duration: 0
+        max_minutes_duration: 0,
+        daily_execution_hour: 17
     });
     const [savingSettings, setSavingSettings] = useState(false);
 
@@ -92,7 +93,8 @@ export default function FichajeAdminPage() {
             setSettings({
                 auto_close_enabled: data.auto_close_enabled,
                 max_hours_duration: data.max_hours_duration,
-                max_minutes_duration: data.max_minutes_duration
+                max_minutes_duration: data.max_minutes_duration,
+                daily_execution_hour: data.daily_execution_hour ?? 17
             });
         }
     };
@@ -105,6 +107,7 @@ export default function FichajeAdminPage() {
                 auto_close_enabled: settings.auto_close_enabled,
                 max_hours_duration: settings.max_hours_duration,
                 max_minutes_duration: settings.max_minutes_duration,
+                daily_execution_hour: settings.daily_execution_hour,
                 updated_at: new Date().toISOString()
             })
             .eq('id', 1); // Singleton
@@ -329,7 +332,7 @@ export default function FichajeAdminPage() {
                     <Clock className="w-5 h-5 text-neutral-600" />
                     <h2 className="font-semibold text-neutral-900">Ajustes de Auto-Cierre</h2>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-6 items-end">
                     <div className="flex items-center gap-2">
                         <label className="flex items-center cursor-pointer gap-2">
                             <input
@@ -340,6 +343,17 @@ export default function FichajeAdminPage() {
                             />
                             <span className="text-sm font-medium text-gray-700">Activar Auto-Cierre</span>
                         </label>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Hora Ejecución (0-23h)</label>
+                        <input
+                            type="number"
+                            min="0"
+                            max="23"
+                            className="w-full px-3 py-2 border rounded-lg text-sm"
+                            value={settings.daily_execution_hour}
+                            onChange={(e) => setSettings({ ...settings, daily_execution_hour: parseInt(e.target.value) || 0 })}
+                        />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Max. Horas</label>
@@ -374,7 +388,7 @@ export default function FichajeAdminPage() {
                     </div>
                 </div>
                 <p className="text-xs text-gray-500 mt-2">
-                    Si una sesión excede este tiempo sin cerrarse, el sistema la cerrará automáticamente con esta duración y añadirá una nota.
+                    El sistema comprobará los fichajes <strong>1 vez al día a las {settings.daily_execution_hour}:00h</strong>. Si encuentra sesiones que excedan <strong>{settings.max_hours_duration}h {settings.max_minutes_duration}m</strong>, las cerrará automáticamente.
                 </p>
             </div>
 
