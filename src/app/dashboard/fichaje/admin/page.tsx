@@ -41,6 +41,10 @@ export default function FichajeAdminPage() {
     const [filterDateFrom, setFilterDateFrom] = useState('');
     const [filterDateTo, setFilterDateTo] = useState('');
 
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
+    const [sessionToClose, setSessionToClose] = useState<string | null>(null);
+    const [isClosing, setIsClosing] = useState(false);
+
     const [settings, setSettings] = useState({
         auto_close_enabled: true,
         max_hours_duration: 12,
@@ -141,11 +145,17 @@ export default function FichajeAdminPage() {
         }
     };
 
-    const handleAdminClockOut = async (userId: string) => {
-        if (!confirm('¿Estás seguro de cerrar la sesión de este usuario?')) return;
+    const handleAdminClockOut = (userId: string) => {
+        setSessionToClose(userId);
+        setShowConfirmModal(true);
+    };
 
+    const handleConfirmClose = async () => {
+        if (!sessionToClose) return;
+
+        setIsClosing(true);
         const { error } = await supabase.rpc('admin_clock_out', {
-            _user_id: userId
+            _user_id: sessionToClose
         });
 
         if (error) {
@@ -153,7 +163,10 @@ export default function FichajeAdminPage() {
         } else {
             toast.success('Sesión cerrada correctamente');
             fetchEntries();
+            setShowConfirmModal(false);
+            setSessionToClose(null);
         }
+        setIsClosing(false);
     };
 
     const formatDuration = (start: string, end: string | null) => {
@@ -475,6 +488,46 @@ export default function FichajeAdminPage() {
                 loading={loading}
                 emptyMessage="No hay fichajes que coincidan con los filtros"
             />
+
+            {/* CONFIRMATION MODAL */}
+            {showConfirmModal && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 relative">
+                        <button
+                            onClick={() => setShowConfirmModal(false)}
+                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+
+                        <div className="mb-6 text-center">
+                            <div className="mx-auto w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                                <Clock className="w-6 h-6 text-red-600" />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900">Confirmar Cierre</h3>
+                            <p className="text-sm text-gray-500 mt-2">
+                                ¿Estás seguro de cerrar manualmente esta sesión? Se registrará la hora actual como salida.
+                            </p>
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowConfirmModal(false)}
+                                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleConfirmClose}
+                                disabled={isClosing}
+                                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition shadow-sm disabled:opacity-50"
+                            >
+                                {isClosing ? 'Cerrando...' : 'Cerrar Sesión'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
