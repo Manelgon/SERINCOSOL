@@ -41,6 +41,13 @@ export default function FichajeAdminPage() {
     const [filterDateFrom, setFilterDateFrom] = useState('');
     const [filterDateTo, setFilterDateTo] = useState('');
 
+    const [settings, setSettings] = useState({
+        auto_close_enabled: true,
+        max_hours_duration: 12,
+        max_minutes_duration: 0
+    });
+    const [savingSettings, setSavingSettings] = useState(false);
+
     useEffect(() => {
         checkAdminAndFetch();
     }, []);
@@ -66,8 +73,44 @@ export default function FichajeAdminPage() {
 
     const fetchData = async () => {
         setLoading(true);
-        await Promise.all([fetchProfiles(), fetchEntries()]);
+        await Promise.all([fetchProfiles(), fetchEntries(), fetchSettings()]);
         setLoading(false);
+    };
+
+    const fetchSettings = async () => {
+        const { data, error } = await supabase
+            .from('fichaje_settings')
+            .select('*')
+            .single();
+
+        if (data) {
+            setSettings({
+                auto_close_enabled: data.auto_close_enabled,
+                max_hours_duration: data.max_hours_duration,
+                max_minutes_duration: data.max_minutes_duration
+            });
+        }
+    };
+
+    const saveSettings = async () => {
+        setSavingSettings(true);
+        const { error } = await supabase
+            .from('fichaje_settings')
+            .update({
+                auto_close_enabled: settings.auto_close_enabled,
+                max_hours_duration: settings.max_hours_duration,
+                max_minutes_duration: settings.max_minutes_duration,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', 1); // Singleton
+
+        if (error) {
+            toast.error('Error al guardar ajustes');
+            console.error(error);
+        } else {
+            toast.success('Ajustes guardados correctamente');
+        }
+        setSavingSettings(false);
     };
 
     const fetchProfiles = async () => {
@@ -95,6 +138,21 @@ export default function FichajeAdminPage() {
             console.error(error);
         } else {
             setEntries(data || []);
+        }
+    };
+
+    const handleAdminClockOut = async (userId: string) => {
+        if (!confirm('¿Estás seguro de cerrar la sesión de este usuario?')) return;
+
+        const { error } = await supabase.rpc('admin_clock_out', {
+            _user_id: userId
+        });
+
+        if (error) {
+            toast.error('Error al cerrar sesión: ' + error.message);
+        } else {
+            toast.success('Sesión cerrada correctamente');
+            fetchEntries();
         }
     };
 
@@ -178,9 +236,18 @@ export default function FichajeAdminPage() {
             render: (row) => row.end_at ? (
                 new Date(row.end_at).toLocaleTimeString('es-ES')
             ) : (
-                <span className="inline-flex items-center gap-2 px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-semibold">
-                    En curso
-                </span>
+                <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-semibold">
+                        En curso
+                    </span>
+                    <button
+                        onClick={() => handleAdminClockOut(row.user_id)}
+                        className="text-xs text-red-600 hover:text-red-800 underline"
+                        title="Cerrar sesión manualmente"
+                    >
+                        Cerrar
+                    </button>
+                </div>
             ),
         },
         {
@@ -227,6 +294,61 @@ export default function FichajeAdminPage() {
                     <Clock className="w-4 h-4" />
                     Volver a mi Fichaje
                 </a>
+            </div>
+
+            {/* SETTINGS PANEL */}
+            <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
+                <div className="flex items-center gap-2 mb-4 border-b pb-2">
+                    <Clock className="w-5 h-5 text-neutral-600" />
+                    <h2 className="font-semibold text-neutral-900">Ajustes de Auto-Cierre</h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
+                    <div className="flex items-center gap-2">
+                        <label className="flex items-center cursor-pointer gap-2">
+                            <input
+                                type="checkbox"
+                                className="w-5 h-5 text-yellow-500 rounded focus:ring-yellow-500"
+                                checked={settings.auto_close_enabled}
+                                onChange={(e) => setSettings({ ...settings, auto_close_enabled: e.target.checked })}
+                            />
+                            <span className="text-sm font-medium text-gray-700">Activar Auto-Cierre</span>
+                        </label>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Max. Horas</label>
+                        <input
+                            type="number"
+                            min="0"
+                            max="48"
+                            className="w-full px-3 py-2 border rounded-lg text-sm"
+                            value={settings.max_hours_duration}
+                            onChange={(e) => setSettings({ ...settings, max_hours_duration: parseInt(e.target.value) || 0 })}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Max. Minutos</label>
+                        <input
+                            type="number"
+                            min="0"
+                            max="59"
+                            className="w-full px-3 py-2 border rounded-lg text-sm"
+                            value={settings.max_minutes_duration}
+                            onChange={(e) => setSettings({ ...settings, max_minutes_duration: parseInt(e.target.value) || 0 })}
+                        />
+                    </div>
+                    <div>
+                        <button
+                            onClick={saveSettings}
+                            disabled={savingSettings}
+                            className="w-full bg-neutral-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-neutral-800 transition disabled:opacity-50"
+                        >
+                            {savingSettings ? 'Guardando...' : 'Guardar Ajustes'}
+                        </button>
+                    </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                    Si una sesión excede este tiempo sin cerrarse, el sistema la cerrará automáticamente con esta duración y añadirá una nota.
+                </p>
             </div>
 
             {/* Filters */}
