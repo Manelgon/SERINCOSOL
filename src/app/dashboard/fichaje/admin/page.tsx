@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { Users, Calendar, Filter, X, Clock } from 'lucide-react';
 import DataTable, { Column } from '@/components/DataTable';
+import { logActivity } from '@/lib/logActivity';
 
 interface TimeEntryWithProfile {
     id: number;
@@ -162,6 +163,19 @@ export default function FichajeAdminPage() {
             toast.error('Error al cerrar sesión: ' + error.message);
         } else {
             toast.success('Sesión cerrada correctamente');
+
+            // Log Activity
+            const entry = entries.find(e => e.user_id === sessionToClose && !e.end_at);
+            const userName = entry?.profiles?.nombre ? `${entry.profiles.nombre} ${entry.profiles.apellido || ''}` : 'Usuario';
+
+            await logActivity({
+                action: 'clock_out',
+                entityType: 'fichaje',
+                entityId: entry?.id || 0,
+                entityName: `Fichaje - ${userName}`,
+                details: { method: 'admin_forced', closed_user_id: sessionToClose }
+            });
+
             fetchEntries();
             setShowConfirmModal(false);
             setSessionToClose(null);
