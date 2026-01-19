@@ -53,13 +53,27 @@ export async function POST(req: Request) {
             const sendToWebhook = async (sub: any, type: string) => {
                 if (!sub) return;
                 try {
+                    // Download document
+                    const { data: fileBlob, error: downloadError } = await supabase.storage
+                        .from("documentos_administrativos")
+                        .download(sub.pdf_path);
+
+                    if (downloadError) {
+                        console.error(`Error downloading file for ${type}:`, downloadError);
+                    }
+
                     const formData = new FormData();
                     formData.append("to_email", toEmail);
                     formData.append("document_id", sub.id.toString());
                     formData.append("type", type);
-                    formData.append("filename", sub.pdf_path.split('/').pop() || `${type}.pdf`);
+                    const filename = sub.pdf_path.split('/').pop() || `${type}.pdf`;
+                    formData.append("filename", filename);
 
-                    // Send payload data instead of binary file
+                    if (fileBlob) {
+                        formData.append("file", fileBlob, filename);
+                    }
+
+                    // Send payload data (JSON)
                     formData.append("data", JSON.stringify(sub.payload));
 
                     await fetch(webhookUrl, {

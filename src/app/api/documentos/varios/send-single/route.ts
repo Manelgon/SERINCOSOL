@@ -38,13 +38,27 @@ export async function POST(req: Request) {
         const webhookUrl = process.env.EMAIL_WEBHOOK_URL;
         if (webhookUrl) {
             try {
+                // Download document
+                const { data: fileBlob, error: downloadError } = await supabase.storage
+                    .from("documentos_administrativos")
+                    .download(sub.data.pdf_path);
+
+                if (downloadError) {
+                    console.error("Error downloading file for webhook:", downloadError);
+                }
+
                 const formData = new FormData();
                 formData.append("to_email", body.toEmail);
                 formData.append("document_id", sub.data.id.toString());
                 formData.append("type", "varios-single"); // Distinguish from the batched "varios-factura"
-                formData.append("filename", sub.data.pdf_path.split('/').pop() || "documento.pdf");
+                const filename = sub.data.pdf_path.split('/').pop() || "documento.pdf";
+                formData.append("filename", filename);
 
-                // Send payload data instead of binary file
+                if (fileBlob) {
+                    formData.append("file", fileBlob, filename);
+                }
+
+                // Send payload data (JSON)
                 formData.append("data", JSON.stringify(sub.data.payload));
 
                 await fetch(webhookUrl, {
