@@ -42,6 +42,7 @@ export default function MorosidadPage() {
     const [deleteId, setDeleteId] = useState<number | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
+    const [filterEstado, setFilterEstado] = useState('all');
 
     const [formData, setFormData] = useState({
         comunidad_id: '',
@@ -542,6 +543,28 @@ export default function MorosidadPage() {
                 </button>
             </div>
 
+            {/* Filters */}
+            <div className="flex gap-2">
+                <button
+                    onClick={() => setFilterEstado('all')}
+                    className={`px-3 py-1 rounded-full text-sm font-medium transition ${filterEstado === 'all' ? 'bg-neutral-900 text-white' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
+                >
+                    Todas
+                </button>
+                <button
+                    onClick={() => setFilterEstado('pendiente')}
+                    className={`px-3 py-1 rounded-full text-sm font-medium transition ${filterEstado === 'pendiente' ? 'bg-yellow-400 text-neutral-950' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
+                >
+                    Pendientes
+                </button>
+                <button
+                    onClick={() => setFilterEstado('resuelto')}
+                    className={`px-3 py-1 rounded-full text-sm font-medium transition ${filterEstado === 'resuelto' ? 'bg-neutral-900 text-white' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
+                >
+                    Resueltas
+                </button>
+            </div>
+
             {showForm && (
                 <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
                     <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -685,14 +708,26 @@ export default function MorosidadPage() {
                 </div>
             )}
 
-            <DataTable
-                data={morosos}
-                columns={columns}
-                keyExtractor={(row) => row.id}
-                storageKey="morosidad"
-                loading={loading}
-                emptyMessage="No hay registros de morosidad"
-            />
+
+
+            {(() => {
+                const filteredMorosidad = morosos.filter(m => {
+                    if (filterEstado === 'pendiente') return m.estado !== 'Pagado';
+                    if (filterEstado === 'resuelto') return m.estado === 'Pagado';
+                    return true;
+                });
+
+                return (
+                    <DataTable
+                        data={filteredMorosidad}
+                        columns={columns}
+                        keyExtractor={(row) => row.id}
+                        storageKey="morosidad"
+                        loading={loading}
+                        emptyMessage="No hay registros de morosidad en esta vista"
+                    />
+                );
+            })()}
 
             {/* Delete Confirmation Modal */}
             {showDeleteModal && (
