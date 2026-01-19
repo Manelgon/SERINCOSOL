@@ -40,7 +40,7 @@ export async function POST(req: Request) {
 
     // Generate signed URL (24 hours)
     const signed = await supabase.storage
-      .from("documents")
+      .from("documentos_administrativos")
       .createSignedUrl(sub.data.pdf_path, 60 * 60 * 24);
 
     if (signed.error) {
@@ -102,7 +102,7 @@ export async function POST(req: Request) {
     const webhookUrl = process.env.EMAIL_WEBHOOK_URL;
     if (webhookUrl) {
       try {
-        const fileData = await supabase.storage.from("documents").download(sub.data.pdf_path);
+        const fileData = await supabase.storage.from("documentos_administrativos").download(sub.data.pdf_path);
 
         if (fileData.data) {
           const formData = new FormData();
