@@ -22,6 +22,7 @@ export default function PerfilesPage() {
 
     // Modal States
     const [showCreateModal, setShowCreateModal] = useState(false);
+    const [showEditModal, setShowEditModal] = useState(false);
     const [showPasswordModal, setShowPasswordModal] = useState(false);
 
     const [processing, setProcessing] = useState(false);
@@ -32,6 +33,15 @@ export default function PerfilesPage() {
         email: '',
         password: '',
         confirmPassword: '',
+        nombre: '',
+        apellido: '',
+        telefono: '',
+        rol: 'gestor' as 'admin' | 'empleado' | 'gestor',
+    });
+
+    // Edit User Form State
+    const [editFormData, setEditFormData] = useState({
+        email: '',
         nombre: '',
         apellido: '',
         telefono: '',
@@ -81,6 +91,18 @@ export default function PerfilesPage() {
             rol: 'gestor',
         });
         setShowCreateModal(true);
+    };
+
+    const handleOpenEdit = (profile: Profile) => {
+        setSelectedProfile(profile);
+        setEditFormData({
+            email: profile.email,
+            nombre: profile.nombre || '',
+            apellido: profile.apellido || '',
+            telefono: profile.telefono || '',
+            rol: profile.rol,
+        });
+        setShowEditModal(true);
     };
 
     const handleOpenPasswordReset = (profile: Profile) => {
@@ -140,6 +162,55 @@ export default function PerfilesPage() {
             });
 
             setShowCreateModal(false);
+            fetchProfiles();
+
+        } catch (error: any) {
+            toast.error(error.message);
+        } finally {
+            setProcessing(false);
+        }
+    };
+
+    const handleUpdateProfile = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedProfile) return;
+
+        setProcessing(true);
+
+        try {
+            const session = (await supabase.auth.getSession()).data.session;
+            const response = await fetch('/api/admin/update-user', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session?.access_token}`
+                },
+                body: JSON.stringify({
+                    userId: selectedProfile.user_id,
+                    email: editFormData.email, // Kept for consistency, though possibly read-only in UI
+                    nombre: editFormData.nombre,
+                    apellido: editFormData.apellido,
+                    telefono: editFormData.telefono,
+                    rol: editFormData.rol,
+                }),
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || 'Error al actualizar perfil');
+            }
+
+            toast.success('Perfil actualizado correctamente');
+
+            await logActivity({
+                action: 'update',
+                entityType: 'profile',
+                entityName: editFormData.nombre,
+                details: { userId: selectedProfile.user_id, ...editFormData }
+            });
+
+            setShowEditModal(false);
             fetchProfiles();
 
         } catch (error: any) {
@@ -358,6 +429,15 @@ export default function PerfilesPage() {
             render: (row) => (
                 <div className="flex items-center gap-1">
                     <button
+                        onClick={() => handleOpenEdit(row)}
+                        className="p-1.5 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                        title="Editar Datos"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                    </button>
+                    <button
                         onClick={() => handleOpenPasswordReset(row)}
                         className="p-1.5 rounded-full bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-colors"
                         title="Restablecer Contraseña"
@@ -541,6 +621,98 @@ export default function PerfilesPage() {
                                             Crear Usuario
                                         </>
                                     )}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit User Modal */}
+            {showEditModal && selectedProfile && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] backdrop-blur-sm p-4">
+                    <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden">
+                        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                            <h3 className="text-lg font-bold text-neutral-900">
+                                Editar Usuario
+                            </h3>
+                            <button
+                                onClick={() => setShowEditModal(false)}
+                                className="text-gray-400 hover:text-gray-600 font-bold text-xl"
+                            >
+                                &times;
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleUpdateProfile} className="p-6 space-y-4" autoComplete="off">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 outline-none transition"
+                                        value={editFormData.nombre}
+                                        onChange={e => setEditFormData({ ...editFormData, nombre: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Apellido</label>
+                                    <input
+                                        type="text"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 outline-none transition"
+                                        value={editFormData.apellido}
+                                        onChange={e => setEditFormData({ ...editFormData, apellido: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                                <input
+                                    type="tel"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 outline-none transition"
+                                    value={editFormData.telefono}
+                                    onChange={e => setEditFormData({ ...editFormData, telefono: e.target.value })}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Email <span className="text-xs text-gray-400">(No editable)</span></label>
+                                <input
+                                    type="email"
+                                    disabled
+                                    className="w-full px-3 py-2 border border-gray-200 bg-gray-100 rounded-lg text-gray-500 cursor-not-allowed"
+                                    value={editFormData.email}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Rol</label>
+                                <select
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 outline-none bg-white font-medium"
+                                    value={editFormData.rol}
+                                    onChange={e => setEditFormData({ ...editFormData, rol: e.target.value as any })}
+                                >
+                                    <option value="gestor">Gestor</option>
+                                    <option value="admin">Administrador</option>
+                                </select>
+                            </div>
+
+                            <div className="pt-4 flex gap-3 justify-end border-t border-gray-100 mt-6">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowEditModal(false)}
+                                    className="px-4 py-2 text-gray-700 font-medium hover:bg-gray-100 rounded-lg transition"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={processing}
+                                    className="px-6 py-2 bg-yellow-400 text-neutral-950 rounded-lg hover:bg-yellow-500 transition font-bold shadow-sm disabled:opacity-50 flex items-center gap-2"
+                                >
+                                    {processing ? 'Guardando...' : 'Guardar Cambios'}
                                 </button>
                             </div>
                         </form>

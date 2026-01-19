@@ -65,7 +65,7 @@ export async function POST(request: Request) {
     }
 
     try {
-        const { userId, email, password, nombre, rol, activo } = await request.json();
+        const { userId, email, password, nombre, apellido, telefono, rol, activo } = await request.json();
 
         if (!userId) {
             return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
@@ -104,6 +104,9 @@ export async function POST(request: Request) {
         const profileUpdates: any = {};
         if (email) profileUpdates.email = email;
         if (nombre) profileUpdates.nombre = nombre;
+        // Allow empty string to clear these fields
+        if (apellido !== undefined) profileUpdates.apellido = apellido;
+        if (telefono !== undefined) profileUpdates.telefono = telefono;
         if (rol) profileUpdates.rol = rol;
         if (activo !== undefined) profileUpdates.activo = activo;
 
