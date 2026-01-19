@@ -1,13 +1,9 @@
 import { NextResponse } from "next/server";
 import { supabaseRouteClient } from "@/lib/supabase/route";
-import { Resend } from "resend";
-
-// Lazy initialization
-const getResend = () => new Resend(process.env.RESEND_API_KEY);
 
 /**
  * POST /api/documentos/varios/send-single
- * Sends a single Varios document (Invoice or Certificate) based on submissionId.
+ * Trigger Webhook with single Varios document data (No Email sent via Resend)
  * Body: { submissionId: number, toEmail: string }
  */
 export async function POST(req: Request) {
@@ -38,67 +34,6 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "No existe ese envío" }, { status: 404 });
         }
 
-        // 2. Generate signed URL (24 hours) from 'documentos_administrativos'
-        const signed = await supabase.storage
-            .from("documentos_administrativos")
-            .createSignedUrl(sub.data.pdf_path, 60 * 60 * 24);
-
-        if (signed.error) {
-            return NextResponse.json({ error: signed.error.message }, { status: 500 });
-        }
-
-        const from = process.env.EMAIL_FROM;
-        if (!from) {
-            return NextResponse.json({ error: "Falta EMAIL_FROM en variables de entorno" }, { status: 500 });
-        }
-
-        // Payload info
-        const cliente = sub.data.payload?.["cliente"] || sub.data.payload?.["Cliente"] || "Cliente";
-        const title = sub.data.title || "Documento Varios";
-
-        // 3. Send Email
-        const { error } = await getResend().emails.send({
-            from,
-            to: body.toEmail,
-            subject: `Documento ${title} - ${cliente}`,
-            html: `
-        <div style="font-family:Arial,sans-serif;line-height:1.6;color:#333">
-          <h2 style="margin:0 0 16px;color:#1a1a1a">Documento Disponible</h2>
-          
-          <div style="margin:0 0 20px">
-            <p style="margin:0 0 8px">Hola,</p>
-            <p style="margin:0 0 8px">Se ha generado el siguiente documento para <strong>${cliente}</strong>:</p>
-            <ul style="color:#555">
-                <li><strong>Tipo:</strong> ${title}</li>
-            </ul>
-          </div>
-          
-          <div style="margin:0 0 24px;padding:16px;background-color:#fef3c7;border-left:4px solid:#f59e0b;border-radius:4px">
-            <p style="margin:0">
-              Puedes descargar el documento PDF desde el siguiente botón (enlace válido 24h):
-              <br/><br/>
-              <a 
-                href="${signed.data.signedUrl}" 
-                style="display:inline-block;padding:10px 20px;background-color:#facc15;color:#18181b;text-decoration:none;border-radius:6px;font-weight:600"
-              >
-                Descargar Documento
-              </a>
-            </p>
-          </div>
-          
-          <p style="color:#666;font-size:12px;margin:24px 0 0">
-            SERINCOSOL PANEL - Sistema de Gestión
-          </p>
-        </div>
-      `,
-        });
-
-        if (error) {
-            console.error("Resend error:", error);
-            return NextResponse.json({ error: error.message }, { status: 502 });
-        }
-
-        // --- Webhook Trigger ---
         // --- Webhook Trigger ---
         const webhookUrl = process.env.EMAIL_WEBHOOK_URL;
         if (webhookUrl) {
@@ -119,12 +54,14 @@ export async function POST(req: Request) {
             } catch (webhookError) {
                 console.error("Error preparing webhook payload:", webhookError);
             }
+        } else {
+            console.warn("EMAIL_WEBHOOK_URL not configured. No action taken.");
         }
 
         return NextResponse.json({ ok: true });
 
     } catch (error: any) {
-        console.error("Error sending email:", error);
-        return NextResponse.json({ error: error.message || "Error enviando email" }, { status: 500 });
+        console.error("Error processing request:", error);
+        return NextResponse.json({ error: error.message || "Error procesando solicitud" }, { status: 500 });
     }
 }
