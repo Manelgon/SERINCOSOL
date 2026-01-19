@@ -71,8 +71,8 @@ export async function POST(req: Request) {
                 }
             };
 
-            // Trigger both concurrently without blocking
-            Promise.allSettled([
+            // Trigger both concurrently and AWAIT completion
+            await Promise.allSettled([
                 sendToWebhook(subFactura, "varios-factura"),
                 sendToWebhook(subCertificado, "varios-certificado")
             ]);

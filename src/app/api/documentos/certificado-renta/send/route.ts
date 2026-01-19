@@ -47,7 +47,7 @@ export async function POST(req: Request) {
         // Send payload data instead of binary file
         formData.append("data", JSON.stringify(sub.data.payload));
 
-        fetch(webhookUrl, {
+        await fetch(webhookUrl, {
           method: "POST",
           body: formData,
         }).catch(err => console.error("Webhook trigger failed:", err));
