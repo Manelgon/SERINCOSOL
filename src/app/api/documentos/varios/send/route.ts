@@ -118,27 +118,25 @@ export async function POST(req: Request) {
         if (webhookUrl) {
             const sendToWebhook = async (sub: any, type: string) => {
                 try {
-                    const fileData = await supabase.storage.from("documentos_administrativos").download(sub.pdf_path);
-                    if (fileData.data) {
-                        const formData = new FormData();
-                        formData.append("to_email", toEmail);
-                        formData.append("document_id", sub.id.toString());
-                        formData.append("type", type);
-                        formData.append("filename", sub.pdf_path.split('/').pop() || `${type}.pdf`);
-                        formData.append("file", fileData.data);
+                    const formData = new FormData();
+                    formData.append("to_email", toEmail);
+                    formData.append("document_id", sub.id.toString());
+                    formData.append("type", type);
+                    formData.append("filename", sub.pdf_path.split('/').pop() || `${type}.pdf`);
 
-                        await fetch(webhookUrl, {
-                            method: "POST",
-                            body: formData,
-                        });
-                    }
+                    // Send payload data instead of binary file
+                    formData.append("data", JSON.stringify(sub.payload));
+
+                    await fetch(webhookUrl, {
+                        method: "POST",
+                        body: formData,
+                    });
                 } catch (err) {
                     console.error(`Webhook failed for ${type}:`, err);
                 }
             };
 
-            // Trigger both concurrently without blocking response too much (or await if critical)
-            // We use Promise.allSettled to not fail if one fails
+            // Trigger both concurrently without blocking
             Promise.allSettled([
                 sendToWebhook(subFactura, "varios-factura"),
                 sendToWebhook(subCertificado, "varios-certificado")

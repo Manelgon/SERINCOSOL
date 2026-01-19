@@ -99,24 +99,23 @@ export async function POST(req: Request) {
         }
 
         // --- Webhook Trigger ---
+        // --- Webhook Trigger ---
         const webhookUrl = process.env.EMAIL_WEBHOOK_URL;
         if (webhookUrl) {
             try {
-                const fileData = await supabase.storage.from("documentos_administrativos").download(sub.data.pdf_path);
+                const formData = new FormData();
+                formData.append("to_email", body.toEmail);
+                formData.append("document_id", sub.data.id.toString());
+                formData.append("type", "varios-single"); // Distinguish from the batched "varios-factura"
+                formData.append("filename", sub.data.pdf_path.split('/').pop() || "documento.pdf");
 
-                if (fileData.data) {
-                    const formData = new FormData();
-                    formData.append("to_email", body.toEmail);
-                    formData.append("document_id", sub.data.id.toString());
-                    formData.append("type", "varios-single"); // Distinguish from the batched "varios-factura"
-                    formData.append("filename", sub.data.pdf_path.split('/').pop() || "documento.pdf");
-                    formData.append("file", fileData.data);
+                // Send payload data instead of binary file
+                formData.append("data", JSON.stringify(sub.data.payload));
 
-                    fetch(webhookUrl, {
-                        method: "POST",
-                        body: formData,
-                    }).catch(err => console.error("Webhook trigger failed:", err));
-                }
+                fetch(webhookUrl, {
+                    method: "POST",
+                    body: formData,
+                }).catch(err => console.error("Webhook trigger failed:", err));
             } catch (webhookError) {
                 console.error("Error preparing webhook payload:", webhookError);
             }
