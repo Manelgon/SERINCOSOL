@@ -3,7 +3,7 @@ import { supabaseRouteClient } from "@/lib/supabase/route";
 
 /**
  * POST /api/documentos/varios/send
- * Trigger Webhook with document data (No Email sent via Resend)
+ * Trigger A SINGLE Webhook containing BOTH Invoice and Certificate data/files.
  * Body: { submissionIdFactura: number, submissionIdCertificado: number, toEmail: string }
  */
 export async function POST(req: Request) {
@@ -47,54 +47,67 @@ export async function POST(req: Request) {
             if (!error) subCertificado = data;
         }
 
-        // --- Webhook Trigger (Dual) ---
+        // --- Webhook Trigger (Single Request) ---
         const webhookUrl = process.env.EMAIL_WEBHOOK_URL;
         if (webhookUrl) {
-            const sendToWebhook = async (sub: any, type: string) => {
-                if (!sub) return;
-                try {
-                    const formData = new FormData();
+            try {
+                const formData = new FormData();
+                formData.append("to_email", toEmail);
+                formData.append("type", "varios-pack"); // Indicates it contains multiple files
 
-                    // Download document
+                // --- Process Factura ---
+                if (subFactura) {
+                    formData.append("document_id_factura", subFactura.id.toString());
+                    formData.append("data_factura", JSON.stringify(subFactura.payload));
+
+                    const filename = subFactura.pdf_path.split('/').pop() || "factura.pdf";
+                    formData.append("filename_factura", filename);
+
+                    // Download
                     const { data: fileBlob, error: downloadError } = await supabase.storage
                         .from("documentos_administrativos")
-                        .download(sub.pdf_path);
+                        .download(subFactura.pdf_path);
 
                     if (downloadError) {
-                        console.error(`Error downloading file for ${type}:`, downloadError);
-                        formData.append("file_download_error", downloadError.message);
+                        console.error("Error downloading factura:", downloadError);
+                        formData.append("error_factura", downloadError.message);
+                    } else if (fileBlob) {
+                        formData.append("file_factura", fileBlob, filename);
+                        formData.append("size_factura", fileBlob.size.toString());
                     }
-
-                    formData.append("to_email", toEmail);
-                    formData.append("document_id", sub.id.toString());
-                    formData.append("type", type);
-                    const filename = sub.pdf_path.split('/').pop() || `${type}.pdf`;
-                    formData.append("filename", filename);
-
-                    if (fileBlob) {
-                        formData.append("file", fileBlob, filename);
-                        formData.append("file_size_bytes", fileBlob.size.toString());
-                    } else {
-                        formData.append("file_missing", "true");
-                    }
-
-                    // Send payload data (JSON)
-                    formData.append("data", JSON.stringify(sub.payload));
-
-                    await fetch(webhookUrl, {
-                        method: "POST",
-                        body: formData,
-                    });
-                } catch (err) {
-                    console.error(`Webhook failed for ${type}:`, err);
                 }
-            };
 
-            // Trigger both concurrently and AWAIT completion
-            await Promise.allSettled([
-                sendToWebhook(subFactura, "varios-factura"),
-                sendToWebhook(subCertificado, "varios-certificado")
-            ]);
+                // --- Process Certificado ---
+                if (subCertificado) {
+                    formData.append("document_id_certificado", subCertificado.id.toString());
+                    formData.append("data_certificado", JSON.stringify(subCertificado.payload));
+
+                    const filename = subCertificado.pdf_path.split('/').pop() || "certificado.pdf";
+                    formData.append("filename_certificado", filename);
+
+                    // Download
+                    const { data: fileBlob, error: downloadError } = await supabase.storage
+                        .from("documentos_administrativos")
+                        .download(subCertificado.pdf_path);
+
+                    if (downloadError) {
+                        console.error("Error downloading certificado:", downloadError);
+                        formData.append("error_certificado", downloadError.message);
+                    } else if (fileBlob) {
+                        formData.append("file_certificado", fileBlob, filename);
+                        formData.append("size_certificado", fileBlob.size.toString());
+                    }
+                }
+
+                // Send unified payload
+                await fetch(webhookUrl, {
+                    method: "POST",
+                    body: formData,
+                }).catch(err => console.error("Webhook trigger failed:", err));
+
+            } catch (err) {
+                console.error("Error preparing combined webhook:", err);
+            }
         } else {
             console.warn("EMAIL_WEBHOOK_URL not configured. No action taken.");
         }
