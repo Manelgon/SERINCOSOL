@@ -32,7 +32,7 @@ export async function GET(req: Request) {
         }
 
         const signed = await supabase.storage
-            .from("documents")
+            .from("documentos_administrativos")
             .createSignedUrl(sub.data.pdf_path, 60 * 10); // 10 minutes
 
         if (signed.error) {
