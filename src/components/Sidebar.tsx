@@ -96,7 +96,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 </div>
 
                 {/* User Info */}
-                <div className="px-4 pb-4 -mt-2 border-b border-white/10 mb-2">
+                <div className="px-4 py-3 border-b border-white/10 mb-2">
                     {userName && (
                         <div className="text-sm font-medium text-white truncate">
                             {userName}
