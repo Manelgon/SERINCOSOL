@@ -52,7 +52,9 @@ const INITIAL_DATA: RecordData = {
 
 export default function CertificadoForm() {
     const [values, setValues] = useState<RecordData>(INITIAL_DATA);
-    const [status, setStatus] = useState<"idle" | "generating" | "ready" | "error">("idle");
+    const [status, setStatus] = useState<"idle" | "generating" | "ready" | "sending" | "error">("idle");
+    const [submissionId, setSubmissionId] = useState<number | null>(null);
+    const [toEmail, setToEmail] = useState("");
     const [pdfUrl, setPdfUrl] = useState<string>("");
 
     const handleChange = (key: keyof RecordData, val: string) => {
@@ -62,6 +64,7 @@ export default function CertificadoForm() {
     const generate = async () => {
         setStatus("generating");
         setPdfUrl("");
+        setSubmissionId(null);
 
         try {
             const res = await fetch("/api/documentos/certificado-renta/generate", {
@@ -73,6 +76,7 @@ export default function CertificadoForm() {
             if (!res.ok) throw new Error(data?.error || "Error generando PDF");
 
             setPdfUrl(data.pdfUrl);
+            setSubmissionId(data.submissionId);
             setStatus("ready");
             toast.success("PDF generado correctamente ✅");
         } catch (e: any) {
@@ -85,6 +89,96 @@ export default function CertificadoForm() {
         if (!pdfUrl) return;
         window.open(pdfUrl, "_blank");
     };
+
+    const sendEmail = async () => {
+        if (!submissionId) return;
+        if (!toEmail) {
+            toast.error("Introduce un email destino");
+            return;
+        }
+
+        setStatus("sending");
+
+        try {
+            const res = await fetch("/api/documentos/certificado-renta/send", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ submissionId, toEmail }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data?.error || "Error enviando email");
+
+            setStatus("ready");
+            toast.success("Email enviado correctamente ✅");
+        } catch (e: any) {
+            setStatus("ready");
+            toast.error(e?.message || "Error enviando");
+        }
+    };
+
+    // SUCCESS VIEW
+    if (status === "ready" || status === "sending") {
+        return (
+            <div className="bg-white p-12 rounded-xl border border-neutral-200 shadow-sm text-center space-y-8 max-w-3xl mx-auto">
+                <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto">
+                    <Download className="w-8 h-8" />
+                </div>
+
+                <div className="space-y-2">
+                    <h2 className="text-2xl font-bold text-neutral-900">¡Certificado Generado!</h2>
+                    <p className="text-neutral-600">
+                        El documento se ha creado correctamente. <br />
+                        Puedes descargarlo o enviarlo por email ahora.
+                    </p>
+                </div>
+
+                <div className="flex flex-col gap-3 max-w-md mx-auto w-full">
+                    <button
+                        onClick={download}
+                        className="w-full bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold shadow-sm transition flex items-center justify-center gap-2"
+                    >
+                        <Download className="w-5 h-5" />
+                        Descargar PDF
+                    </button>
+
+                    <button
+                        onClick={() => { setStatus("idle"); setSubmissionId(null); setPdfUrl(""); }}
+                        className="w-full bg-white border-2 border-neutral-200 hover:border-neutral-300 text-neutral-600 hover:text-neutral-900 px-6 py-3 rounded-lg font-semibold transition"
+                    >
+                        Volver al formulario
+                    </button>
+                    <a
+                        href="/dashboard/documentos"
+                        className="w-full text-neutral-500 hover:text-neutral-900 text-sm font-medium transition underline"
+                    >
+                        Ir al listado
+                    </a>
+                </div>
+
+                {/* Email Section */}
+                <div className="max-w-md mx-auto pt-6 border-t border-neutral-100 w-full">
+                    <p className="text-sm font-medium text-neutral-700 mb-3 text-left">Enviar por email</p>
+                    <div className="flex gap-2">
+                        <input
+                            type="email"
+                            placeholder="cliente@ejemplo.com"
+                            value={toEmail}
+                            onChange={(e) => setToEmail(e.target.value)}
+                            className="flex-1 px-3 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                        />
+                        <button
+                            onClick={sendEmail}
+                            disabled={status === "sending"}
+                            className="bg-neutral-900 hover:bg-neutral-800 text-white px-4 py-2 rounded-lg text-sm font-semibold transition disabled:opacity-50 flex items-center gap-2"
+                        >
+                            {status === "sending" ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                            Enviar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">
@@ -134,16 +228,6 @@ export default function CertificadoForm() {
                     {status === "generating" ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                     {status === "generating" ? "Generando..." : "Generar PDF"}
                 </button>
-
-                {pdfUrl && (
-                    <button
-                        onClick={download}
-                        className="bg-white hover:bg-neutral-50 border border-neutral-200 text-neutral-900 px-5 py-2.5 rounded-md text-sm font-semibold transition flex items-center gap-2"
-                    >
-                        <Download className="w-4 h-4" />
-                        Descargar
-                    </button>
-                )}
             </div>
         </div>
     );

@@ -320,7 +320,10 @@ export async function POST(req: Request) {
             .from("documentos_administrativos")
             .createSignedUrl(filePath, 60 * 10);
 
-        return NextResponse.json({ pdfUrl: signedData?.signedUrl });
+        return NextResponse.json({
+            pdfUrl: signedData?.signedUrl,
+            submissionId: submission?.id
+        });
 
     } catch (e: any) {
         console.error("Endpoint error:", e);
