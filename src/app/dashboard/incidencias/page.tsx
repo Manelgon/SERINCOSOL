@@ -519,13 +519,13 @@ export default function IncidenciasPage() {
     return (
         <div className="space-y-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <h1 className="text-xl font-bold text-neutral-900">Gestión de Incidencias</h1>
+                <h1 className="text-xl font-bold text-neutral-900">Gestión de Tickets</h1>
                 <button
                     onClick={() => setShowForm(!showForm)}
                     className="bg-yellow-400 hover:bg-yellow-500 text-neutral-950 px-4 py-2 rounded-md flex items-center gap-2 transition font-semibold text-sm"
                 >
                     <Plus className="w-4 h-4" />
-                    Nueva Incidencia
+                    Nuevo Ticket
                 </button>
             </div>
 

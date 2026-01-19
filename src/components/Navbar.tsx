@@ -31,7 +31,7 @@ export default function Navbar() {
                     Comunidades Activas: <span className="font-bold">{stats.comunidades}</span>
                 </div>
                 <div className="font-semibold text-neutral-900">
-                    Incidencias Pendientes: <span className="font-bold">{stats.incidencias}</span>
+                    Tickets Pendientes: <span className="font-bold">{stats.incidencias}</span>
                 </div>
                 <div className="font-semibold text-neutral-900">
                     Deudas Pendientes: <span className="font-bold">{stats.morosidad}</span>
