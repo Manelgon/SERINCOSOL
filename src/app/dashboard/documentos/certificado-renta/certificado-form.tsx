@@ -1,8 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
 import { Download, Loader2 } from "lucide-react";
+import { createBrowserClient } from "@supabase/ssr";
+
+interface Comunidad {
+    id: number;
+    codigo: string;
+    nombre_cdad: string;
+    cif: string;
+    direccion: string;
+    cp: string;
+    ciudad: string;
+    provincia: string;
+}
 
 type RecordData = {
     Apellidos: string;
@@ -56,9 +68,51 @@ export default function CertificadoForm() {
     const [submissionId, setSubmissionId] = useState<number | null>(null);
     const [toEmail, setToEmail] = useState("");
     const [pdfUrl, setPdfUrl] = useState<string>("");
+    const [communities, setCommunities] = useState<Comunidad[]>([]);
+    const [selectedCode, setSelectedCode] = useState("");
+
+    const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
+    useEffect(() => {
+        const fetchCommunities = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('comunidades')
+                    .select('*')
+                    .eq('activo', true)
+                    .order('codigo', { ascending: true });
+
+                if (error) throw error;
+                setCommunities(data || []);
+            } catch (error) {
+                console.error('Error fetching communities:', error);
+                toast.error('Error cargando comunidades');
+            }
+        };
+        fetchCommunities();
+    }, []);
 
     const handleChange = (key: keyof RecordData, val: string) => {
         setValues((prev) => ({ ...prev, [key]: val }));
+    };
+
+    const handleCommunityChange = (codigo: string) => {
+        setSelectedCode(codigo);
+        const comunidad = communities.find(c => c.codigo === codigo);
+
+        if (comunidad) {
+            setValues(prev => ({
+                ...prev,
+                // Apellidos/Nombre/Nif removed per user request (only address data)
+                "Dirección 2": comunidad.direccion,
+                CP: comunidad.cp,
+                Poblacion: comunidad.ciudad,
+                Provincia: comunidad.provincia
+            }));
+        }
     };
 
     const generate = async () => {
@@ -186,6 +240,22 @@ export default function CertificadoForm() {
                 <h3 className="text-lg font-semibold text-neutral-900 border-b pb-2">Datos del Declarante</h3>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <label className="flex flex-col gap-1.5">
+                        <span className="text-sm font-medium text-gray-700">Código (Autocompletar)</span>
+                        <select
+                            value={selectedCode}
+                            onChange={(e) => handleCommunityChange(e.target.value)}
+                            className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 appearance-none"
+                        >
+                            <option value="">Seleccionar código</option>
+                            {communities.map((c) => (
+                                <option key={c.id} value={c.codigo}>
+                                    {c.codigo} - {c.nombre_cdad}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+
                     <Field label="Apellidos" value={values.Apellidos} onChange={(v) => handleChange("Apellidos", v)} />
                     <Field label="Nombre" value={values.Nombre} onChange={(v) => handleChange("Nombre", v)} />
                     <Field label="NIF" value={values.Nif} onChange={(v) => handleChange("Nif", v)} />
@@ -239,7 +309,7 @@ function Field({ label, value, onChange, type = "text" }: { label: string; value
             <span className="text-sm font-medium text-gray-700">{label}</span>
             <input
                 type={type}
-                value={value}
+                value={value ?? ""}
                 onChange={(e) => onChange(e.target.value)}
                 className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none"
             />
