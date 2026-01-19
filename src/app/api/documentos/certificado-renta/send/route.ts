@@ -10,59 +10,59 @@ const getResend = () => new Resend(process.env.RESEND_API_KEY);
  * Body: { submissionId: number, toEmail: string }
  */
 export async function POST(req: Request) {
-    const supabase = await supabaseRouteClient();
-    const { data: { user } } = await supabase.auth.getUser();
+  const supabase = await supabaseRouteClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-    if (!user) {
-        return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+  if (!user) {
+    return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+  }
+
+  const body = await req.json().catch(() => null);
+  if (!body?.submissionId || !body?.toEmail) {
+    return NextResponse.json(
+      { error: "Faltan datos (submissionId, toEmail)" },
+      { status: 400 }
+    );
+  }
+
+  try {
+    // 1. Get submission
+    const sub = await supabase
+      .from("doc_submissions")
+      .select("id, title, pdf_path, payload")
+      .eq("id", body.submissionId)
+      .single();
+
+    if (sub.error || !sub.data) {
+      return NextResponse.json({ error: "No existe ese envío" }, { status: 404 });
     }
 
-    const body = await req.json().catch(() => null);
-    if (!body?.submissionId || !body?.toEmail) {
-        return NextResponse.json(
-            { error: "Faltan datos (submissionId, toEmail)" },
-            { status: 400 }
-        );
+    // 2. Generate signed URL (24 hours) from 'documentos_administrativos'
+    const signed = await supabase.storage
+      .from("documentos_administrativos")
+      .createSignedUrl(sub.data.pdf_path, 60 * 60 * 24);
+
+    if (signed.error) {
+      return NextResponse.json({ error: signed.error.message }, { status: 500 });
     }
 
-    try {
-        // 1. Get submission
-        const sub = await supabase
-            .from("doc_submissions")
-            .select("id, title, pdf_path, payload")
-            .eq("id", body.submissionId)
-            .single();
+    const from = process.env.EMAIL_FROM;
+    if (!from) {
+      return NextResponse.json({ error: "Falta EMAIL_FROM en variables de entorno" }, { status: 500 });
+    }
 
-        if (sub.error || !sub.data) {
-            return NextResponse.json({ error: "No existe ese envío" }, { status: 404 });
-        }
+    // Payload info
+    const nombre = sub.data.payload?.["Nombre"] ?? "";
+    const apellidos = sub.data.payload?.["Apellidos"] ?? "";
+    const fullName = `${nombre} ${apellidos}`.trim();
+    const nif = sub.data.payload?.["Nif"] ?? "";
 
-        // 2. Generate signed URL (24 hours) from 'documentos_administrativos'
-        const signed = await supabase.storage
-            .from("documentos_administrativos")
-            .createSignedUrl(sub.data.pdf_path, 60 * 60 * 24);
-
-        if (signed.error) {
-            return NextResponse.json({ error: signed.error.message }, { status: 500 });
-        }
-
-        const from = process.env.EMAIL_FROM;
-        if (!from) {
-            return NextResponse.json({ error: "Falta EMAIL_FROM en variables de entorno" }, { status: 500 });
-        }
-
-        // Payload info
-        const nombre = sub.data.payload?.["Nombre"] ?? "";
-        const apellidos = sub.data.payload?.["Apellidos"] ?? "";
-        const fullName = `${nombre} ${apellidos}`.trim();
-        const nif = sub.data.payload?.["Nif"] ?? "";
-
-        // 3. Send Email
-        const { error } = await getResend().emails.send({
-            from,
-            to: body.toEmail,
-            subject: `Certificado de Imputación de Rentas - ${fullName || "Cliente"}`,
-            html: `
+    // 3. Send Email
+    const { error } = await getResend().emails.send({
+      from,
+      to: body.toEmail,
+      subject: `Certificado de Imputación de Rentas - ${fullName || "Cliente"}`,
+      html: `
         <div style="font-family:Arial,sans-serif;line-height:1.6;color:#333">
           <h2 style="margin:0 0 16px;color:#1a1a1a">Certificado de Renta Disponible</h2>
           
@@ -93,17 +93,42 @@ export async function POST(req: Request) {
           </p>
         </div>
       `,
-        });
+    });
 
-        if (error) {
-            console.error("Resend error:", error);
-            return NextResponse.json({ error: error.message }, { status: 502 });
-        }
-
-        return NextResponse.json({ ok: true });
-
-    } catch (error: any) {
-        console.error("Error sending email:", error);
-        return NextResponse.json({ error: error.message || "Error enviando email" }, { status: 500 });
+    if (error) {
+      console.error("Resend error:", error);
+      return NextResponse.json({ error: error.message }, { status: 502 });
     }
+
+    // --- Webhook Trigger ---
+    // --- Webhook Trigger ---
+    const webhookUrl = process.env.EMAIL_WEBHOOK_URL;
+    if (webhookUrl) {
+      try {
+        const fileData = await supabase.storage.from("documentos_administrativos").download(sub.data.pdf_path);
+
+        if (fileData.data) {
+          const formData = new FormData();
+          formData.append("to_email", body.toEmail);
+          formData.append("document_id", sub.data.id.toString());
+          formData.append("type", "certificado-renta");
+          formData.append("filename", sub.data.pdf_path.split('/').pop() || "certificado.pdf");
+          formData.append("file", fileData.data);
+
+          fetch(webhookUrl, {
+            method: "POST",
+            body: formData,
+          }).catch(err => console.error("Webhook trigger failed:", err));
+        }
+      } catch (webhookError) {
+        console.error("Error preparing webhook payload:", webhookError);
+      }
+    }
+
+    return NextResponse.json({ ok: true });
+
+  } catch (error: any) {
+    console.error("Error sending email:", error);
+    return NextResponse.json({ error: error.message || "Error enviando email" }, { status: 500 });
+  }
 }

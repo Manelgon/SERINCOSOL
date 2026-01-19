@@ -98,6 +98,31 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: error.message }, { status: 502 });
     }
 
+    // --- Webhook Trigger ---
+    const webhookUrl = process.env.EMAIL_WEBHOOK_URL;
+    if (webhookUrl) {
+      try {
+        const fileData = await supabase.storage.from("documents").download(sub.data.pdf_path);
+
+        if (fileData.data) {
+          const formData = new FormData();
+          formData.append("to_email", body.toEmail);
+          formData.append("document_id", sub.data.id.toString());
+          formData.append("type", "suplidos");
+          formData.append("filename", sub.data.pdf_path.split('/').pop() || "suplidos.pdf");
+          formData.append("file", fileData.data);
+
+          // Non-blocking fetch
+          fetch(webhookUrl, {
+            method: "POST",
+            body: formData,
+          }).catch(err => console.error("Webhook trigger failed:", err));
+        }
+      } catch (webhookError) {
+        console.error("Error preparing webhook payload:", webhookError);
+      }
+    }
+
     return NextResponse.json({ ok: true });
   } catch (error: any) {
     console.error("Error sending email:", error);

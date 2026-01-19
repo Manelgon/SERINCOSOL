@@ -113,6 +113,38 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: error.message }, { status: 502 });
         }
 
+        // --- Webhook Trigger (Dual) ---
+        const webhookUrl = process.env.EMAIL_WEBHOOK_URL;
+        if (webhookUrl) {
+            const sendToWebhook = async (sub: any, type: string) => {
+                try {
+                    const fileData = await supabase.storage.from("documentos_administrativos").download(sub.pdf_path);
+                    if (fileData.data) {
+                        const formData = new FormData();
+                        formData.append("to_email", toEmail);
+                        formData.append("document_id", sub.id.toString());
+                        formData.append("type", type);
+                        formData.append("filename", sub.pdf_path.split('/').pop() || `${type}.pdf`);
+                        formData.append("file", fileData.data);
+
+                        await fetch(webhookUrl, {
+                            method: "POST",
+                            body: formData,
+                        });
+                    }
+                } catch (err) {
+                    console.error(`Webhook failed for ${type}:`, err);
+                }
+            };
+
+            // Trigger both concurrently without blocking response too much (or await if critical)
+            // We use Promise.allSettled to not fail if one fails
+            Promise.allSettled([
+                sendToWebhook(subFactura, "varios-factura"),
+                sendToWebhook(subCertificado, "varios-certificado")
+            ]);
+        }
+
         return NextResponse.json({ ok: true });
 
     } catch (error: any) {
