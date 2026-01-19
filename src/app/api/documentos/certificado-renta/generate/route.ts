@@ -150,7 +150,25 @@ export async function buildRentaCertificatePdf(
     const situacion = v(data["Situación"]);
     const declarado = v(data["Declarado"]);
 
-    const fechaEmision = v(data["Fecha emisión"]);
+    // --- HELPER: DATE FORMAT EU ---
+    function formatDateEU(v: any) {
+        const s = String(v ?? "").trim();
+        if (!s) return "";
+        // Try YYYY-MM-DD
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+            const [y, m, d] = s.split("-");
+            return `${d}-${m}-${y}`;
+        }
+        // Try ISO with T
+        if (/^\d{4}-\d{2}-\d{2}T/.test(s)) {
+            const [datePart] = s.split("T");
+            const [y, m, d] = datePart.split("-");
+            return `${d}-${m}-${y}`;
+        }
+        return s;
+    }
+
+    const fechaEmision = formatDateEU(data["Fecha emisión"]);
 
     // Texto legal
     const p1 =
@@ -212,7 +230,9 @@ export async function buildRentaCertificatePdf(
     y -= 18;
 
     // 5) Pie
-    const fechaStr = fechaEmision || new Date().toLocaleDateString();
+    const now = new Date();
+    const todayEU = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
+    const fechaStr = fechaEmision || todayEU;
     const pie = `Lo que certifica a los efectos oportunos en Málaga a ${fechaStr}.`;
 
     const pieLines = wrapText(pie, font, bodySize, maxTextW);

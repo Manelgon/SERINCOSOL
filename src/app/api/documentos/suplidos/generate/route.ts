@@ -199,8 +199,26 @@ export async function buildSuplidoPdf(
         }
     }
 
+    // --- HELPER: DATE FORMAT EU ---
+    function formatDateEU(v: any) {
+        const s = String(v ?? "").trim();
+        if (!s) return "";
+        // Try YYYY-MM-DD
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+            const [y, m, d] = s.split("-");
+            return `${d}-${m}-${y}`;
+        }
+        // Try ISO with T
+        if (/^\d{4}-\d{2}-\d{2}T/.test(s)) {
+            const [datePart] = s.split("T");
+            const [y, m, d] = datePart.split("-");
+            return `${d}-${m}-${y}`;
+        }
+        return s;
+    }
+
     // 2) Fecha de emisión (Yellow Box)
-    const fecha = txt(payload["Fecha emisión"] ?? "");
+    const fecha = formatDateEU(payload["Fecha emisión"]);
     const fechaLabelY = headerBottomY; // Justo debajo del logo
 
     page.drawText("Fecha de emisión", { x: marginX, y: fechaLabelY, size: 10, font: bold, color: BLACK });

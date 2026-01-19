@@ -15,19 +15,29 @@ interface SidebarProps {
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     const pathname = usePathname();
     const [isAdmin, setIsAdmin] = useState(false);
+    const [userName, setUserName] = useState('');
+    const [userEmail, setUserEmail] = useState('');
 
     useEffect(() => {
         const checkRole = async () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user) {
+                // setUserName(session.user.user_metadata?.nombre || '');
+                setUserEmail(session.user.email || '');
+
                 const { data } = await supabase
                     .from('profiles')
-                    .select('rol')
+                    .select('rol, nombre, apellido')
                     .eq('user_id', session.user.id)
                     .single();
 
-                if (data?.rol === 'admin') {
-                    setIsAdmin(true);
+                if (data) {
+                    const fullName = [data.nombre, data.apellido].filter(Boolean).join(' ');
+                    setUserName(fullName || session.user.user_metadata?.nombre || '');
+
+                    if (data.rol === 'admin') {
+                        setIsAdmin(true);
+                    }
                 }
             }
         };
@@ -83,6 +93,20 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     >
                         <X className="w-5 h-5" />
                     </button>
+                </div>
+
+                {/* User Info */}
+                <div className="px-4 pb-4 -mt-2 border-b border-white/10 mb-2">
+                    {userName && (
+                        <div className="text-sm font-medium text-white truncate">
+                            {userName}
+                        </div>
+                    )}
+                    {userEmail && (
+                        <div className="text-xs text-white/50 truncate">
+                            {userEmail}
+                        </div>
+                    )}
                 </div>
 
                 <nav className="flex-1 px-2 py-4 text-sm overflow-y-auto">

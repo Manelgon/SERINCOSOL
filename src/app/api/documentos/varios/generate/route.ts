@@ -56,6 +56,24 @@ const EMISOR = {
     cif: "B09915075",
 };
 
+// --- HELPER: DATE FORMAT EU ---
+function formatDateEU(v: any) {
+    const s = String(v ?? "").trim();
+    if (!s) return "";
+    // Try YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+        const [y, m, d] = s.split("-");
+        return `${d}-${m}-${y}`;
+    }
+    // Try ISO with T
+    if (/^\d{4}-\d{2}-\d{2}T/.test(s)) {
+        const [datePart] = s.split("T");
+        const [y, m, d] = datePart.split("-");
+        return `${d}-${m}-${y}`;
+    }
+    return s;
+}
+
 function txt(v: any) { return String(v ?? "").trim(); }
 function n(v: any) {
     const x = typeof v === "number" ? v : Number(String(v ?? "").replace(",", "."));
@@ -199,7 +217,7 @@ export async function buildFacturaVariosPdf(
     }
 
     // 2) Fecha de emisión (Yellow Box)
-    const fecha = txt(payload["fecha_emision"] ?? payload["Fecha emisión"] ?? payload["Fecha"] ?? "");
+    const fecha = formatDateEU(payload["fecha_emision"] ?? payload["Fecha emisión"] ?? payload["Fecha"]);
     const fechaLabelY = headerBottomY; // Justo debajo del logo
 
     page.drawText("Fecha de emisión", { x: marginX, y: fechaLabelY, size: 10, font: bold, color: BLACK });
@@ -506,8 +524,8 @@ export async function buildPagosAlDiaPdf(payload: any, assets: { logoBytes: Uint
     const nif = safe(payload["nif"] ?? "");
     const domicilio = safe(payload["domicilio"] ?? "");
     const cp = safe(payload["cp"] ?? "");
-    const ciudad = safe(payload["ciudad"] ?? "");
-    const fecha = fmtDate(payload["fecha_emision"] ?? "");
+    const ciudad = safe(payload["ciudad"] ?? payload["Ciudad"] ?? "");
+    const fecha = formatDateEU(payload["fecha_emision"]);
 
     const p1 =
         `Roberto Díaz Rodríguez, Administrador de Fincas colegiado en el Ilustre Colegio Territorial de ` +
