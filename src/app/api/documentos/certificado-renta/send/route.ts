@@ -38,6 +38,8 @@ export async function POST(req: Request) {
     const webhookUrl = process.env.EMAIL_WEBHOOK_URL;
     if (webhookUrl) {
       try {
+        const formData = new FormData();
+
         // Download document
         const { data: fileBlob, error: downloadError } = await supabase.storage
           .from("documentos_administrativos")
@@ -45,9 +47,9 @@ export async function POST(req: Request) {
 
         if (downloadError) {
           console.error("Error downloading file for webhook:", downloadError);
+          formData.append("file_download_error", downloadError.message);
         }
 
-        const formData = new FormData();
         formData.append("to_email", body.toEmail);
         formData.append("document_id", sub.data.id.toString());
         formData.append("type", "certificado-renta");
@@ -56,6 +58,9 @@ export async function POST(req: Request) {
 
         if (fileBlob) {
           formData.append("file", fileBlob, filename);
+          formData.append("file_size_bytes", fileBlob.size.toString());
+        } else {
+          formData.append("file_missing", "true");
         }
 
         // Send payload data (JSON)
