@@ -62,6 +62,9 @@ export async function POST(request: Request) {
             // Supabase Auth Admin deleteUser is best
             const { error } = await supabaseAdmin.auth.admin.deleteUser(id);
             deleteError = error;
+        } else if (type === 'document') {
+            const { error } = await supabaseAdmin.from('doc_submissions').delete().eq('id', id);
+            deleteError = error;
         } else {
             return NextResponse.json({ error: 'Tipo de entidad no válido' }, { status: 400 });
         }
