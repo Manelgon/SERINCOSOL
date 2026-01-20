@@ -406,7 +406,7 @@ export default function MorosidadPage() {
 
             if (isDetailView) {
                 // "DEV_id_fecha"
-                a.download = `DEV_${idsToExport[0]}_${dateStr}.${type === 'csv' ? 'csv' : 'pdf'}`;
+                a.download = `DEV_${idsToExport[0]}_${dateStr}.pdf`;
             } else {
                 a.download = `listado_morosidad_${dateStr}.${type === 'csv' ? 'csv' : 'pdf'}`;
             }

@@ -363,7 +363,7 @@ export default function IncidenciasPage() {
             const dateStr = `${now.getDate().toString().padStart(2, '0')}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getFullYear()}`;
 
             if (isDetailView) {
-                a.download = `ticket_${idsToExport[0]}_${dateStr}.${type === 'csv' ? 'csv' : 'pdf'}`;
+                a.download = `ticket_${idsToExport[0]}_${dateStr}.pdf`;
             } else {
                 a.download = `listado_incidencias_${dateStr}.${type === 'csv' ? 'csv' : 'pdf'}`;
             }
