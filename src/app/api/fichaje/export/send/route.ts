@@ -73,7 +73,7 @@ export async function POST(req: Request) {
             formData.append("filename", filename);
 
             // Create Blob from buffer
-            const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+            const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
             formData.append("file", blob, filename);
 
             // Add Profile data
