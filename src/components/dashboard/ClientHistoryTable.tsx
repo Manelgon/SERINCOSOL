@@ -114,6 +114,45 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
         }
     };
 
+    const handleDownload = async (doc: any) => {
+        const loadingToast = toast.loading("Preparando descarga...");
+        try {
+            const res = await fetch(`/api/documentos/${type}/signed-url?id=${doc.id}`);
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || "Error obteniendo URL de descarga");
+            }
+
+            // The API redirects directly to the PDF, so 'res' contains the PDF content
+            const contentType = res.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+                const data = await res.json();
+                throw new Error(data.error || "Se esperaba un PDF");
+            }
+
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+
+            // Generate a nice filename
+            const date = new Date(doc.created_at).toISOString().split('T')[0];
+            const title = (doc.payload?.["Nombre Cliente"] || doc.payload?.["Nombre Comunidad"] || doc.payload?.nombre_comunidad || doc.title || "documento").replace(/[^a-z0-9]/gi, '_');
+            a.download = `${date}_${type}_${title}.pdf`;
+
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            toast.success("Descarga iniciada", { id: loadingToast });
+        } catch (err: any) {
+            console.error("Error en descarga:", err);
+            toast.error("Error al descargar: " + err.message, { id: loadingToast });
+        }
+    };
+
     const columns: Column<any>[] = useMemo(() => {
         const idCol: Column<any> = {
             key: "id",
@@ -304,15 +343,13 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
             width: "120px",
             render: (r) => (
                 <div className="flex items-center gap-2">
-                    <a
-                        href={`/api/documentos/${type}/signed-url?id=${r.id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                    <button
+                        onClick={() => handleDownload(r)}
                         className="p-1.5 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
-                        title="Ver/Descargar PDF"
+                        title="Descargar PDF"
                     >
                         <Download className="w-4 h-4" />
-                    </a>
+                    </button>
                     <button
                         onClick={() => handleSendClick(r)}
                         className="p-1.5 rounded-full bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-colors"

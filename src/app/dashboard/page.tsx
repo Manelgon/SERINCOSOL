@@ -506,15 +506,15 @@ export default function DashboardPage() {
                 {selectedCommunity === 'all' && (
                     <div className="bg-white p-4 md:p-6 rounded-xl border border-neutral-200 shadow-sm flex flex-col">
                         <h3 className="text-base md:text-lg font-bold text-neutral-800 mb-2">Urgencia</h3>
-                        <div className="flex-1 min-h-[200px] md:min-h-[250px] relative" id="chart-urgency">
+                        <div className="flex-1 min-h-[300px] md:min-h-[250px] relative" id="chart-urgency">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
                                     <Pie
                                         data={chartData.urgencyDistribution}
                                         cx="50%"
                                         cy="50%"
-                                        innerRadius={60}
-                                        outerRadius={90}
+                                        innerRadius="60%"
+                                        outerRadius="80%"
                                         paddingAngle={5}
                                         dataKey="value"
                                     >
@@ -595,15 +595,15 @@ export default function DashboardPage() {
                         {/* Debt Status */}
                         <div className="bg-white p-4 md:p-6 rounded-xl border border-neutral-200 shadow-sm flex flex-col">
                             <h3 className="text-base md:text-lg font-bold text-neutral-800 mb-2">Estado de Deuda</h3>
-                            <div className="flex-1 min-h-[200px] md:min-h-[250px] relative" id="chart-debt-status">
+                            <div className="flex-1 min-h-[300px] md:min-h-[250px] relative" id="chart-debt-status">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
                                         <Pie
                                             data={chartData.debtStatus}
                                             cx="50%"
                                             cy="50%"
-                                            innerRadius={60}
-                                            outerRadius={90}
+                                            innerRadius="60%"
+                                            outerRadius="80%"
                                             paddingAngle={5}
                                             dataKey="value"
                                         >
@@ -626,15 +626,15 @@ export default function DashboardPage() {
                         {/* When a community is selected, we show Urgency and Debt Status side by side to match PDF sizes */}
                         <div className="bg-white p-4 md:p-6 rounded-xl border border-neutral-200 shadow-sm flex flex-col">
                             <h3 className="text-base md:text-lg font-bold text-neutral-800 mb-2">Estado de Incidencias</h3>
-                            <div className="flex-1 min-h-[200px] md:min-h-[250px] relative" id="chart-incident-status">
+                            <div className="flex-1 min-h-[300px] md:min-h-[250px] relative" id="chart-incident-status">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
                                         <Pie
                                             data={chartData.incidenciasStatus}
                                             cx="50%"
                                             cy="50%"
-                                            innerRadius={60}
-                                            outerRadius={90}
+                                            innerRadius="60%"
+                                            outerRadius="80%"
                                             paddingAngle={5}
                                             dataKey="value"
                                         >
@@ -654,15 +654,15 @@ export default function DashboardPage() {
 
                         <div className="bg-white p-4 md:p-6 rounded-xl border border-neutral-200 shadow-sm flex flex-col">
                             <h3 className="text-base md:text-lg font-bold text-neutral-800 mb-2">Urgencia</h3>
-                            <div className="flex-1 min-h-[200px] md:min-h-[250px] relative" id="chart-urgency">
+                            <div className="flex-1 min-h-[300px] md:min-h-[250px] relative" id="chart-urgency">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
                                         <Pie
                                             data={chartData.urgencyDistribution}
                                             cx="50%"
                                             cy="50%"
-                                            innerRadius={60}
-                                            outerRadius={90}
+                                            innerRadius="60%"
+                                            outerRadius="80%"
                                             paddingAngle={5}
                                             dataKey="value"
                                         >
@@ -679,15 +679,15 @@ export default function DashboardPage() {
 
                         <div className="bg-white p-4 md:p-6 rounded-xl border border-neutral-200 shadow-sm flex flex-col">
                             <h3 className="text-base md:text-lg font-bold text-neutral-800 mb-2">Estado de Deuda</h3>
-                            <div className="flex-1 min-h-[200px] md:min-h-[250px] relative" id="chart-debt-status">
+                            <div className="flex-1 min-h-[300px] md:min-h-[250px] relative" id="chart-debt-status">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
                                         <Pie
                                             data={chartData.debtStatus}
                                             cx="50%"
                                             cy="50%"
-                                            innerRadius={60}
-                                            outerRadius={90}
+                                            innerRadius="60%"
+                                            outerRadius="80%"
                                             paddingAngle={5}
                                             dataKey="value"
                                         >
@@ -713,15 +713,15 @@ export default function DashboardPage() {
                 {selectedCommunity === 'all' && (
                     <div className="bg-white p-4 md:p-6 rounded-xl border border-neutral-200 shadow-sm flex flex-col">
                         <h3 className="text-base md:text-lg font-bold text-neutral-800 mb-2">Estado de Incidencias</h3>
-                        <div className="flex-1 min-h-[200px] md:min-h-[250px] relative" id="chart-incident-status">
+                        <div className="flex-1 min-h-[300px] md:min-h-[250px] relative" id="chart-incident-status">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
                                     <Pie
                                         data={chartData.incidenciasStatus}
                                         cx="50%"
                                         cy="50%"
-                                        innerRadius={60}
-                                        outerRadius={90}
+                                        innerRadius="60%"
+                                        outerRadius="80%"
                                         paddingAngle={5}
                                         dataKey="value"
                                     >
