@@ -537,7 +537,7 @@ export default function DashboardPage() {
                 {selectedCommunity === 'all' && (
                     <>
                         <div className="bg-white p-4 md:p-6 rounded-xl border border-neutral-200 shadow-sm flex flex-col">
-                            <h3 className="text-base md:text-lg font-bold text-neutral-800 mb-2">Urgencia (Pendientes)</h3>
+                            <h3 className="text-base md:text-lg font-bold text-neutral-800 mb-2">Urgencia</h3>
                             <div className="flex-1 min-h-[300px] md:min-h-[250px] relative" id="chart-urgency">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
@@ -562,7 +562,7 @@ export default function DashboardPage() {
                         </div>
 
                         <div className="bg-white p-4 md:p-6 rounded-xl border border-neutral-200 shadow-sm flex flex-col">
-                            <h3 className="text-base md:text-lg font-bold text-neutral-800 mb-2">Sentimiento (Pendientes)</h3>
+                            <h3 className="text-base md:text-lg font-bold text-neutral-800 mb-2">Sentimiento</h3>
                             <div className="flex-1 min-h-[300px] md:min-h-[250px] relative" id="chart-sentiment">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
@@ -594,7 +594,7 @@ export default function DashboardPage() {
                 <div className="grid grid-cols-1 gap-6">
                     {/* Top Communities Bar Chart */}
                     <div className="bg-white p-4 md:p-6 rounded-xl border border-neutral-200 shadow-sm">
-                        <h3 className="text-base md:text-lg font-bold text-neutral-800 mb-4 md:mb-6">Comunidades con Más Incidencias (Pendientes)</h3>
+                        <h3 className="text-base md:text-lg font-bold text-neutral-800 mb-4 md:mb-6">Comunidades con Más Incidencias</h3>
                         <div className="h-[250px] md:h-[300px]" id="chart-top-communities">
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart
@@ -711,7 +711,7 @@ export default function DashboardPage() {
                         </div>
 
                         <div className="bg-white p-4 md:p-6 rounded-xl border border-neutral-200 shadow-sm flex flex-col">
-                            <h3 className="text-base md:text-lg font-bold text-neutral-800 mb-2">Urgencia (Pend.)</h3>
+                            <h3 className="text-base md:text-lg font-bold text-neutral-800 mb-2">Urgencia</h3>
                             <div className="flex-1 min-h-[300px] md:min-h-[250px] relative" id="chart-urgency">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
@@ -736,7 +736,7 @@ export default function DashboardPage() {
                         </div>
 
                         <div className="bg-white p-4 md:p-6 rounded-xl border border-neutral-200 shadow-sm flex flex-col">
-                            <h3 className="text-base md:text-lg font-bold text-neutral-800 mb-2">Sentimiento (Pend.)</h3>
+                            <h3 className="text-base md:text-lg font-bold text-neutral-800 mb-2">Sentimiento</h3>
                             <div className="flex-1 min-h-[300px] md:min-h-[250px] relative" id="chart-sentiment">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>

@@ -177,7 +177,7 @@ export async function POST(req: Request) {
 
             if (charts.topCommunities) {
                 if (currentY < 200) { page = pdfDoc.addPage([A4.w, A4.h]); currentY = A4.h - 50; }
-                page.drawText("Comunidades con Más Incidencias (Pendientes)", { x: marginX, y: currentY, size: 12, font: bold });
+                page.drawText("Comunidades con Más Incidencias", { x: marginX, y: currentY, size: 12, font: bold });
                 currentY -= 15;
                 currentY = await drawImage(pdfDoc, page, charts.topCommunities, marginX, currentY, contentW);
                 currentY -= 20;
