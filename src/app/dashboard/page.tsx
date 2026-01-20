@@ -296,7 +296,12 @@ export default function DashboardPage() {
                     totalDeuda: `${stats.totalDeuda.toLocaleString()}€`
                 },
                 period,
-                communityName: selectedCommunity === 'all' ? 'Todas' : (communities.find(c => String(c.id) === selectedCommunity)?.nombre_cdad || 'Seleccionada'),
+                communityName: selectedCommunity === 'all'
+                    ? 'Todas'
+                    : (() => {
+                        const c = communities.find(c => String(c.id) === selectedCommunity);
+                        return c ? `${c.codigo} - ${c.nombre_cdad}` : 'Seleccionada';
+                    })(),
                 charts,
                 userPerformance: chartData.userPerformance,
                 topComunidades: chartData.topComunidades
@@ -312,7 +317,12 @@ export default function DashboardPage() {
 
             const now = new Date();
             const dateStr = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
-            const communityLabel = selectedCommunity === 'all' ? 'Todas' : (communities.find(c => String(c.id) === selectedCommunity)?.nombre_cdad || 'Seleccionada');
+            const communityLabel = selectedCommunity === 'all'
+                ? 'Todas'
+                : (() => {
+                    const c = communities.find(c => String(c.id) === selectedCommunity);
+                    return c ? `${c.codigo} - ${c.nombre_cdad}` : 'Seleccionada';
+                })();
             const safeName = communityLabel.replace(/[^a-z0-9]/gi, '_');
             const filename = `${dateStr}_Reporte_${safeName}.pdf`;
 
@@ -371,7 +381,7 @@ export default function DashboardPage() {
                                     { value: 'all', label: 'Todas' },
                                     ...communities.map(c => ({
                                         value: String(c.id),
-                                        label: c.nombre_cdad
+                                        label: `${c.codigo} - ${c.nombre_cdad}`
                                     }))
                                 ]}
                                 value={selectedCommunity}
@@ -427,7 +437,10 @@ export default function DashboardPage() {
                     value={
                         selectedCommunity === 'all'
                             ? 'Todas'
-                            : communities.find((c) => String(c.id) === selectedCommunity)?.nombre_cdad || 'Seleccionada'
+                            : (() => {
+                                const c = communities.find((c) => String(c.id) === selectedCommunity);
+                                return c ? `${c.codigo} - ${c.nombre_cdad}` : 'Seleccionada';
+                            })()
                     }
                     icon={Building}
                     color="text-blue-500"

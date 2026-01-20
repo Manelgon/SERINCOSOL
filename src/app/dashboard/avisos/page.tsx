@@ -375,7 +375,9 @@ export default function AvisosPage() {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="bg-gray-50 p-3 rounded-lg">
                                             <span className="text-xs text-gray-500 uppercase tracking-wide">Comunidad</span>
-                                            <p className="font-medium text-gray-900">{entityData.comunidades?.nombre_cdad || '-'}</p>
+                                            <p className="font-medium text-gray-900">
+                                                {entityData.comunidades?.codigo ? `${entityData.comunidades.codigo} - ${entityData.comunidades.nombre_cdad}` : entityData.comunidades?.nombre_cdad || '-'}
+                                            </p>
                                         </div>
                                         <div className="bg-gray-50 p-3 rounded-lg">
                                             <span className="text-xs text-gray-500 uppercase tracking-wide">Cliente</span>
@@ -439,7 +441,9 @@ export default function AvisosPage() {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="bg-gray-50 p-3 rounded-lg">
                                             <span className="text-xs text-gray-500 uppercase tracking-wide">Comunidad</span>
-                                            <p className="font-medium text-gray-900">{entityData.comunidades?.nombre_cdad || '-'}</p>
+                                            <p className="font-medium text-gray-900">
+                                                {entityData.comunidades?.codigo ? `${entityData.comunidades.codigo} - ${entityData.comunidades.nombre_cdad}` : entityData.comunidades?.nombre_cdad || '-'}
+                                            </p>
                                         </div>
                                         <div className="bg-gray-50 p-3 rounded-lg">
                                             <span className="text-xs text-gray-500 uppercase tracking-wide">Deudor</span>
