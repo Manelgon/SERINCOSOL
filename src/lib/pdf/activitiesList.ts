@@ -174,6 +174,54 @@ export async function generateActivitiesPdf({
         return labels[entityType] || entityType;
     };
 
+    // Improve wrapText to handle long strings without spaces (like JSON)
+    const wrapTextForce = (text: string, maxWidth: number, font: any, size: number): string[] => {
+        if (!text) return [];
+        const lines: string[] = [];
+
+        // Sanitize
+        text = text.replace(/[\r\n]+/g, " ");
+
+        const words = text.split(' ');
+        let currentLine = "";
+
+        for (let i = 0; i < words.length; i++) {
+            let word = words[i];
+
+            // Check if word itself is too long
+            const wordWidth = font.widthOfTextAtSize(word, size);
+            if (wordWidth > maxWidth) {
+                // Force split long word
+                if (currentLine.length > 0) {
+                    lines.push(currentLine);
+                    currentLine = "";
+                }
+
+                let remaining = word;
+                while (remaining.length > 0) {
+                    let sliceLen = remaining.length;
+                    while (sliceLen > 0 && font.widthOfTextAtSize(remaining.substring(0, sliceLen), size) > maxWidth) {
+                        sliceLen--;
+                    }
+                    if (sliceLen === 0) sliceLen = 1; // Anti-freeze
+                    lines.push(remaining.substring(0, sliceLen));
+                    remaining = remaining.substring(sliceLen);
+                }
+                continue;
+            }
+
+            const width = font.widthOfTextAtSize(currentLine + (currentLine ? " " : "") + word, size);
+            if (width < maxWidth) {
+                currentLine += (currentLine ? " " : "") + word;
+            } else {
+                lines.push(currentLine);
+                currentLine = word;
+            }
+        }
+        if (currentLine) lines.push(currentLine);
+        return lines;
+    };
+
     for (let index = 0; index < activities.length; index++) {
         const act = activities[index];
 
@@ -181,21 +229,26 @@ export async function generateActivitiesPdf({
         const accion = getActionLabel(act.action);
         const entidad = getEntityLabel(act.entity_type);
         const nombreEntidad = act.entity_name || '-';
-        const detalles = typeof act.details === 'string' ? act.details : JSON.stringify(act.details) || '-';
+        // Pretty print JSON safely to string, then remove breaks
+        const detalles = typeof act.details === 'string' ? act.details : JSON.stringify(act.details);
         const fecha = new Date(act.created_at).toLocaleString('es-ES');
 
-        const detailsWidth = cols[4].w - 4;
-        const detailsLines = wrapText(detalles, detailsWidth, font, fontSize);
-        const lineHeight = fontSize + 4;
-        const textBlockHeight = Math.max(minRowHeight, (detailsLines.length * lineHeight) + 6);
+        const detailsWidth = cols[4].w - 6;
+        const detailsLines = wrapTextForce(detalles || '', detailsWidth, font, fontSize);
 
+        const lineHeight = fontSize + 4;
+        // Padding top 6, bottom 6
+        const textBlockHeight = Math.max(minRowHeight, (detailsLines.length * lineHeight) + 12);
+
+        // Check Page Break
         if (y - textBlockHeight < 40) {
             page = pdfDoc.addPage([841.89, 595.28]);
-            y = height - 40;
+            y = page.getSize().height - 40;
             drawTableHeader(page, y);
             y -= minRowHeight;
         }
 
+        // Draw Row Background
         if (index % 2 !== 0) {
             page.drawRectangle({
                 x: margin,
@@ -206,23 +259,33 @@ export async function generateActivitiesPdf({
             });
         }
 
-        const commonY = y - 12;
+        // Draw Border Line (Optional, or just bottom border)
+        page.drawLine({
+            start: { x: margin, y: y - textBlockHeight },
+            end: { x: width - margin, y: y - textBlockHeight },
+            color: rgb(0.9, 0.9, 0.9),
+            thickness: 0.5
+        });
 
-        page.drawText(usuario.substring(0, 25), { x: cols[0].x + 2, y: commonY, size: fontSize, font });
-        page.drawText(accion, { x: cols[1].x + 2, y: commonY, size: fontSize, font });
-        page.drawText(entidad, { x: cols[2].x + 2, y: commonY, size: fontSize, font });
-        page.drawText(nombreEntidad.substring(0, 30), { x: cols[3].x + 2, y: commonY, size: fontSize, font });
+        // Vertical Alignment: Top aligned with padding
+        const textY = y - 10;
 
+        page.drawText(usuario.substring(0, 25), { x: cols[0].x + 2, y: textY, size: fontSize, font });
+        page.drawText(accion, { x: cols[1].x + 2, y: textY, size: fontSize, font });
+        page.drawText(entidad, { x: cols[2].x + 2, y: textY, size: fontSize, font });
+        page.drawText(nombreEntidad.substring(0, 30), { x: cols[3].x + 2, y: textY, size: fontSize, font });
+
+        // Draw Wrapped Details
         detailsLines.forEach((line, i) => {
             page.drawText(line, {
                 x: cols[4].x + 2,
-                y: commonY - (i * lineHeight),
+                y: textY - (i * lineHeight),
                 size: fontSize,
                 font
             });
         });
 
-        page.drawText(fecha, { x: cols[5].x + 2, y: commonY, size: fontSize, font });
+        page.drawText(fecha, { x: cols[5].x + 2, y: textY, size: fontSize, font });
 
         y -= textBlockHeight;
     }
