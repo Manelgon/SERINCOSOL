@@ -107,6 +107,8 @@ export default function CertificadoForm() {
         if (comunidad) {
             setValues(prev => ({
                 ...prev,
+                "Código": codigo,
+                "Nombre Comunidad": comunidad.nombre_cdad,
                 // Apellidos/Nombre/Nif removed per user request (only address data)
                 "Dirección 2": comunidad.direccion,
                 CP: comunidad.cp,

@@ -210,6 +210,7 @@ export default function SuplidosForm() {
             const next = {
                 ...prev,
                 "Código": codigo,
+                "Nombre Comunidad": comunidad?.nombre_cdad || "",
             };
 
             if (comunidad) {

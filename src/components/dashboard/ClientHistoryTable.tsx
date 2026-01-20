@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { Search, User, FileText, Trash2, Send, Download, X } from "lucide-react";
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import { User, Send, Download, Trash2, X } from "lucide-react";
 import { toast } from "react-hot-toast";
+import DataTable, { Column } from "@/components/DataTable";
 
 type HistoryType = "varios" | "suplidos" | "certificado-renta";
 
@@ -12,8 +14,6 @@ interface ClientHistoryTableProps {
 }
 
 export default function ClientHistoryTable({ entries, type }: ClientHistoryTableProps) {
-    const [search, setSearch] = useState("");
-
     // Delete State
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [docToDelete, setDocToDelete] = useState<any>(null);
@@ -90,7 +90,6 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
                     endpoint = "/api/documentos/certificado-renta/send";
                     break;
                 case "varios":
-                    // Use the new single-send endpoint for individual history items
                     endpoint = "/api/documentos/varios/send-single";
                     break;
                 default:
@@ -115,193 +114,261 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
         }
     };
 
-    const filtered = entries.filter((r) => {
-        const term = search.toLowerCase();
+    const columns: Column<any>[] = useMemo(() => {
+        const idCol: Column<any> = {
+            key: "id",
+            label: "ID",
+            sortable: true,
+            width: "60px",
+        };
 
-        // Common fields
-        if (r.title?.toLowerCase().includes(term)) return true;
+        const tipoCol: Column<any> = {
+            key: "tipo",
+            label: "tipo",
+            sortable: true,
+            width: "120px",
+            render: () => {
+                const label = type === "suplidos" ? "Suplido" : type === "certificado-renta" ? "Certificado Renta" : "Varios";
+                const bgColor = type === "suplidos" ? "bg-amber-50 text-amber-700 border-amber-100" : type === "certificado-renta" ? "bg-indigo-50 text-indigo-700 border-indigo-100" : "bg-blue-50 text-blue-700 border-blue-100";
+                return <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${bgColor}`}>{label}</span>;
+            }
+        };
 
-        const u = r.profiles;
-        const who = u ? `${u.nombre ?? ""} ${u.apellido ?? ""}` : (r.user_id || "");
-        if (who.toLowerCase().includes(term)) return true;
+        const creadoPorCol: Column<any> = {
+            key: "profiles",
+            label: "generado por",
+            sortable: true,
+            render: (r) => {
+                const u = r.profiles;
+                const who = u ? `${u.nombre ?? ""} ${u.apellido ?? ""}`.trim() : (r.user_id || "Sistema");
+                return (
+                    <div className="flex items-center gap-2">
+                        <User className="w-3.5 h-3.5 text-neutral-400" />
+                        <span className="text-neutral-900">{who}</span>
+                    </div>
+                );
+            },
+            getSearchValue: (r) => {
+                const u = r.profiles;
+                return u ? `${u.nombre ?? ""} ${u.apellido ?? ""}`.trim() : (r.user_id || "Sistema");
+            }
+        };
 
-        const date = new Date(r.created_at).toLocaleDateString("es-ES");
-        if (date.includes(term)) return true;
+        let typeCols: Column<any>[] = [];
 
-        // Payload fields
-        const p = r.payload || {};
+        if (type === "suplidos") {
+            typeCols = [
+                {
+                    key: "codigo",
+                    label: "Código",
+                    sortable: true,
+                    render: (r) => r.payload?.["Código"] || "-",
+                },
+                {
+                    key: "nombre_comunidad",
+                    label: "nombre comunidad",
+                    sortable: true,
+                    render: (r) => r.payload?.["Nombre Cliente"] || "-",
+                },
+                {
+                    key: "nombre_cliente",
+                    label: "Nombre Cliente",
+                    sortable: true,
+                    render: (r) => r.payload?.["Nombre Cliente"] || "-",
+                },
+                {
+                    key: "nif",
+                    label: "NIF",
+                    sortable: true,
+                    render: (r) => r.payload?.["NIF"] || "-",
+                },
+                {
+                    key: "descripcion",
+                    label: "Descripción",
+                    render: (r) => <div className="max-w-xs truncate" title={r.payload?.Descripcion}>{r.payload?.Descripcion || "-"}</div>,
+                },
+                {
+                    key: "total",
+                    label: "TOTAL",
+                    sortable: true,
+                    align: 'right',
+                    width: "110px",
+                    render: (r) => r.payload?.["Suma final"] ? parseFloat(r.payload["Suma final"]).toLocaleString("es-ES", { style: "currency", currency: "EUR" }) : "-",
+                },
+                {
+                    key: "fecha_emision",
+                    label: "FECHA emision",
+                    sortable: true,
+                    render: (r) => r.payload?.["Fecha emisión"] ? new Date(r.payload["Fecha emisión"]).toLocaleDateString("es-ES") : new Date(r.created_at).toLocaleDateString("es-ES"),
+                },
+                creadoPorCol
+            ];
+        } else if (type === "certificado-renta") {
+            typeCols = [
+                {
+                    key: "codigo",
+                    label: "Código",
+                    sortable: true,
+                    render: (r) => r.payload?.["Código"] || r.payload?.codigo || "-",
+                },
+                {
+                    key: "nombre_comunidad",
+                    label: "nombre comunidad",
+                    sortable: true,
+                    render: (r) => r.payload?.["Nombre Comunidad"] || r.payload?.nombre_comunidad || "-",
+                },
+                {
+                    key: "declarante",
+                    label: "(Declarante) nombre y apellidos",
+                    sortable: true,
+                    render: (r) => `${r.payload?.Apellidos || ""} ${r.payload?.Nombre || ""}`.trim() || "-",
+                },
+                {
+                    key: "nif",
+                    label: "NIF",
+                    sortable: true,
+                    render: (r) => r.payload?.Nif || r.payload?.NIF || "-",
+                },
+                {
+                    key: "direccion",
+                    label: "Direccion",
+                    render: (r) => r.payload?.["Dirección 2"] || "-",
+                },
+                {
+                    key: "piso_puerta",
+                    label: "piso/puerta",
+                    render: (r) => {
+                        const p = r.payload?.Piso || "";
+                        const pt = r.payload?.Puerta || "";
+                        if (!p && !pt) return "-";
+                        return `${p}${pt ? ` / ${pt}` : ""}`;
+                    }
+                },
+                {
+                    key: "created_at",
+                    label: "FECHA",
+                    sortable: true,
+                    render: (r) => new Date(r.created_at).toLocaleDateString("es-ES"),
+                },
+                creadoPorCol
+            ];
+        } else if (type === "varios") {
+            typeCols = [
+                {
+                    key: "codigo",
+                    label: "Código",
+                    sortable: true,
+                    render: (r) => r.payload?.codigo || "-",
+                },
+                {
+                    key: "nombre_comunidad",
+                    label: "nombre comunidad",
+                    sortable: true,
+                    render: (r) => r.payload?.nombre_comunidad || "-",
+                },
+                {
+                    key: "cliente",
+                    label: "cliente (nombre y apellidos)",
+                    sortable: true,
+                    render: (r) => r.payload?.cliente || r.payload?.nombre_apellidos || "-",
+                },
+                {
+                    key: "nif",
+                    label: "NIF",
+                    sortable: true,
+                    render: (r) => r.payload?.nif || "-",
+                },
+                {
+                    key: "tipo_inmueble",
+                    label: "tipo inmueble",
+                    render: (r) => r.payload?.tipo_inmueble || "-",
+                },
+                {
+                    key: "total",
+                    label: "total",
+                    sortable: true,
+                    align: 'right',
+                    width: "110px",
+                    render: (r) => `${r.payload?.suma_final || "-"} €`,
+                }
+            ];
+        }
 
-        // Search in all payload values (simple approach)
-        const payloadValues = Object.values(p).map(v => String(v).toLowerCase());
-        if (payloadValues.some(v => v.includes(term))) return true;
+        const baseResult = [idCol, tipoCol, ...typeCols];
 
-        return false;
-    });
+        const actionCol: Column<any> = {
+            key: "acciones",
+            label: type === "varios" ? "acciones" : "ACCIONES",
+            sortable: false,
+            align: 'right',
+            width: "120px",
+            render: (r) => (
+                <div className="flex items-center gap-2">
+                    <a
+                        href={`/api/documentos/${type}/signed-url?id=${r.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1.5 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                        title="Ver/Descargar PDF"
+                    >
+                        <Download className="w-4 h-4" />
+                    </a>
+                    <button
+                        onClick={() => handleSendClick(r)}
+                        className="p-1.5 rounded-full bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-colors"
+                        title="Enviar por Email"
+                    >
+                        <Send className="w-4 h-4" />
+                    </button>
+                    <button
+                        onClick={() => handleDeleteClick(r)}
+                        className="p-1.5 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                        title="Eliminar Documento"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                    </button>
+                </div>
+            )
+        };
+
+        return [...baseResult, actionCol];
+    }, [type]);
+
+    const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set());
 
     return (
-        <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
-            {/* Search Bar */}
-            <div className="p-4 border-b border-gray-100 bg-neutral-50/50">
-                <div className="relative max-w-sm">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                        type="text"
-                        placeholder="Buscar..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-                    />
-                </div>
+        <div className="space-y-4">
+            <div className="flex gap-2">
+                <Link
+                    href="/dashboard/documentos/suplidos/historial"
+                    className={`px-4 py-1.5 rounded-full text-sm font-semibold transition ${type === 'suplidos' ? 'bg-yellow-400 text-neutral-950 shadow-sm' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
+                >
+                    Suplidos
+                </Link>
+                <Link
+                    href="/dashboard/documentos/certificado-renta/historial"
+                    className={`px-4 py-1.5 rounded-full text-sm font-semibold transition ${type === 'certificado-renta' ? 'bg-yellow-400 text-neutral-950 shadow-sm' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
+                >
+                    Certificados Renta
+                </Link>
+                <Link
+                    href="/dashboard/documentos/varios/historial"
+                    className={`px-4 py-1.5 rounded-full text-sm font-semibold transition ${type === 'varios' ? 'bg-yellow-400 text-neutral-950 shadow-sm' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
+                >
+                    Varios Facturas
+                </Link>
             </div>
 
-            <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                    <thead className="bg-neutral-50">
-                        <tr>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wide">Fecha</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wide">Generado por</th>
-
-                            {type === "varios" && (
-                                <>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wide">Tipo</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wide">Cliente</th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold text-neutral-600 uppercase tracking-wide">Total</th>
-                                </>
-                            )}
-
-                            {type === "suplidos" && (
-                                <>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wide">Código</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wide">Descripción</th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold text-neutral-600 uppercase tracking-wide">Total</th>
-                                </>
-                            )}
-
-                            {type === "certificado-renta" && (
-                                <>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wide">Declarante</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wide">NIF</th>
-                                </>
-                            )}
-
-                            <th className="px-4 py-3 text-right text-xs font-semibold text-neutral-600 uppercase tracking-wide">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-neutral-200">
-                        {filtered.length === 0 ? (
-                            <tr>
-                                <td colSpan={10} className="px-4 py-12 text-center text-neutral-500">
-                                    {entries.length === 0 ? "No hay documentos" : "No se encontraron resultados"}
-                                </td>
-                            </tr>
-                        ) : (
-                            filtered.map((r) => {
-                                const u = r.profiles;
-                                const who = u ? `${u.nombre ?? ""} ${u.apellido ?? ""}`.trim() : (r.user_id || "Sistema");
-                                const fecha = new Date(r.created_at);
-                                const payload = r.payload || {};
-
-                                // --- VARIOS ---
-                                const clientVarios = payload.cliente || "Desconocido";
-                                const totalVarios = payload.suma_final || "-";
-                                // Type badge logic
-                                const lowerTitle = (r.title || "").toLowerCase();
-                                let typeBadge = <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Otro</span>;
-                                if (lowerTitle.includes("factura")) typeBadge = <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">Factura</span>;
-                                else if (lowerTitle.includes("certificado")) typeBadge = <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-100">Certificado</span>;
-
-                                // --- SUPLIDOS ---
-                                const codigoSup = payload["Código"] || "-";
-                                const descSup = payload["Descripcion"] || "-";
-                                const totalSup = payload["Suma final"] ? parseFloat(payload["Suma final"]).toLocaleString("es-ES", { style: "currency", currency: "EUR" }) : "-";
-
-                                // --- RENTA ---
-                                const nombreRenta = `${payload.Apellidos || ""} ${payload.Nombre || ""}`.trim();
-                                const nifRenta = payload.Nif || "-";
-
-                                return (
-                                    <tr key={r.id} className="hover:bg-neutral-50 transition-colors">
-                                        <td className="px-4 py-3 whitespace-nowrap">
-                                            <div className="flex flex-col">
-                                                <span className="font-medium text-neutral-900">{fecha.toLocaleDateString("es-ES")}</span>
-                                                <span className="text-neutral-500 text-xs">{fecha.toLocaleTimeString("es-ES", { hour: '2-digit', minute: '2-digit' })}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 whitespace-nowrap">
-                                            <div className="flex items-center gap-2">
-                                                <User className="w-4 h-4 text-neutral-400" />
-                                                <span className="text-neutral-900">{who}</span>
-                                            </div>
-                                        </td>
-
-                                        {type === "varios" && (
-                                            <>
-                                                <td className="px-4 py-3 whitespace-nowrap">{typeBadge}</td>
-                                                <td className="px-4 py-3 font-medium text-neutral-800">{clientVarios}</td>
-                                                <td className="px-4 py-3 text-right font-mono text-neutral-900">{totalVarios} €</td>
-                                            </>
-                                        )}
-
-                                        {type === "suplidos" && (
-                                            <>
-                                                <td className="px-4 py-3 font-mono text-xs text-neutral-600">{codigoSup}</td>
-                                                <td className="px-4 py-3 max-w-xs truncate text-neutral-600" title={descSup}>{descSup}</td>
-                                                <td className="px-4 py-3 text-right font-semibold text-neutral-900">{totalSup}</td>
-                                            </>
-                                        )}
-
-                                        {type === "certificado-renta" && (
-                                            <>
-                                                <td className="px-4 py-3 font-medium text-neutral-800">{nombreRenta || "Desconocido"}</td>
-                                                <td className="px-4 py-3 text-neutral-600 font-mono text-xs">{nifRenta}</td>
-                                            </>
-                                        )}
-
-                                        <td className="px-4 py-3 text-right">
-                                            <div className="flex items-center justify-end gap-2">
-                                                {/* Download/View - Blue */}
-                                                <a
-                                                    href={`/api/documentos/${type}/signed-url?id=${r.id}`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="p-1.5 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
-                                                    title="Ver/Descargar PDF"
-                                                >
-                                                    <Download className="w-4 h-4" />
-                                                </a>
-
-                                                {/* Send (Only Suplidos for now fully supported, but button visible) - Yellow */}
-                                                <button
-                                                    onClick={() => handleSendClick(r)}
-                                                    className="p-1.5 rounded-full bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-colors"
-                                                    title="Enviar por Email"
-                                                >
-                                                    <Send className="w-4 h-4" />
-                                                </button>
-
-                                                {/* Delete - Red */}
-                                                <button
-                                                    onClick={() => handleDeleteClick(r)}
-                                                    className="p-1.5 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
-                                                    title="Eliminar Documento"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                );
-                            })
-                        )}
-                    </tbody>
-                </table>
-            </div>
-
-            {filtered.length > 0 && (
-                <div className="p-3 border-t border-gray-100 text-center text-xs text-neutral-500">
-                    Mostrando {filtered.length} de {entries.length} registro(s)
-                </div>
-            )}
+            <DataTable
+                data={entries}
+                columns={columns}
+                keyExtractor={(r) => r.id}
+                storageKey={`history-${type}`}
+                emptyMessage="No se encontraron documentos en el historial"
+                selectable={true}
+                selectedKeys={selectedIds}
+                onSelectionChange={setSelectedIds}
+            />
 
             {/* DELETE MODAL */}
             {deleteModalOpen && (
@@ -415,3 +482,4 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
         </div>
     );
 }
+

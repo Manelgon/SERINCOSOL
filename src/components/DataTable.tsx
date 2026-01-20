@@ -11,6 +11,8 @@ export interface Column<T> {
     render?: (row: T) => React.ReactNode;
     getSearchValue?: (row: T) => string;
     defaultVisible?: boolean;
+    align?: 'left' | 'center' | 'right';
+    width?: string;
 }
 
 interface DataTableProps<T> {
@@ -234,7 +236,7 @@ export default function DataTable<T extends Record<string, any>>({
 
                     {showColumnSelector && (
                         <div className="absolute right-0 mt-2 w-56 bg-white border border-neutral-200 rounded-lg shadow-lg z-10 p-2">
-                            <div className="text-xs font-semibold text-neutral-600 mb-2 px-2">Mostrar columnas</div>
+                            <div className="text-[10px] font-bold text-neutral-400 mb-2 px-2 uppercase tracking-wider">Mostrar columnas</div>
                             {columns.map((col) => (
                                 <label
                                     key={col.key}
@@ -244,9 +246,9 @@ export default function DataTable<T extends Record<string, any>>({
                                         type="checkbox"
                                         checked={visibleColumns.has(col.key)}
                                         onChange={() => toggleColumn(col.key)}
-                                        className="rounded border-neutral-300"
+                                        className="rounded border-neutral-300 text-yellow-500 focus:ring-yellow-400"
                                     />
-                                    <span>{col.label}</span>
+                                    <span className="uppercase text-[11px] font-medium text-neutral-700">{col.label}</span>
                                 </label>
                             ))}
                         </div>
@@ -274,11 +276,13 @@ export default function DataTable<T extends Record<string, any>>({
                                 {visibleCols.map((col) => (
                                     <th
                                         key={col.key}
-                                        className={`px-4 py-3 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wide ${col.sortable !== false ? 'cursor-pointer select-none hover:bg-neutral-100' : ''
+                                        style={col.width ? { width: col.width } : {}}
+                                        className={`px-4 py-2 text-xs font-semibold text-neutral-600 uppercase tracking-wide ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'
+                                            } ${col.sortable !== false ? 'cursor-pointer select-none hover:bg-neutral-100' : ''
                                             }`}
                                         onClick={() => col.sortable !== false && handleSort(col.key)}
                                     >
-                                        <div className="flex items-center gap-2">
+                                        <div className={`flex items-center gap-2 ${col.align === 'right' ? 'justify-end' : col.align === 'center' ? 'justify-center' : 'justify-start'}`}>
                                             <span>{col.label}</span>
                                             {col.sortable !== false && sortColumn === col.key && (
                                                 sortDirection === 'asc' ? (
@@ -326,7 +330,11 @@ export default function DataTable<T extends Record<string, any>>({
                                                 </td>
                                             )}
                                             {visibleCols.map((col) => (
-                                                <td key={col.key} className="px-4 py-3">
+                                                <td
+                                                    key={col.key}
+                                                    style={col.width ? { width: col.width } : {}}
+                                                    className={`px-4 py-2 ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'}`}
+                                                >
                                                     {col.render ? col.render(row) : row[col.key]}
                                                 </td>
                                             ))}

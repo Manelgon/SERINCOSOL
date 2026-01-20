@@ -665,12 +665,40 @@ export async function POST(req: Request) {
 
         // (Proceed to upload...)
 
-        const timestamp = Date.now();
-        const rand = Math.random().toString(36).substring(7);
+        // Calculate total amount for filename
+        // Replicating frontend logic to be safe or use what frontend sent?
+        // Frontend sends "suma_final" which is pre-calculated string "1050.50". 
+        // We can trust it or fallback to recompute. Let's try payload.suma_final first.
+        let importeTotal = payload["suma_final"];
+        if (!importeTotal) {
+            // Fallback Compute
+            const calc = (v: any) => Number(String(v || "0").replace(",", ".")) || 0;
+            let sum = 0;
+            let vatTotal = 0;
+            for (let i = 1; i <= 3; i++) {
+                const qty = calc(payload[`und${i}`]);
+                const price = calc(payload[`importe${i}`]);
+                const ivap = calc(payload[`iva${i}`]);
+                const sub = qty * price;
+                sum += sub;
+                vatTotal += sub * (ivap / 100);
+            }
+            importeTotal = (sum + vatTotal).toFixed(2);
+        }
 
-        // 4. Upload BOTH to Storage
-        const fileFactura = `varios_factura_${timestamp}_${rand}.pdf`;
-        const fileCertificado = `varios_certificado_${timestamp}_${rand}.pdf`;
+        // Clean String
+        const clean = (s: string) => String(s || "").replace(/[^a-zA-Z0-9À-ÿ \-_.]/g, "").trim();
+        const now = new Date();
+        const dateStr = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
+
+        const clienteInfo = clean(payload["cliente"] || "Cliente");
+        const nombrePerson = clean(payload["nombre_apellidos"] || "Usuario");
+
+        // FCTA_NOMBRE cliente_importe total_fecha europea actual
+        const fileFactura = `varios/FCTA_${clienteInfo}_${importeTotal}_${dateStr}.pdf`;
+
+        // CERT_nombre y apellidos_fecha europea actual
+        const fileCertificado = `varios/CERT_${nombrePerson}_${dateStr}.pdf`;
 
         // Upload Factura
         const { error: uploadErr1 } = await supabaseAdmin.storage

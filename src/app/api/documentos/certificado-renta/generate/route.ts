@@ -299,7 +299,16 @@ export async function POST(req: Request) {
         const pdfBytes = await buildRentaCertificatePdf(payload, { logoBytes, selloBytes });
 
         // 3) Subir a Storage (documento generado)
-        const filePath = `certificados/${Date.now()}_certificado.pdf`;
+        const clean = (s: string) => String(s || "").replace(/[^a-zA-Z0-9À-ÿ \-_.]/g, "").trim();
+        const now = new Date();
+        const dateStr = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
+
+        const pisoSafe = clean(payload["Piso"] || "0");
+        const nombreFull = clean((payload["Apellidos"] || "") + " " + (payload["Nombre"] || ""));
+
+        // CERT_RENTA_Piso_'Apellidos y Nombre_fecha europea actual
+        const fileName = `CERT_RENTA_${pisoSafe}_${nombreFull}_${dateStr}.pdf`;
+        const filePath = `certificados/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
             .from('documentos_administrativos')

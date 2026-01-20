@@ -68,6 +68,7 @@ export default function VariosForm() {
             const next = {
                 ...prev,
                 codigo: codigo,
+                nombre_comunidad: comunidad?.nombre_cdad || "",
             };
 
             if (comunidad) {
