@@ -12,18 +12,18 @@ interface KPICardProps {
 
 export default function KPICard({ title, value, icon: Icon, href, color = 'text-yellow-400' }: KPICardProps) {
     const Content = (
-        <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-            <div className="flex items-center justify-between">
-                <div>
-                    <p className="text-sm font-medium text-neutral-500 uppercase tracking-wider mb-1">
+        <div className="bg-white p-4 md:p-6 rounded-xl border border-neutral-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group h-full">
+            <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                    <p className="text-xs md:text-sm font-medium text-neutral-500 uppercase tracking-wider mb-1 truncate">
                         {title}
                     </p>
-                    <h3 className="text-3xl font-bold text-neutral-900">
+                    <h3 className="text-xl md:text-2xl lg:text-3xl font-bold text-neutral-900 truncate">
                         {value}
                     </h3>
                 </div>
-                <div className={`p-3 rounded-full bg-neutral-50 group-hover:bg-neutral-100 transition-colors ${color}`}>
-                    <Icon className="w-8 h-8" />
+                <div className={`p-2 md:p-3 rounded-full bg-neutral-50 group-hover:bg-neutral-100 transition-colors flex-shrink-0 ${color}`}>
+                    <Icon className="w-6 h-6 md:w-8 md:h-8" />
                 </div>
             </div>
             {href && (

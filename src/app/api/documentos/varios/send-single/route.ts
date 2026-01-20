@@ -53,6 +53,7 @@ export async function POST(req: Request) {
                 formData.append("to_email", body.toEmail);
                 formData.append("document_id", sub.data.id.toString());
                 formData.append("type", "varios-single"); // Distinguish from the batched "varios-factura"
+                formData.append("route", "documentos");
                 const filename = sub.data.pdf_path.split('/').pop() || "documento.pdf";
                 formData.append("filename", filename);
 

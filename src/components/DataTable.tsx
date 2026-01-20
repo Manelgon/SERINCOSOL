@@ -9,6 +9,7 @@ export interface Column<T> {
     label: string;
     sortable?: boolean;
     render?: (row: T) => React.ReactNode;
+    getSearchValue?: (row: T) => string;
     defaultVisible?: boolean;
 }
 
@@ -19,6 +20,12 @@ interface DataTableProps<T> {
     storageKey: string; // Unique key for localStorage
     loading?: boolean;
     emptyMessage?: string;
+    // Selection Support
+    selectable?: boolean;
+    selectedKeys?: Set<string | number>;
+    onSelectionChange?: (keys: Set<string | number>) => void;
+    // Row Interaction
+    onRowClick?: (row: T) => void;
 }
 
 export default function DataTable<T extends Record<string, any>>({
@@ -28,6 +35,10 @@ export default function DataTable<T extends Record<string, any>>({
     storageKey,
     loading = false,
     emptyMessage = 'No hay datos disponibles',
+    selectable = false,
+    selectedKeys = new Set(),
+    onSelectionChange,
+    onRowClick,
 }: DataTableProps<T>) {
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
@@ -102,17 +113,27 @@ export default function DataTable<T extends Record<string, any>>({
         const searchLower = searchTerm.toLowerCase();
 
         // Search across all visible columns
-        return visibleColumns.size > 0
-            ? Array.from(visibleColumns).some((colKey) => {
-                const value = row[colKey];
-                if (value == null) return false;
-                return String(value).toLowerCase().includes(searchLower);
-            })
-            : columns.some((col) => {
-                const value = row[col.key];
-                if (value == null) return false;
-                return String(value).toLowerCase().includes(searchLower);
-            });
+        const colsToSearch = visibleColumns.size > 0
+            ? columns.filter(c => visibleColumns.has(c.key))
+            : columns;
+
+        return colsToSearch.some((col) => {
+            let valueToSearch = '';
+
+            if (col.getSearchValue) {
+                valueToSearch = col.getSearchValue(row);
+            } else {
+                const val = row[col.key];
+                if (val == null) return false;
+                if (typeof val === 'object') {
+                    valueToSearch = JSON.stringify(val);
+                } else {
+                    valueToSearch = String(val);
+                }
+            }
+
+            return valueToSearch.toLowerCase().includes(searchLower);
+        });
     });
 
     // Sort data
@@ -143,6 +164,35 @@ export default function DataTable<T extends Record<string, any>>({
         }
         setVisibleColumns(newVisible);
     };
+
+    // Selection Logic
+    const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!onSelectionChange) return;
+        if (e.target.checked) {
+            // Select all VISIBLE (paginated) data, or all data? Usually user expects page or all. 
+            // Let's select all FILTERED data for bulk actions, 
+            // but typical "checkbox in header" usually acts on the current view.
+            // Let's implement select ALL FILTERED data to be powerful.
+            const allKeys = new Set(searchFilteredData.map(keyExtractor));
+            onSelectionChange(allKeys as Set<string | number>);
+        } else {
+            onSelectionChange(new Set());
+        }
+    };
+
+    const handleSelectRow = (key: string | number) => {
+        if (!onSelectionChange) return;
+        const newSet = new Set(selectedKeys);
+        if (newSet.has(key)) {
+            newSet.delete(key);
+        } else {
+            newSet.add(key);
+        }
+        onSelectionChange(newSet);
+    };
+
+    const isAllSelected = searchFilteredData.length > 0 && selectedKeys.size === searchFilteredData.length;
+    const isIndeterminate = selectedKeys.size > 0 && selectedKeys.size < searchFilteredData.length;
 
     const visibleCols = columns.filter(c => visibleColumns.has(c.key));
 
@@ -210,6 +260,17 @@ export default function DataTable<T extends Record<string, any>>({
                     <table className="w-full text-sm">
                         <thead className="bg-neutral-50">
                             <tr>
+                                {selectable && (
+                                    <th className="w-10 px-4 py-3 text-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={isAllSelected}
+                                            ref={input => { if (input) input.indeterminate = isIndeterminate; }}
+                                            onChange={handleSelectAll}
+                                            className="rounded border-gray-300 text-yellow-500 focus:ring-yellow-400"
+                                        />
+                                    </th>
+                                )}
                                 {visibleCols.map((col) => (
                                     <th
                                         key={col.key}
@@ -234,26 +295,44 @@ export default function DataTable<T extends Record<string, any>>({
                         <tbody className="bg-white divide-y divide-neutral-200">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={visibleCols.length} className="px-4 py-8 text-center text-neutral-500">
+                                    <td colSpan={visibleCols.length + (selectable ? 1 : 0)} className="px-4 py-8 text-center text-neutral-500">
                                         Cargando datos...
                                     </td>
                                 </tr>
                             ) : paginatedData.length === 0 ? (
                                 <tr>
-                                    <td colSpan={visibleCols.length} className="px-4 py-8 text-center text-neutral-500">
+                                    <td colSpan={visibleCols.length + (selectable ? 1 : 0)} className="px-4 py-8 text-center text-neutral-500">
                                         {emptyMessage}
                                     </td>
                                 </tr>
                             ) : (
-                                paginatedData.map((row) => (
-                                    <tr key={keyExtractor(row)} className="hover:bg-neutral-50 transition">
-                                        {visibleCols.map((col) => (
-                                            <td key={col.key} className="px-4 py-3">
-                                                {col.render ? col.render(row) : row[col.key]}
-                                            </td>
-                                        ))}
-                                    </tr>
-                                ))
+                                paginatedData.map((row) => {
+                                    const key = keyExtractor(row);
+                                    const isSelected = selectedKeys.has(key as any);
+                                    return (
+                                        <tr
+                                            key={key}
+                                            className={`hover:bg-neutral-50 transition ${isSelected ? 'bg-yellow-50' : ''} ${onRowClick ? 'cursor-pointer' : ''}`}
+                                            onClick={() => onRowClick && onRowClick(row)}
+                                        >
+                                            {selectable && (
+                                                <td className="px-4 py-3 text-center w-10" onClick={(e) => e.stopPropagation()}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isSelected}
+                                                        onChange={() => handleSelectRow(key as any)}
+                                                        className="rounded border-gray-300 text-yellow-500 focus:ring-yellow-400"
+                                                    />
+                                                </td>
+                                            )}
+                                            {visibleCols.map((col) => (
+                                                <td key={col.key} className="px-4 py-3">
+                                                    {col.render ? col.render(row) : row[col.key]}
+                                                </td>
+                                            ))}
+                                        </tr>
+                                    );
+                                })
                             )}
                         </tbody>
                     </table>

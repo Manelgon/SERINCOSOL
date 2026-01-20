@@ -411,6 +411,22 @@ export async function buildFacturaVariosPdf(
         page.drawText(iban, { x: marginX, y: ibanY - 22, size: 10, font, color: BLACK });
     }
 
+    // Global Footer
+    const footerText = "Serincosol | Administración de Fincas Málaga";
+    const footerSize = 8;
+    const allPages = pdfDoc.getPages();
+    for (const p of allPages) {
+        const { width: pW } = p.getSize();
+        const textW = font.widthOfTextAtSize(footerText, footerSize);
+        p.drawText(footerText, {
+            x: pW / 2 - textW / 2,
+            y: 20,
+            size: footerSize,
+            font,
+            color: rgb(0.5, 0.5, 0.5),
+        });
+    }
+
     return await pdfDoc.save();
 }
 
@@ -589,6 +605,22 @@ export async function buildPagosAlDiaPdf(payload: any, assets: { logoBytes: Uint
 
     page.drawText("Roberto Díaz Rodríguez", { x: marginX, y: 110, size: 11, font: bold, color: BLACK });
     page.drawText("Administrador de fincas", { x: marginX, y: 92, size: 11, font, color: BLACK });
+
+    // Global Footer
+    const footerText = "Serincosol | Administración de Fincas Málaga";
+    const footerSize = 8;
+    const allPages = pdfDoc.getPages();
+    for (const p of allPages) {
+        const { width: pW } = p.getSize();
+        const textW = font.widthOfTextAtSize(footerText, footerSize);
+        p.drawText(footerText, {
+            x: pW / 2 - textW / 2,
+            y: 20,
+            size: footerSize,
+            font,
+            color: rgb(0.5, 0.5, 0.5),
+        });
+    }
 
     return await pdfDoc.save();
 }

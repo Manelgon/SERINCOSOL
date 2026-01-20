@@ -1,0 +1,84 @@
+import { NextResponse } from "next/server";
+import { supabaseRouteClient } from "@/lib/supabase/route";
+import { generateIncidentsPdf } from "@/lib/pdf/incidentsList";
+
+/**
+ * POST /api/incidencias/export
+ * Body: { ids: number[], type: 'csv' | 'pdf' }
+ */
+export async function POST(req: Request) {
+    const { ids, type } = await req.json();
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+        return NextResponse.json({ error: "No Items Selected" }, { status: 400 });
+    }
+
+    const supabase = await supabaseRouteClient();
+
+    // Fetch Data
+    const { data: incidents, error } = await supabase
+        .from('incidencias')
+        .select(`
+            *,
+            comunidades (nombre_cdad),
+            gestor:profiles!gestor_asignado (nombre)
+        `)
+        .in('id', ids)
+        .order('created_at', { ascending: false });
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (!incidents || incidents.length === 0) return NextResponse.json({ error: "No data found" }, { status: 404 });
+
+    const now = new Date();
+    const dateStr = `${now.getDate()}-${now.getMonth() + 1}-${now.getFullYear()}`;
+    const filename = `incidencias_${dateStr}`;
+
+    try {
+        if (type === 'pdf') {
+            const pdfBytes = await generateIncidentsPdf({ incidents });
+            return new NextResponse(Buffer.from(pdfBytes), {
+                headers: {
+                    'Content-Type': 'application/pdf',
+                    'Content-Disposition': `attachment; filename="${filename}.pdf"`,
+                },
+            });
+        }
+
+        else if (type === 'csv') {
+            // Generate CSV
+            const headers = ['ID', 'Fecha', 'Comunidad', 'Cliente', 'Telefono', 'Email', 'Mensaje', 'Estado', 'Gestor', 'Urgencia'];
+            const rows = incidents.map(inc => [
+                inc.id,
+                new Date(inc.created_at).toLocaleDateString(),
+                `"${(inc.comunidad || inc.comunidades?.nombre_cdad || '').replace(/"/g, '""')}"`,
+                `"${(inc.nombre_cliente || '').replace(/"/g, '""')}"`,
+                inc.telefono || '',
+                inc.email || '',
+                `"${(inc.mensaje || '').replace(/"/g, '""').replace(/\n/g, ' ')}"`, // Remove newlines
+                inc.resuelto ? 'Resuelto' : 'Pendiente',
+                inc.gestor?.nombre || inc.gestor_asignado || '',
+                inc.urgencia || ''
+            ]);
+
+            const csvContent = [
+                headers.join(','),
+                ...rows.map(r => r.join(','))
+            ].join('\n');
+
+            // Add BOM for Excel
+            const bom = '\uFEFF';
+            return new NextResponse(bom + csvContent, {
+                headers: {
+                    'Content-Type': 'text/csv; charset=utf-8',
+                    'Content-Disposition': `attachment; filename="${filename}.csv"`,
+                },
+            });
+        }
+
+        return NextResponse.json({ error: "Invalid Type" }, { status: 400 });
+
+    } catch (e: any) {
+        console.error("Export Error", e);
+        return NextResponse.json({ error: e.message }, { status: 500 });
+    }
+}

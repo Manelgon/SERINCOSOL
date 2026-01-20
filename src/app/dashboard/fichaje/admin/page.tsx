@@ -5,7 +5,9 @@ import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { Users, Calendar, Filter, X, Clock } from 'lucide-react';
 import DataTable, { Column } from '@/components/DataTable';
+import SearchableSelect from '@/components/SearchableSelect';
 import { logActivity } from '@/lib/logActivity';
+import EmployeeResume from '@/components/fichaje/EmployeeResume';
 
 interface TimeEntryWithProfile {
     id: number;
@@ -34,6 +36,8 @@ export default function FichajeAdminPage() {
     const [profiles, setProfiles] = useState<Profile[]>([]);
     const [loading, setLoading] = useState(true);
     const [isAdmin, setIsAdmin] = useState(false);
+    const [activeTab, setActiveTab] = useState<'control' | 'reports'>('control');
+    const [selectedUserForReport, setSelectedUserForReport] = useState<string | null>(null);
 
     // Filters
     const [filterUser, setFilterUser] = useState('all');
@@ -326,196 +330,235 @@ export default function FichajeAdminPage() {
                 </a>
             </div>
 
-            {/* SETTINGS PANEL */}
-            <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
-                <div className="flex items-center gap-2 mb-4 border-b pb-2">
-                    <Clock className="w-5 h-5 text-neutral-600" />
-                    <h2 className="font-semibold text-neutral-900">Ajustes de Auto-Cierre</h2>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-6 items-end">
-                    <div className="flex items-center gap-2">
-                        <label className="flex items-center cursor-pointer gap-2">
-                            <input
-                                type="checkbox"
-                                className="w-5 h-5 text-yellow-500 rounded focus:ring-yellow-500"
-                                checked={settings.auto_close_enabled}
-                                onChange={(e) => setSettings({ ...settings, auto_close_enabled: e.target.checked })}
-                            />
-                            <span className="text-sm font-medium text-gray-700">Activar Auto-Cierre</span>
-                        </label>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Hora Ejecución (0-23h)</label>
-                        <input
-                            type="number"
-                            min="0"
-                            max="23"
-                            className="w-full px-3 py-2 border rounded-lg text-sm"
-                            value={settings.daily_execution_hour}
-                            onChange={(e) => setSettings({ ...settings, daily_execution_hour: parseInt(e.target.value) || 0 })}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Max. Horas</label>
-                        <input
-                            type="number"
-                            min="0"
-                            max="48"
-                            className="w-full px-3 py-2 border rounded-lg text-sm"
-                            value={settings.max_hours_duration}
-                            onChange={(e) => setSettings({ ...settings, max_hours_duration: parseInt(e.target.value) || 0 })}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Max. Minutos</label>
-                        <input
-                            type="number"
-                            min="0"
-                            max="59"
-                            className="w-full px-3 py-2 border rounded-lg text-sm"
-                            value={settings.max_minutes_duration}
-                            onChange={(e) => setSettings({ ...settings, max_minutes_duration: parseInt(e.target.value) || 0 })}
-                        />
-                    </div>
-                    <div>
-                        <button
-                            onClick={saveSettings}
-                            disabled={savingSettings}
-                            className="w-full bg-neutral-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-neutral-800 transition disabled:opacity-50"
-                        >
-                            {savingSettings ? 'Guardando...' : 'Guardar Ajustes'}
-                        </button>
-                    </div>
-                </div>
-                <p className="text-xs text-gray-500 mt-2">
-                    El sistema comprobará los fichajes <strong>1 vez al día a las {settings.daily_execution_hour}:00h</strong>. Si encuentra sesiones que excedan <strong>{settings.max_hours_duration}h {settings.max_minutes_duration}m</strong>, las cerrará automáticamente.
-                </p>
+            {/* TABS */}
+            <div className="flex border-b border-gray-200">
+                <button
+                    onClick={() => setActiveTab('control')}
+                    className={`px-6 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === 'control' ? 'border-yellow-400 text-yellow-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                >
+                    Control General
+                </button>
+                <button
+                    onClick={() => setActiveTab('reports')}
+                    className={`px-6 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === 'reports' ? 'border-yellow-400 text-yellow-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                >
+                    Informes y Exportación
+                </button>
             </div>
 
-            {/* Filters */}
-            <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
-                <div className="flex items-center gap-2 mb-4">
-                    <Filter className="w-5 h-5 text-neutral-600" />
-                    <h2 className="font-semibold text-neutral-900">Filtros</h2>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                    {/* User filter */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Usuario</label>
-                        <select
-                            className="w-full px-3 py-2 border rounded-lg bg-white text-sm"
-                            value={filterUser}
-                            onChange={(e) => setFilterUser(e.target.value)}
-                        >
-                            <option value="all">Todos</option>
-                            {profiles.map(p => (
-                                <option key={p.user_id} value={p.user_id}>
-                                    {p.nombre} {p.apellido}
-                                </option>
-                            ))}
-                        </select>
+            {activeTab === 'control' ? (
+                <>
+                    {/* SETTINGS PANEL */}
+                    <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
+                        <div className="flex items-center gap-2 mb-4 border-b pb-2">
+                            <Clock className="w-5 h-5 text-neutral-600" />
+                            <h2 className="font-semibold text-neutral-900">Ajustes de Auto-Cierre</h2>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 items-end">
+                            <div className="flex items-center gap-2">
+                                <label className="flex items-center cursor-pointer gap-2">
+                                    <input
+                                        type="checkbox"
+                                        className="w-5 h-5 text-yellow-500 rounded focus:ring-yellow-500"
+                                        checked={settings.auto_close_enabled}
+                                        onChange={(e) => setSettings({ ...settings, auto_close_enabled: e.target.checked })}
+                                    />
+                                    <span className="text-sm font-medium text-gray-700">Activar Auto-Cierre</span>
+                                </label>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Hora Ejecución (0-23h)</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="23"
+                                    className="w-full px-3 py-2 border rounded-lg text-sm"
+                                    value={settings.daily_execution_hour}
+                                    onChange={(e) => setSettings({ ...settings, daily_execution_hour: parseInt(e.target.value) || 0 })}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Max. Horas</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="48"
+                                    className="w-full px-3 py-2 border rounded-lg text-sm"
+                                    value={settings.max_hours_duration}
+                                    onChange={(e) => setSettings({ ...settings, max_hours_duration: parseInt(e.target.value) || 0 })}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Max. Minutos</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="59"
+                                    className="w-full px-3 py-2 border rounded-lg text-sm"
+                                    value={settings.max_minutes_duration}
+                                    onChange={(e) => setSettings({ ...settings, max_minutes_duration: parseInt(e.target.value) || 0 })}
+                                />
+                            </div>
+                            <div>
+                                <button
+                                    onClick={saveSettings}
+                                    disabled={savingSettings}
+                                    className="w-full bg-neutral-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-neutral-800 transition disabled:opacity-50"
+                                >
+                                    {savingSettings ? 'Guardando...' : 'Guardar Ajustes'}
+                                </button>
+                            </div>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2">
+                            El sistema comprobará los fichajes <strong>1 vez al día a las {settings.daily_execution_hour}:00h</strong>. Si encuentra sesiones que excedan <strong>{settings.max_hours_duration}h {settings.max_minutes_duration}m</strong>, las cerrará automáticamente.
+                        </p>
                     </div>
 
-                    {/* Rol filter */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Rol</label>
-                        <select
-                            className="w-full px-3 py-2 border rounded-lg bg-white text-sm"
-                            value={filterRol}
-                            onChange={(e) => setFilterRol(e.target.value)}
-                        >
-                            <option value="all">Todos</option>
-                            <option value="admin">Admin</option>
-                            <option value="gestor">Gestor</option>
-                            <option value="empleado">Empleado</option>
-                        </select>
+                    {/* Filters */}
+                    <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
+                        <div className="flex items-center gap-2 mb-4">
+                            <Filter className="w-5 h-5 text-neutral-600" />
+                            <h2 className="font-semibold text-neutral-900">Filtros</h2>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                            {/* User filter */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Usuario</label>
+                                <select
+                                    className="w-full px-3 py-2 border rounded-lg bg-white text-sm"
+                                    value={filterUser}
+                                    onChange={(e) => setFilterUser(e.target.value)}
+                                >
+                                    <option value="all">Todos</option>
+                                    {profiles.map(p => (
+                                        <option key={p.user_id} value={p.user_id}>
+                                            {p.nombre} {p.apellido}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Rol filter */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Rol</label>
+                                <select
+                                    className="w-full px-3 py-2 border rounded-lg bg-white text-sm"
+                                    value={filterRol}
+                                    onChange={(e) => setFilterRol(e.target.value)}
+                                >
+                                    <option value="all">Todos</option>
+                                    <option value="admin">Admin</option>
+                                    <option value="gestor">Gestor</option>
+                                    <option value="empleado">Empleado</option>
+                                </select>
+                            </div>
+
+                            {/* Status filter */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                                <select
+                                    className="w-full px-3 py-2 border rounded-lg bg-white text-sm"
+                                    value={filterStatus}
+                                    onChange={(e) => setFilterStatus(e.target.value)}
+                                >
+                                    <option value="all">Todos</option>
+                                    <option value="open">En curso</option>
+                                    <option value="closed">Finalizados</option>
+                                </select>
+                            </div>
+
+                            {/* Date from */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Desde</label>
+                                <input
+                                    type="date"
+                                    className="w-full px-3 py-2 border rounded-lg text-sm"
+                                    value={filterDateFrom}
+                                    onChange={(e) => setFilterDateFrom(e.target.value)}
+                                />
+                            </div>
+
+                            {/* Date to */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Hasta</label>
+                                <input
+                                    type="date"
+                                    className="w-full px-3 py-2 border rounded-lg text-sm"
+                                    value={filterDateTo}
+                                    onChange={(e) => setFilterDateTo(e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Clear filters */}
+                        {(filterUser !== 'all' || filterRol !== 'all' || filterStatus !== 'all' || filterDateFrom || filterDateTo) && (
+                            <button
+                                onClick={() => {
+                                    setFilterUser('all');
+                                    setFilterRol('all');
+                                    setFilterStatus('all');
+                                    setFilterDateFrom('');
+                                    setFilterDateTo('');
+                                }}
+                                className="mt-4 text-sm text-neutral-600 hover:text-neutral-900 flex items-center gap-2 transition-colors"
+                            >
+                                <X className="w-4 h-4" />
+                                Limpiar filtros
+                            </button>
+                        )}
                     </div>
 
-                    {/* Status filter */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
-                        <select
-                            className="w-full px-3 py-2 border rounded-lg bg-white text-sm"
-                            value={filterStatus}
-                            onChange={(e) => setFilterStatus(e.target.value)}
-                        >
-                            <option value="all">Todos</option>
-                            <option value="open">En curso</option>
-                            <option value="closed">Finalizados</option>
-                        </select>
+                    {/* Stats summary */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-xl border border-blue-200">
+                            <p className="text-sm text-neutral-600">Total Registros</p>
+                            <p className="text-2xl font-bold text-neutral-900">{filteredEntries.length}</p>
+                        </div>
+                        <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 p-4 rounded-xl border border-yellow-200">
+                            <p className="text-sm text-neutral-600">Sesiones Abiertas</p>
+                            <p className="text-2xl font-bold text-neutral-900">
+                                {filteredEntries.filter(e => !e.end_at).length}
+                            </p>
+                        </div>
+                        <div className="bg-gradient-to-r from-green-50 to-green-100 p-4 rounded-xl border border-green-200">
+                            <p className="text-sm text-neutral-600">Sesiones Cerradas</p>
+                            <p className="text-2xl font-bold text-neutral-900">
+                                {filteredEntries.filter(e => e.end_at).length}
+                            </p>
+                        </div>
                     </div>
 
-                    {/* Date from */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Desde</label>
-                        <input
-                            type="date"
-                            className="w-full px-3 py-2 border rounded-lg text-sm"
-                            value={filterDateFrom}
-                            onChange={(e) => setFilterDateFrom(e.target.value)}
+                    {/* Table */}
+                    <DataTable
+                        data={filteredEntries}
+                        columns={columns}
+                        keyExtractor={(row) => row.id}
+                        storageKey="fichaje-admin"
+                        loading={loading}
+                        emptyMessage="No hay fichajes que coincidan con los filtros"
+                    />
+                </>
+            ) : (
+                <div className="space-y-6">
+                    <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Seleccionar Empleado</label>
+                        <SearchableSelect
+                            value={selectedUserForReport || ''}
+                            onChange={(val) => setSelectedUserForReport(String(val))}
+                            options={profiles.map(p => ({
+                                value: p.user_id,
+                                label: `${p.nombre} ${p.apellido || ''}`
+                            }))}
+                            placeholder="-- Seleccionar Usuario --"
                         />
                     </div>
 
-                    {/* Date to */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Hasta</label>
-                        <input
-                            type="date"
-                            className="w-full px-3 py-2 border rounded-lg text-sm"
-                            value={filterDateTo}
-                            onChange={(e) => setFilterDateTo(e.target.value)}
-                        />
-                    </div>
+                    {selectedUserForReport && (
+                        <EmployeeResume userId={selectedUserForReport} allowExport={true} />
+                    )}
                 </div>
-
-                {/* Clear filters */}
-                {(filterUser !== 'all' || filterRol !== 'all' || filterStatus !== 'all' || filterDateFrom || filterDateTo) && (
-                    <button
-                        onClick={() => {
-                            setFilterUser('all');
-                            setFilterRol('all');
-                            setFilterStatus('all');
-                            setFilterDateFrom('');
-                            setFilterDateTo('');
-                        }}
-                        className="mt-4 text-sm text-neutral-600 hover:text-neutral-900 flex items-center gap-2 transition-colors"
-                    >
-                        <X className="w-4 h-4" />
-                        Limpiar filtros
-                    </button>
-                )}
-            </div>
-
-            {/* Stats summary */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-xl border border-blue-200">
-                    <p className="text-sm text-neutral-600">Total Registros</p>
-                    <p className="text-2xl font-bold text-neutral-900">{filteredEntries.length}</p>
-                </div>
-                <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 p-4 rounded-xl border border-yellow-200">
-                    <p className="text-sm text-neutral-600">Sesiones Abiertas</p>
-                    <p className="text-2xl font-bold text-neutral-900">
-                        {filteredEntries.filter(e => !e.end_at).length}
-                    </p>
-                </div>
-                <div className="bg-gradient-to-r from-green-50 to-green-100 p-4 rounded-xl border border-green-200">
-                    <p className="text-sm text-neutral-600">Sesiones Cerradas</p>
-                    <p className="text-2xl font-bold text-neutral-900">
-                        {filteredEntries.filter(e => e.end_at).length}
-                    </p>
-                </div>
-            </div>
-
-            {/* Table */}
-            <DataTable
-                data={filteredEntries}
-                columns={columns}
-                keyExtractor={(row) => row.id}
-                storageKey="fichaje-admin"
-                loading={loading}
-                emptyMessage="No hay fichajes que coincidan con los filtros"
-            />
+            )}
 
             {/* CONFIRMATION MODAL */}
             {showConfirmModal && (

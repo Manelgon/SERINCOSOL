@@ -54,6 +54,7 @@ export async function POST(req: Request) {
                 const formData = new FormData();
                 formData.append("to_email", toEmail);
                 formData.append("type", "varios-pack"); // Indicates it contains multiple files
+                formData.append("route", "documentos");
 
                 // --- Process Factura ---
                 if (subFactura) {

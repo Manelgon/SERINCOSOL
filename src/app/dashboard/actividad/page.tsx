@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import DataTable, { Column } from '@/components/DataTable';
+import { FileDown, Download } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 interface ActivityLog {
     id: number;
@@ -18,6 +20,8 @@ interface ActivityLog {
 export default function ActividadPage() {
     const [logs, setLogs] = useState<ActivityLog[]>([]);
     const [loading, setLoading] = useState(true);
+    const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+    const [isExporting, setIsExporting] = useState(false);
 
     useEffect(() => {
         fetchLogs();
@@ -38,6 +42,44 @@ export default function ActividadPage() {
         setLoading(false);
     };
 
+    const handleExport = async (type: 'csv' | 'pdf') => {
+        if (selectedIds.size === 0) return toast.error('Selecciona al menos un registro');
+
+        setIsExporting(true);
+        const loadingToast = toast.loading(`Generando ${type.toUpperCase()}...`);
+
+        try {
+            const response = await fetch('/api/actividad/export', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ids: Array.from(selectedIds),
+                    type
+                })
+            });
+
+            if (!response.ok) throw new Error('Error al exportar');
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const now = new Date();
+            const dateStr = `${now.getDate()}-${now.getMonth() + 1}-${now.getFullYear()}`;
+            a.download = `actividad_${dateStr}.${type}`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            toast.success('Exportación completada', { id: loadingToast });
+        } catch (error) {
+            console.error(error);
+            toast.error('Error al exportar', { id: loadingToast });
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
+    // ... getActionLabel, getEntityLabel, getActionColor ...
     const getActionLabel = (action: string) => {
         const labels: Record<string, string> = {
             create: 'Crear',
@@ -48,6 +90,7 @@ export default function ActividadPage() {
             clock_in: 'Fichaje Entrada',
             clock_out: 'Fichaje Salida',
             generate: 'Generar',
+            read: 'Leído',
         };
         return labels[action] || action;
     };
@@ -60,6 +103,7 @@ export default function ActividadPage() {
             profile: 'Perfil de Usuario',
             fichaje: 'Control Horario',
             documento: 'Documento',
+            aviso: 'Aviso',
         };
         return labels[entityType] || entityType;
     };
@@ -74,6 +118,7 @@ export default function ActividadPage() {
             clock_in: 'bg-emerald-100 text-emerald-800',
             clock_out: 'bg-amber-100 text-amber-800',
             generate: 'bg-indigo-100 text-indigo-800',
+            read: 'bg-neutral-100 text-neutral-800',
         };
         return colors[action] || 'bg-gray-100 text-gray-800';
     };
@@ -102,11 +147,13 @@ export default function ActividadPage() {
                     {getActionLabel(row.action)}
                 </span>
             ),
+            getSearchValue: (row) => getActionLabel(row.action),
         },
         {
             key: 'entity_type',
             label: 'Tipo',
             render: (row) => getEntityLabel(row.entity_type),
+            getSearchValue: (row) => getEntityLabel(row.entity_type),
         },
         {
             key: 'entity_name',
@@ -114,20 +161,20 @@ export default function ActividadPage() {
             render: (row) => row.entity_name || '-',
         },
         {
-            key: 'entity_id',
-            label: 'ID',
-            defaultVisible: false,
-        },
-        {
             key: 'details',
             label: 'Detalles',
+            getSearchValue: (row) => {
+                if (!row.details) return '';
+                try {
+                    const details = typeof row.details === 'string' ? JSON.parse(row.details) : row.details;
+                    return Object.entries(details).map(([k, v]) => `${k}: ${v}`).join(' ');
+                } catch { return ''; }
+            },
             render: (row) => {
                 if (!row.details) return '-';
                 try {
                     const details = typeof row.details === 'string' ? JSON.parse(row.details) : row.details;
-
                     if (Object.keys(details).length === 0) return '-';
-
                     return (
                         <div className="flex flex-col gap-1 text-xs">
                             {Object.entries(details).map(([key, value]) => (
@@ -142,18 +189,39 @@ export default function ActividadPage() {
                             ))}
                         </div>
                     );
-                } catch {
-                    return '-';
-                }
+                } catch { return '-'; }
             },
-            defaultVisible: true,
         },
     ];
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <h1 className="text-xl font-bold text-neutral-900">Registro de Actividad</h1>
+
+                <div className="flex items-center gap-2">
+                    {selectedIds.size > 0 && (
+                        <span className="text-xs font-medium text-neutral-500 mr-2">
+                            {selectedIds.size} seleccionados
+                        </span>
+                    )}
+                    <button
+                        onClick={() => handleExport('csv')}
+                        disabled={selectedIds.size === 0 || isExporting}
+                        className="flex items-center gap-2 bg-white border border-neutral-300 text-neutral-700 px-3 py-1.5 rounded-lg text-sm font-semibold hover:bg-neutral-50 transition disabled:opacity-50"
+                    >
+                        <Download className="w-4 h-4" />
+                        CSV
+                    </button>
+                    <button
+                        onClick={() => handleExport('pdf')}
+                        disabled={selectedIds.size === 0 || isExporting}
+                        className="flex items-center gap-2 bg-neutral-900 text-white px-3 py-1.5 rounded-lg text-sm font-semibold hover:bg-neutral-800 transition disabled:opacity-50"
+                    >
+                        <FileDown className="w-4 h-4" />
+                        PDF
+                    </button>
+                </div>
             </div>
 
             <DataTable
@@ -163,6 +231,9 @@ export default function ActividadPage() {
                 storageKey="actividad"
                 loading={loading}
                 emptyMessage="No hay registros de actividad"
+                selectable={true}
+                selectedKeys={selectedIds}
+                onSelectionChange={(keys) => setSelectedIds(keys as Set<number>)}
             />
         </div>
     );

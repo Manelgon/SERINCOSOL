@@ -259,6 +259,22 @@ export async function buildRentaCertificatePdf(
     page.drawText("Roberto Díaz Rodríguez", { x: marginX, y: 120, size: 10.5, font: bold, color: BLACK });
     page.drawText("Administrador de fincas", { x: marginX, y: 102, size: 10.5, font, color: BLACK });
 
+    // 7. Global Footer
+    const footerText = "Serincosol | Administración de Fincas Málaga";
+    const footerSize = 8;
+    const allPages = pdfDoc.getPages();
+    for (const p of allPages) {
+        const { width: pW } = p.getSize();
+        const textW = font.widthOfTextAtSize(footerText, footerSize);
+        p.drawText(footerText, {
+            x: pW / 2 - textW / 2,
+            y: 20,
+            size: footerSize,
+            font,
+            color: rgb(0.5, 0.5, 0.5),
+        });
+    }
+
     return await pdfDoc.save();
 }
 

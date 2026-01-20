@@ -377,6 +377,8 @@ export default function PerfilesPage() {
         created_at: string;
     }
 
+
+
     const columns: Column<Profile>[] = [
         {
             key: 'nombre',
@@ -463,7 +465,7 @@ export default function PerfilesPage() {
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
-                <h1 className="text-2xl font-bold tracking-tight text-neutral-900">
+                <h1 className="text-xl font-bold text-neutral-900">
                     Gestión de Perfiles
                 </h1>
                 <button

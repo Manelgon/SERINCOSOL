@@ -48,8 +48,7 @@ export default async function DocumentosPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center gap-3">
-                <FileText className="w-6 h-6 text-yellow-500" />
+            <div>
                 <h1 className="text-xl font-bold text-neutral-900">Documentos</h1>
             </div>
 

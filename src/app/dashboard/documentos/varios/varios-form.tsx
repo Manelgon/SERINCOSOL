@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
 import { Download, Loader2 } from "lucide-react";
+import SearchableSelect from "@/components/SearchableSelect";
 import { createBrowserClient } from "@supabase/ssr";
 
 interface Comunidad {
@@ -271,19 +272,15 @@ export default function VariosForm() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <label className="flex flex-col gap-1.5">
                         <span className="text-sm font-medium text-gray-700">Código</span>
-                        <select
-                            disabled={isDisabled}
+                        <SearchableSelect
                             value={values.codigo || ""}
-                            onChange={(e) => handleCommunityChange(e.target.value)}
-                            className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 appearance-none disabled:bg-neutral-100"
-                        >
-                            <option value="">Seleccionar código</option>
-                            {communities.map((c) => (
-                                <option key={c.id} value={c.codigo}>
-                                    {c.codigo} - {c.nombre_cdad}
-                                </option>
-                            ))}
-                        </select>
+                            onChange={(val) => handleCommunityChange(String(val))}
+                            options={communities.map(c => ({
+                                value: c.codigo,
+                                label: `${c.codigo} - ${c.nombre_cdad}`
+                            }))}
+                            placeholder="Seleccionar código"
+                        />
                     </label>
                     <label className="flex flex-col gap-1.5">
                         <span className="text-sm font-medium text-gray-700">Cliente / Comunidad</span>

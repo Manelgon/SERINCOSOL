@@ -346,6 +346,22 @@ export async function buildSuplidoPdf(
 
     page.drawText(totalText, { x: tx, y: ty, size: totalSize, font: bold, color: BLACK });
 
+    // 7) Global Footer
+    const footerText = "Serincosol | Administración de Fincas Málaga";
+    const footerSize = 8;
+    const allPages = pdfDoc.getPages();
+    for (const p of allPages) {
+        const { width: pW } = p.getSize();
+        const textW = font.widthOfTextAtSize(footerText, footerSize);
+        p.drawText(footerText, {
+            x: pW / 2 - textW / 2,
+            y: 20,
+            size: footerSize,
+            font,
+            color: rgb(0.5, 0.5, 0.5),
+        });
+    }
+
     return { pdfBytes: await pdfDoc.save(), payloadComputed: payload };
 }
 

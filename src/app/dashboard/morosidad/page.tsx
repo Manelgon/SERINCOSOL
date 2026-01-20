@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { Plus, FileText, Check, Trash2 } from 'lucide-react';
+import { Plus, FileText, Check, Trash2, X, RotateCcw, Paperclip, Download, Loader2 } from 'lucide-react';
 import DataTable, { Column } from '@/components/DataTable';
 import SearchableSelect from '@/components/SearchableSelect';
 import { logActivity } from '@/lib/logActivity';
@@ -26,7 +26,10 @@ interface Morosidad {
     aviso?: string | null;
     documento: string;
     created_at: string;
-    comunidades?: { nombre_cdad: string };
+    comunidades?: { nombre_cdad: string; codigo?: string };
+    resuelto_por?: string;
+    fecha_resuelto?: string;
+    resolver?: { nombre: string };
 }
 
 export default function MorosidadPage() {
@@ -42,7 +45,20 @@ export default function MorosidadPage() {
     const [deleteId, setDeleteId] = useState<number | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
-    const [filterEstado, setFilterEstado] = useState('all');
+    const [filterEstado, setFilterEstado] = useState('pendiente');
+
+    // Detail Modal State
+    const [selectedDetailMorosidad, setSelectedDetailMorosidad] = useState<Morosidad | null>(null);
+    const [showDetailModal, setShowDetailModal] = useState(false);
+
+    // Selection & Export
+    const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set());
+    const [exporting, setExporting] = useState(false);
+
+    const handleRowClick = (morosidad: Morosidad) => {
+        setSelectedDetailMorosidad(morosidad);
+        setShowDetailModal(true);
+    };
 
     const [formData, setFormData] = useState({
         comunidad_id: '',
@@ -88,7 +104,7 @@ export default function MorosidadPage() {
     };
 
     const fetchComunidades = async () => {
-        const { data } = await supabase.from('comunidades').select('id, nombre_cdad, codigo, direccion');
+        const { data } = await supabase.from('comunidades').select('id, nombre_cdad, codigo, direccion').eq('activo', true);
         if (data) setComunidades(data);
     };
 
@@ -100,7 +116,11 @@ export default function MorosidadPage() {
     const fetchMorosidad = async () => {
         const { data, error } = await supabase
             .from('morosidad')
-            .select(`*, comunidades (nombre_cdad)`)
+            .select(`
+                *,
+                comunidades (nombre_cdad, codigo),
+                resolver:profiles!resuelto_por (nombre)
+            `)
             .order('created_at', { ascending: false });
 
         if (error) {
@@ -264,9 +284,15 @@ export default function MorosidadPage() {
 
     const markAsPaid = async (id: number) => {
         try {
+            const { data: { user } } = await supabase.auth.getUser();
             const { error } = await supabase
                 .from('morosidad')
-                .update({ estado: 'Pagado', fecha_pago: new Date().toISOString() })
+                .update({
+                    estado: 'Pagado',
+                    fecha_pago: new Date().toISOString(),
+                    resuelto_por: user?.id,
+                    fecha_resuelto: new Date().toISOString()
+                })
                 .eq('id', id);
 
             if (error) throw error;
@@ -348,6 +374,40 @@ export default function MorosidadPage() {
         }
     };
 
+    const handleExport = async (type: 'csv' | 'pdf') => {
+        if (selectedIds.size === 0) return;
+        setExporting(true);
+        try {
+            const res = await fetch('/api/morosidad/export', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ids: Array.from(selectedIds),
+                    type
+                })
+            });
+
+            if (!res.ok) throw new Error('Export failed');
+
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = type === 'pdf' ? 'morosidad.pdf' : 'morosidad.csv';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            toast.success('Exportación completada');
+        } catch (error) {
+            console.error(error);
+            toast.error('Error al exportar');
+        } finally {
+            setExporting(false);
+        }
+    };
+
     const handleEdit = (moroso: Morosidad) => {
         setEditingId(moroso.id);
         setFormData({
@@ -369,14 +429,23 @@ export default function MorosidadPage() {
 
     const columns: Column<Morosidad>[] = [
         {
-            key: 'comunidades',
-            label: 'Comunidad',
+            key: 'id',
+            label: 'ID',
+        },
+        {
+            key: 'codigo',
+            label: 'Código',
             render: (row) => (
                 <div className="flex items-start gap-3">
                     <span className={`mt-1 h-3.5 w-1.5 rounded-full ${row.estado === 'Pendiente' ? 'bg-yellow-400' : 'bg-neutral-900'}`} />
-                    <span className="font-semibold">{row.comunidades?.nombre_cdad || '-'}</span>
+                    <span className="font-semibold">{row.comunidades?.codigo || '-'}</span>
                 </div>
             ),
+        },
+        {
+            key: 'comunidades',
+            label: 'Comunidad',
+            render: (row) => row.comunidades?.nombre_cdad || '-',
         },
         {
             key: 'nombre_deudor',
@@ -412,12 +481,6 @@ export default function MorosidadPage() {
             ),
         },
         {
-            key: 'fecha_notificacion',
-            label: 'Fecha Notificación',
-            render: (row) => row.fecha_notificacion ? new Date(row.fecha_notificacion).toLocaleDateString() : '-',
-            defaultVisible: false,
-        },
-        {
             key: 'importe',
             label: 'Importe',
             render: (row) => <span className="font-bold">{row.importe}€</span>,
@@ -433,12 +496,6 @@ export default function MorosidadPage() {
             defaultVisible: false,
         },
         {
-            key: 'created_at',
-            label: 'Fecha Creación',
-            render: (row) => new Date(row.created_at).toLocaleDateString(),
-            defaultVisible: false,
-        },
-        {
             key: 'estado',
             label: 'Estado',
             render: (row) => (
@@ -451,9 +508,14 @@ export default function MorosidadPage() {
             ),
         },
         {
-            key: 'fecha_pago',
-            label: 'Fecha Pago',
-            render: (row) => row.fecha_pago ? new Date(row.fecha_pago).toLocaleDateString() : '-',
+            key: 'aviso',
+            label: 'Aviso',
+            defaultVisible: false,
+        },
+        {
+            key: 'fecha_notificacion',
+            label: 'Fecha Notificación',
+            render: (row) => row.fecha_notificacion ? new Date(row.fecha_notificacion).toLocaleDateString() : '-',
             defaultVisible: false,
         },
         {
@@ -469,8 +531,27 @@ export default function MorosidadPage() {
             defaultVisible: false,
         },
         {
-            key: 'aviso',
-            label: 'Aviso',
+            key: 'fecha_pago',
+            label: 'Fecha Pago',
+            render: (row) => row.fecha_pago ? new Date(row.fecha_pago).toLocaleDateString() : '-',
+            defaultVisible: false,
+        },
+        {
+            key: 'resuelto_por',
+            label: 'Resuelto Por',
+            render: (row) => row.resolver?.nombre || '-',
+            defaultVisible: false,
+        },
+        {
+            key: 'created_at',
+            label: 'Fecha Creación',
+            render: (row) => new Date(row.created_at).toLocaleDateString(),
+            defaultVisible: false,
+        },
+        {
+            key: 'fecha_resuelto',
+            label: 'Fecha Resuelto',
+            render: (row) => row.fecha_resuelto ? new Date(row.fecha_resuelto).toLocaleDateString() : '-',
             defaultVisible: false,
         },
         {
@@ -492,7 +573,10 @@ export default function MorosidadPage() {
                     )}
                     {row.estado !== 'Pagado' && (
                         <button
-                            onClick={() => markAsPaid(row.id)}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                markAsPaid(row.id);
+                            }}
                             className="p-1.5 rounded-full bg-green-100 text-green-600 hover:bg-green-200 transition-colors"
                             title="Marcar como Pagado"
                         >
@@ -500,7 +584,10 @@ export default function MorosidadPage() {
                         </button>
                     )}
                     <button
-                        onClick={() => handleDeleteClick(row.id)}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteClick(row.id);
+                        }}
                         className="p-1.5 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
                         title="Eliminar"
                     >
@@ -544,25 +631,52 @@ export default function MorosidadPage() {
             </div>
 
             {/* Filters */}
-            <div className="flex gap-2">
-                <button
-                    onClick={() => setFilterEstado('all')}
-                    className={`px-3 py-1 rounded-full text-sm font-medium transition ${filterEstado === 'all' ? 'bg-neutral-900 text-white' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
-                >
-                    Todas
-                </button>
-                <button
-                    onClick={() => setFilterEstado('pendiente')}
-                    className={`px-3 py-1 rounded-full text-sm font-medium transition ${filterEstado === 'pendiente' ? 'bg-yellow-400 text-neutral-950' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
-                >
-                    Pendientes
-                </button>
-                <button
-                    onClick={() => setFilterEstado('resuelto')}
-                    className={`px-3 py-1 rounded-full text-sm font-medium transition ${filterEstado === 'resuelto' ? 'bg-neutral-900 text-white' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
-                >
-                    Resueltas
-                </button>
+            <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-4">
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => setFilterEstado('pendiente')}
+                        className={`px-3 py-1 rounded-full text-sm font-medium transition ${filterEstado === 'pendiente' ? 'bg-yellow-400 text-neutral-950' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
+                    >
+                        Pendientes
+                    </button>
+                    <button
+                        onClick={() => setFilterEstado('resuelto')}
+                        className={`px-3 py-1 rounded-full text-sm font-medium transition ${filterEstado === 'resuelto' ? 'bg-neutral-900 text-white' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
+                    >
+                        Resueltas
+                    </button>
+                    <button
+                        onClick={() => setFilterEstado('all')}
+                        className={`px-3 py-1 rounded-full text-sm font-medium transition ${filterEstado === 'all' ? 'bg-neutral-900 text-white' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
+                    >
+                        Todas
+                    </button>
+                </div>
+
+                {/* Export Actions (Visible only if selection) */}
+                {selectedIds.size > 0 && (
+                    <div className="flex gap-2 items-center animate-in fade-in slide-in-from-bottom-2">
+                        <span className="text-sm font-medium text-neutral-500 mr-2">{selectedIds.size} seleccionados</span>
+
+                        <button
+                            onClick={() => handleExport('csv')}
+                            disabled={exporting}
+                            className="bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50 px-3 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition disabled:opacity-50"
+                        >
+                            {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4 text-green-600" />}
+                            CSV
+                        </button>
+
+                        <button
+                            onClick={() => handleExport('pdf')}
+                            disabled={exporting}
+                            className="bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50 px-3 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition disabled:opacity-50"
+                        >
+                            {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4 text-red-600" />}
+                            PDF
+                        </button>
+                    </div>
+                )}
             </div>
 
             {showForm && (
@@ -725,6 +839,10 @@ export default function MorosidadPage() {
                         storageKey="morosidad"
                         loading={loading}
                         emptyMessage="No hay registros de morosidad en esta vista"
+                        onRowClick={handleRowClick}
+                        selectable={true}
+                        selectedKeys={selectedIds}
+                        onSelectionChange={(keys) => setSelectedIds(keys)}
                     />
                 );
             })()}
@@ -784,6 +902,219 @@ export default function MorosidadPage() {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Detail Modal */}
+            {showDetailModal && selectedDetailMorosidad && (
+                <div
+                    className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 md:p-8 backdrop-blur-sm"
+                    onClick={() => setShowDetailModal(false)}
+                >
+                    <div
+                        className="bg-white rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-gray-900/10 w-full max-w-2xl max-h-[80vh] md:max-h-[95vh] overflow-y-auto custom-scrollbar flex flex-col"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Header */}
+                        <div className="px-6 py-8 border-b border-gray-100 flex justify-between items-start bg-gray-50 flex-shrink-0 rounded-t-xl">
+                            <div>
+                                <h3 className="text-xl font-bold text-neutral-900 flex items-center gap-2">
+                                    Deuda #{selectedDetailMorosidad.id}
+                                </h3>
+                                <p className="text-sm text-gray-500 mt-1">
+                                    Creado el {new Date(selectedDetailMorosidad.created_at).toLocaleString()}
+                                </p>
+                                {selectedDetailMorosidad.estado === 'Pagado' && selectedDetailMorosidad.fecha_resuelto && (
+                                    <p className="text-sm text-green-600 mt-0.5 font-medium flex items-center gap-1">
+                                        Pagado el {new Date(selectedDetailMorosidad.fecha_resuelto).toLocaleString()}
+                                        {selectedDetailMorosidad.resolver?.nombre && (
+                                            <span className="text-gray-500 font-normal">
+                                                ({selectedDetailMorosidad.resolver.nombre})
+                                            </span>
+                                        )}
+                                    </p>
+                                )}
+                            </div>
+                            <button
+                                onClick={() => setShowDetailModal(false)}
+                                className="text-gray-400 hover:text-gray-600 transition p-1 hover:bg-gray-200 rounded-full"
+                            >
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+
+                        {/* Body */}
+                        <div className="px-6 pb-6 pt-2 space-y-6 flex-grow">
+                            {/* Top Status Bar */}
+                            <div className="flex flex-wrap items-center gap-4 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                <div className="flex items-center gap-2 text-sm">
+                                    <span className="text-gray-500">Estado:</span>
+                                    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded font-medium ${selectedDetailMorosidad.estado === 'Pagado'
+                                        ? 'bg-gray-100 text-gray-700'
+                                        : selectedDetailMorosidad.estado === 'En disputa'
+                                            ? 'bg-orange-100 text-orange-700'
+                                            : 'bg-yellow-100 text-yellow-800'
+                                        }`}>
+                                        {selectedDetailMorosidad.estado === 'Pagado' ? <Check className="w-3.5 h-3.5" /> : <RotateCcw className="w-3.5 h-3.5" />}
+                                        {selectedDetailMorosidad.estado}
+                                    </span>
+                                </div>
+
+                                <div className="h-6 w-px bg-gray-300 hidden sm:block"></div>
+
+                                <div className="flex items-center gap-2 text-sm">
+                                    <span className="text-gray-500">Importe:</span>
+                                    <span className="font-bold text-gray-900">{selectedDetailMorosidad.importe}€</span>
+                                </div>
+
+                                <div className="flex items-center gap-2 text-sm">
+                                    <span className="text-gray-500">Comunidad:</span>
+                                    <span className="font-medium text-gray-900">{selectedDetailMorosidad.comunidades?.nombre_cdad || '-'}</span>
+                                </div>
+                            </div>
+
+                            {/* Tables Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                {/* Left Column: Deudor Info */}
+                                <div className="space-y-6">
+                                    <div>
+                                        <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 border-b pb-2 flex items-center gap-2">
+                                            👤 Información del Deudor
+                                        </h4>
+                                        <table className="w-full text-sm">
+                                            <tbody className="divide-y divide-gray-100">
+                                                <tr>
+                                                    <td className="py-2.5 text-gray-500 w-1/3">Nombre</td>
+                                                    <td className="py-2.5 font-medium text-gray-900">{selectedDetailMorosidad.nombre_deudor}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td className="py-2.5 text-gray-500">Apellidos</td>
+                                                    <td className="py-2.5 font-medium text-gray-900">{selectedDetailMorosidad.apellidos || '-'}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td className="py-2.5 text-gray-500">Teléfono</td>
+                                                    <td className="py-2.5 font-medium text-gray-900">{selectedDetailMorosidad.telefono_deudor || '-'}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td className="py-2.5 text-gray-500">Email</td>
+                                                    <td className="py-2.5 text-gray-900">{selectedDetailMorosidad.email_deudor || '-'}</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                {/* Right Column: Gestión */}
+                                <div className="space-y-6">
+                                    <div>
+                                        <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 border-b pb-2 flex items-center gap-2">
+                                            📋 Gestión
+                                        </h4>
+                                        <table className="w-full text-sm">
+                                            <tbody className="divide-y divide-gray-100">
+                                                <tr>
+                                                    <td className="py-2.5 text-gray-500 w-1/3">Gestor</td>
+                                                    <td className="py-2.5 font-medium text-gray-900">
+                                                        {(() => {
+                                                            if (!selectedDetailMorosidad.gestor) return '-';
+                                                            const p = profiles.find(p => p.user_id === selectedDetailMorosidad.gestor);
+                                                            return p ? p.nombre : (selectedDetailMorosidad.gestor.length > 20 ? 'Usuario desconocido' : selectedDetailMorosidad.gestor);
+                                                        })()}
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td className="py-2.5 text-gray-500">F. Notificación</td>
+                                                    <td className="py-2.5 text-gray-900">
+                                                        {selectedDetailMorosidad.fecha_notificacion ? new Date(selectedDetailMorosidad.fecha_notificacion).toLocaleDateString() : '-'}
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td className="py-2.5 text-gray-500">F. Pago</td>
+                                                    <td className="py-2.5 text-gray-900">
+                                                        {selectedDetailMorosidad.fecha_pago ? new Date(selectedDetailMorosidad.fecha_pago).toLocaleDateString() : '-'}
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td className="py-2.5 text-gray-500">Aviso</td>
+                                                    <td className="py-2.5 font-medium text-gray-900">{selectedDetailMorosidad.aviso || '-'}</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Concepto */}
+                            <div>
+                                <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 border-b pb-2">
+                                    Concepto
+                                </h4>
+                                <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 text-gray-700 text-sm leading-relaxed">
+                                    {selectedDetailMorosidad.titulo_documento}
+                                </div>
+                            </div>
+
+                            {/* Observaciones */}
+                            {selectedDetailMorosidad.observaciones && (
+                                <div>
+                                    <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 border-b pb-2">
+                                        Observaciones
+                                    </h4>
+                                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
+                                        {selectedDetailMorosidad.observaciones}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Document */}
+                            {selectedDetailMorosidad.documento && (
+                                <div>
+                                    <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 border-b pb-2 flex items-center gap-2">
+                                        📎 Documento
+                                    </h4>
+                                    <a
+                                        href={selectedDetailMorosidad.documento}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-2 bg-white border border-gray-200 px-4 py-3 rounded-lg text-sm font-medium text-gray-700 hover:text-yellow-600 hover:border-yellow-400 hover:shadow-sm transition group w-fit"
+                                    >
+                                        <div className="p-1.5 bg-gray-50 rounded-md group-hover:bg-yellow-50 transition">
+                                            <FileText className="w-5 h-5 text-gray-500 group-hover:text-yellow-600" />
+                                        </div>
+                                        <span>Ver Documento</span>
+                                    </a>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Footer Actions */}
+                        <div className="px-6 py-8 border-t border-gray-100 bg-gray-50 rounded-b-xl flex justify-between items-center flex-shrink-0">
+                            <button
+                                onClick={() => {
+                                    handleDeleteClick(selectedDetailMorosidad.id);
+                                    setShowDetailModal(false);
+                                }}
+                                className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 px-4 py-2 rounded-lg transition font-medium"
+                            >
+                                <Trash2 className="w-5 h-5" />
+                                <span className="hidden sm:inline">Eliminar Deuda</span>
+                                <span className="sm:hidden">Eliminar</span>
+                            </button>
+
+                            {selectedDetailMorosidad.estado !== 'Pagado' && (
+                                <button
+                                    onClick={() => {
+                                        markAsPaid(selectedDetailMorosidad.id);
+                                        setShowDetailModal(false);
+                                    }}
+                                    className="px-6 py-2.5 rounded-lg font-bold shadow-sm transition flex items-center gap-2 bg-yellow-400 text-neutral-950 hover:bg-yellow-500"
+                                >
+                                    <Check className="w-5 h-5" />
+                                    Marcar como Pagado
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}

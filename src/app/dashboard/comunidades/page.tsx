@@ -41,6 +41,15 @@ export default function ComunidadesPage() {
         cif: ''
     });
 
+    const [filterEstado, setFilterEstado] = useState<'all' | 'activo' | 'inactivo'>('activo');
+
+    const filteredComunidades = comunidades.filter(c => {
+        if (filterEstado === 'all') return true;
+        if (filterEstado === 'activo') return c.activo;
+        if (filterEstado === 'inactivo') return !c.activo;
+        return true;
+    });
+
     useEffect(() => {
         fetchComunidades();
     }, []);
@@ -347,6 +356,28 @@ export default function ComunidadesPage() {
                 </button>
             </div>
 
+            {/* Filters */}
+            <div className="flex gap-2">
+                <button
+                    onClick={() => setFilterEstado('activo')}
+                    className={`px-3 py-1 rounded-full text-sm font-medium transition ${filterEstado === 'activo' ? 'bg-yellow-400 text-neutral-950' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
+                >
+                    Activas
+                </button>
+                <button
+                    onClick={() => setFilterEstado('inactivo')}
+                    className={`px-3 py-1 rounded-full text-sm font-medium transition ${filterEstado === 'inactivo' ? 'bg-neutral-900 text-white' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
+                >
+                    Inactivas
+                </button>
+                <button
+                    onClick={() => setFilterEstado('all')}
+                    className={`px-3 py-1 rounded-full text-sm font-medium transition ${filterEstado === 'all' ? 'bg-neutral-900 text-white' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
+                >
+                    Todas
+                </button>
+            </div>
+
             {showForm && (
                 <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm space-y-4"> {/* Enhanced container style */}
                     <h2 className="text-lg font-semibold mb-4">
@@ -435,7 +466,7 @@ export default function ComunidadesPage() {
             )}
 
             <DataTable
-                data={comunidades}
+                data={filteredComunidades}
                 columns={columns}
                 keyExtractor={(row) => row.id}
                 storageKey="comunidades"

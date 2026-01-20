@@ -25,18 +25,22 @@ export default function Navbar() {
     };
 
     return (
-        <header className="border-b border-neutral-200 bg-white px-6 py-4">
-            <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-                <div className="font-semibold text-neutral-900">
-                    Comunidades Activas: <span className="font-bold">{stats.comunidades}</span>
-                </div>
-                <div className="font-semibold text-neutral-900">
-                    Tickets Pendientes: <span className="font-bold">{stats.incidencias}</span>
-                </div>
-                <div className="font-semibold text-neutral-900">
-                    Deudas Pendientes: <span className="font-bold">{stats.morosidad}</span>
-                </div>
+        <div className="flex flex-wrap items-center justify-center md:justify-end gap-x-6 gap-y-2 text-xs md:text-sm">
+            <div className="flex items-center gap-2 text-neutral-600">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                <span className="font-medium">Comunidades:</span>
+                <span className="font-bold text-neutral-900">{stats.comunidades}</span>
             </div>
-        </header>
+            <div className="flex items-center gap-2 text-neutral-600">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                <span className="font-medium">Tickets:</span>
+                <span className="font-bold text-neutral-900">{stats.incidencias}</span>
+            </div>
+            <div className="flex items-center gap-2 text-neutral-600">
+                <span className="w-1.5 h-1.5 rounded-full bg-yellow-500"></span>
+                <span className="font-medium">Deudas:</span>
+                <span className="font-bold text-neutral-900">{stats.morosidad}</span>
+            </div>
+        </div>
     );
 }

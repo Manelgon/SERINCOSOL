@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
 import { Download, Send, Loader2 } from "lucide-react";
+import SearchableSelect from "@/components/SearchableSelect";
 import { createBrowserClient } from "@supabase/ssr";
 
 type Field = { label: string; type?: "text" | "number" | "date" };
@@ -410,144 +411,107 @@ export default function SuplidosForm() {
 
     const isDisabled = status === "generating";
 
+
     return (
         <div className="space-y-6">
-            {/* --- SECCIÓN 1: DATOS CLIENTE --- */}
-            <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm space-y-4">
+            <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm space-y-6">
+                {/* --- SECCIÓN 1: DATOS CLIENTE --- */}
                 <h3 className="text-lg font-semibold text-neutral-900 border-b pb-2">Datos Cliente</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 
                     {/* Código (Select) */}
                     <label className="flex flex-col gap-1.5">
                         <span className="text-sm font-medium text-gray-700">Código</span>
-                        <select
-                            disabled={isDisabled}
+                        <SearchableSelect
                             value={values["Código"] ?? ""}
-                            onChange={(e) => onChange("Código", e.target.value)}
-                            className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 appearance-none disabled:bg-neutral-100"
-                        >
-                            <option value="">Seleccionar código</option>
-                            {communities.map((c) => (
-                                <option key={c.id} value={c.codigo}>
-                                    {c.codigo} - {c.nombre_cdad}
-                                </option>
-                            ))}
-                        </select>
-                    </label>
-
-                    {/* Nombre Cliente */}
-                    <label className="flex flex-col gap-1.5">
-                        <span className="text-sm font-medium text-gray-700">Nombre Cliente</span>
-                        <input
-                            disabled={isDisabled}
-                            type="text"
-                            value={values["Nombre Cliente"] ?? ""}
-                            onChange={(e) => onChange("Nombre Cliente", e.target.value)}
-                            className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
+                            onChange={(val) => onChange("Código", String(val))}
+                            options={communities.map(c => ({
+                                value: c.codigo,
+                                label: `${c.codigo} - ${c.nombre_cdad}`
+                            }))}
+                            placeholder="Seleccionar código"
                         />
                     </label>
 
-                    {/* Provincia */}
-                    <label className="flex flex-col gap-1.5">
-                        <span className="text-sm font-medium text-gray-700">Provincia</span>
-                        <input
-                            disabled={isDisabled}
-                            type="text"
-                            value={values["Provincia"] ?? ""}
-                            onChange={(e) => onChange("Provincia", e.target.value)}
-                            className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
-                        />
-                    </label>
+                    <Field
+                        label="Nombre Cliente"
+                        value={values["Nombre Cliente"] ?? ""}
+                        onChange={(v) => onChange("Nombre Cliente", v)}
+                        disabled={isDisabled}
+                    />
 
-                    {/* Domicilio */}
-                    <label className="flex flex-col gap-1.5">
-                        <span className="text-sm font-medium text-gray-700">Domicilio</span>
-                        <input
-                            disabled={isDisabled}
-                            type="text"
-                            value={values["Domicilio"] ?? ""}
-                            onChange={(e) => onChange("Domicilio", e.target.value)}
-                            className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
-                        />
-                    </label>
+                    <Field
+                        label="Provincia"
+                        value={values["Provincia"] ?? ""}
+                        onChange={(v) => onChange("Provincia", v)}
+                        disabled={isDisabled}
+                    />
 
-                    {/* NIF */}
-                    <label className="flex flex-col gap-1.5">
-                        <span className="text-sm font-medium text-gray-700">NIF</span>
-                        <input
-                            disabled={isDisabled}
-                            type="text"
-                            value={values["NIF"] ?? ""}
-                            onChange={(e) => onChange("NIF", e.target.value)}
-                            className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
-                        />
-                    </label>
+                    <Field
+                        label="Domicilio"
+                        value={values["Domicilio"] ?? ""}
+                        onChange={(v) => onChange("Domicilio", v)}
+                        disabled={isDisabled}
+                    />
 
-                    {/* Fecha emisión */}
-                    <label className="flex flex-col gap-1.5">
-                        <span className="text-sm font-medium text-gray-700">Fecha emisión</span>
-                        <input
-                            disabled={isDisabled}
-                            type="date"
-                            value={values["Fecha emisión"] ?? ""}
-                            onChange={(e) => onChange("Fecha emisión", e.target.value)}
-                            className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
-                        />
-                    </label>
+                    <Field
+                        label="NIF"
+                        value={values["NIF"] ?? ""}
+                        onChange={(v) => onChange("NIF", v)}
+                        disabled={isDisabled}
+                    />
+
+                    <Field
+                        label="Fecha emisión"
+                        value={values["Fecha emisión"] ?? ""}
+                        onChange={(v) => onChange("Fecha emisión", v)}
+                        disabled={isDisabled}
+                        type="date"
+                    />
 
                     {/* Descripción (Full width) */}
-                    <label className="flex flex-col gap-1.5 md:col-span-2 lg:col-span-3">
-                        <span className="text-sm font-medium text-gray-700">Descripción</span>
-                        <input
-                            disabled={isDisabled}
-                            type="text"
+                    <div className="md:col-span-2 lg:col-span-3">
+                        <Field
+                            label="Descripción"
                             value={values["Descripcion"] ?? ""}
-                            onChange={(e) => onChange("Descripcion", e.target.value)}
-                            className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
+                            onChange={(v) => onChange("Descripcion", v)}
+                            disabled={isDisabled}
                         />
-                    </label>
+                    </div>
                 </div>
-            </div>
 
-            {/* --- SECCIÓN 2: DATOS SUPLIDO --- */}
-            <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm space-y-6">
-                <h3 className="text-lg font-semibold text-neutral-900 border-b pb-2">Datos Suplido</h3>
+                {/* --- SECCIÓN 2: DATOS SUPLIDO --- */}
+                <h3 className="text-lg font-semibold text-neutral-900 border-b pb-2 pt-4">Datos Suplido</h3>
 
                 {/* Parámetros de Producción (Cartas/Copias) */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5 p-4 bg-neutral-50 rounded-lg">
-                    <label className="flex flex-col gap-1.5">
-                        <span className="text-sm font-medium text-gray-700">Número de Cartas</span>
-                        <input
-                            disabled={isDisabled}
-                            type="number"
-                            value={values["Número de Cartas"]}
-                            onChange={(e) => onChange("Número de Cartas", e.target.value, "number")}
-                            className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
-                        />
-                    </label>
-                    <label className="flex flex-col gap-1.5">
-                        <span className="text-sm font-medium text-gray-700">Copias</span>
-                        <input
-                            disabled={isDisabled}
-                            type="number"
-                            value={values["Copias"]}
-                            onChange={(e) => onChange("Copias", e.target.value, "number")}
-                            className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
-                        />
-                    </label>
-                    <label className="flex flex-col gap-1.5">
-                        <span className="text-sm font-medium text-gray-700">Total Copias (Auto)</span>
-                        <input
-                            type="number"
-                            readOnly
-                            value={values["Total copias"] ?? 0}
-                            className="w-full rounded-lg border border-neutral-200 bg-neutral-100 px-3 py-2 text-sm text-neutral-600 cursor-not-allowed"
-                        />
-                    </label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-neutral-50 rounded-lg">
+                    <Field
+                        label="Número de Cartas"
+                        value={values["Número de Cartas"]}
+                        onChange={(v) => onChange("Número de Cartas", v, "number")}
+                        disabled={isDisabled}
+                        type="number"
+                    />
+                    <Field
+                        label="Copias"
+                        value={values["Copias"]}
+                        onChange={(v) => onChange("Copias", v, "number")}
+                        disabled={isDisabled}
+                        type="number"
+                    />
+                    <Field
+                        label="Total Copias (Auto)"
+                        value={values["Total copias"] ?? 0}
+                        onChange={() => { }}
+                        readOnly
+                        disabled
+                        type="number"
+                        className="bg-neutral-100 text-neutral-600 cursor-not-allowed"
+                    />
                 </div>
 
                 {/* Tabla de Conceptos (3 Columbas: Cantidad | Precio | Total) */}
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto border rounded-xl border-neutral-100">
                     <table className="w-full text-sm text-left text-neutral-700">
                         <thead className="text-xs text-neutral-500 uppercase bg-neutral-50 border-b border-neutral-200">
                             <tr>
@@ -574,7 +538,7 @@ export default function SuplidosForm() {
                                             type="number"
                                             value={values[row.qty]}
                                             onChange={(e) => onChange(row.qty, e.target.value, "number")}
-                                            className={`w-full rounded border border-neutral-200 px-2 py-1.5 focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100 disabled:text-neutral-500 disabled:cursor-not-allowed`}
+                                            className={`w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed`}
                                         />
                                     </td>
                                     <td className="px-4 py-3">
@@ -584,7 +548,7 @@ export default function SuplidosForm() {
                                                 readOnly
                                                 disabled
                                                 value={values[row.price] ?? 0}
-                                                className="w-full rounded border border-neutral-200 bg-neutral-50 px-2 py-1.5 text-neutral-600 cursor-not-allowed pr-6 text-right"
+                                                className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-neutral-600 cursor-not-allowed pr-6 text-right text-sm"
                                             />
                                             <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-neutral-400">€</span>
                                         </div>
@@ -608,7 +572,7 @@ export default function SuplidosForm() {
             </div>
 
             {/* Actions (Botón de generar) */}
-            <div className="flex flex-col md:flex-row items-start gap-3 pt-4 border-t border-gray-100">
+            <div className="flex flex-col md:flex-row items-start gap-3">
                 <button
                     type="button"
                     onClick={generate}
@@ -628,3 +592,36 @@ export default function SuplidosForm() {
         </div>
     );
 }
+
+function Field({
+    label,
+    value,
+    onChange,
+    type = "text",
+    disabled = false,
+    readOnly = false,
+    className = ""
+}: {
+    label: string;
+    value: any;
+    onChange: (v: string) => void;
+    type?: string;
+    disabled?: boolean;
+    readOnly?: boolean;
+    className?: string;
+}) {
+    return (
+        <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium text-gray-700">{label}</span>
+            <input
+                type={type}
+                value={value ?? ""}
+                onChange={(e) => onChange(e.target.value)}
+                disabled={disabled}
+                readOnly={readOnly}
+                className={`w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-50 ${className}`}
+            />
+        </label>
+    );
+}
+

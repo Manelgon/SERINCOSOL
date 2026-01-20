@@ -31,12 +31,7 @@ export default function SuplidosPage() {
                 </Link>
             </div>
 
-            {/* Form Card */}
-            <div className="bg-white rounded-xl shadow-md border border-gray-100">
-                <div className="p-6">
-                    <SuplidosForm />
-                </div>
-            </div>
+            <SuplidosForm />
         </div>
     );
 }

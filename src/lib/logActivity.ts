@@ -1,7 +1,7 @@
-import { supabase } from './supabaseClient';
+import { supabase as defaultSupabase } from './supabaseClient';
 
-export type ActivityAction = 'create' | 'update' | 'delete' | 'mark_paid' | 'toggle_active' | 'update_password' | 'clock_in' | 'clock_out' | 'generate';
-export type EntityType = 'comunidad' | 'incidencia' | 'morosidad' | 'profile' | 'fichaje' | 'documento';
+export type ActivityAction = 'create' | 'update' | 'delete' | 'mark_paid' | 'toggle_active' | 'update_password' | 'clock_in' | 'clock_out' | 'generate' | 'read';
+export type EntityType = 'comunidad' | 'incidencia' | 'morosidad' | 'profile' | 'fichaje' | 'documento' | 'aviso';
 
 interface LogActivityParams {
     action: ActivityAction;
@@ -9,6 +9,7 @@ interface LogActivityParams {
     entityId?: number;
     entityName?: string;
     details?: any;
+    supabaseClient?: any; // Allow passing a server-side client
 }
 
 export async function logActivity({
@@ -16,22 +17,28 @@ export async function logActivity({
     entityType,
     entityId,
     entityName,
-    details
+    details,
+    supabaseClient
 }: LogActivityParams) {
+    const client = supabaseClient || defaultSupabase;
+
     try {
         // Get current user
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        const { data: { user } } = await client.auth.getUser();
+        if (!user) {
+            console.warn('[logActivity] No user found, skipping log');
+            return;
+        }
 
         // Get user profile for name
-        const { data: profile } = await supabase
+        const { data: profile } = await client
             .from('profiles')
             .select('nombre')
             .eq('user_id', user.id)
             .single();
 
         // Insert activity log
-        await supabase.from('activity_logs').insert({
+        await client.from('activity_logs').insert({
             user_id: user.id,
             user_name: profile?.nombre || user.email || 'Usuario',
             action,
