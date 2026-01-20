@@ -177,7 +177,7 @@ export async function POST(req: Request) {
 
             if (charts.topCommunities) {
                 if (currentY < 200) { page = pdfDoc.addPage([A4.w, A4.h]); currentY = A4.h - 50; }
-                page.drawText("Comunidades con Más Incidencias", { x: marginX, y: currentY, size: 12, font: bold });
+                page.drawText("Comunidades con Más Incidencias (Pendientes)", { x: marginX, y: currentY, size: 12, font: bold });
                 currentY -= 15;
                 currentY = await drawImage(pdfDoc, page, charts.topCommunities, marginX, currentY, contentW);
                 currentY -= 20;
@@ -194,21 +194,22 @@ export async function POST(req: Request) {
             if (currentY < 300) { page = pdfDoc.addPage([A4.w, A4.h]); currentY = A4.h - 50; }
 
             const diagnosticCharts = [
-                { id: 'incidentStatus', label: 'Estado Incidencias', img: charts.incidentStatus },
+                { id: 'incidentStatus', label: 'Incidencias', img: charts.incidentStatus },
                 { id: 'urgency', label: 'Urgencia', img: charts.urgency },
+                { id: 'sentiment', label: 'Sentimiento', img: charts.sentiment },
                 { id: 'debtStatus', label: 'Estado Deuda', img: charts.debtStatus }
             ].filter(c => c.img);
 
             if (diagnosticCharts.length > 0) {
                 const gap = 10;
-                // Always assume 3 columns for consistency in alignment even if less are present
-                const chartW = (contentW - (gap * 2)) / 3;
+                // Use 4 columns layout to fit all indicators together if they exist
+                const chartW = (contentW - (gap * 3)) / 4;
                 let minCharY = currentY;
 
                 for (let i = 0; i < diagnosticCharts.length; i++) {
                     const c = diagnosticCharts[i];
                     const x = marginX + (chartW + gap) * i;
-                    page.drawText(c.label, { x, y: currentY, size: 12, font: bold });
+                    page.drawText(c.label, { x, y: currentY, size: 10, font: bold });
                     const resY = await drawImage(pdfDoc, page, c.img, x, currentY - 15, chartW);
                     if (resY < minCharY) minCharY = resY;
                 }

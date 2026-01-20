@@ -27,6 +27,7 @@ export default function DashboardPage() {
         debtByCommunity: any[];
         debtStatus: any[];
         incidenciasStatus: any[];
+        sentimentDistribution: any[];
     }>({
         incidenciasEvolution: [],
         urgencyDistribution: [],
@@ -34,7 +35,8 @@ export default function DashboardPage() {
         userPerformance: [],
         debtByCommunity: [],
         debtStatus: [],
-        incidenciasStatus: []
+        incidenciasStatus: [],
+        sentimentDistribution: []
     });
 
     const [loading, setLoading] = useState(true);
@@ -159,22 +161,35 @@ export default function DashboardPage() {
                 .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
                 .slice(-14); // Last 14 points for cleanliness
 
-            // Charts: Urgency Distribution
-            const urgencyMap = { 'Baja': 0, 'Media': 0, 'Alta': 0 };
+            // Charts: Urgency & Sentiment Distribution (Pending only)
+            const urgencyMap = { 'Alta': 0, 'Media': 0, 'Baja': 0 };
+            const sentimentMap: Record<string, number> = {};
+
             incidencias?.forEach(inc => {
-                if (inc.urgencia && urgencyMap.hasOwnProperty(inc.urgencia)) {
-                    // @ts-ignore
-                    urgencyMap[inc.urgencia]++;
+                if (!inc.resuelto) {
+                    // Urgency
+                    if (inc.urgencia && urgencyMap.hasOwnProperty(inc.urgencia)) {
+                        // @ts-ignore
+                        urgencyMap[inc.urgencia]++;
+                    }
+                    // Sentiment
+                    const sent = inc.sentimiento || 'Neutral';
+                    sentimentMap[sent] = (sentimentMap[sent] || 0) + 1;
                 }
             });
             const urgencyData = Object.entries(urgencyMap).map(([name, value]) => ({ name, value }));
+            const sentimentData = Object.entries(sentimentMap)
+                .map(([name, value]) => ({ name, value }))
+                .sort((a, b) => b.value - a.value);
 
-            // Charts: Top Comunidades (Most Incidents)
+            // Charts: Top Comunidades (Most Pending Incidents)
             const comMap = new Map<string, number>();
             incidencias?.forEach(inc => {
-                // @ts-ignore
-                const name = inc.comunidades?.nombre_cdad || 'Desconocida';
-                comMap.set(name, (comMap.get(name) || 0) + 1);
+                if (!inc.resuelto) {
+                    // @ts-ignore
+                    const name = inc.comunidades?.nombre_cdad || 'Desconocida';
+                    comMap.set(name, (comMap.get(name) || 0) + 1);
+                }
             });
             const topComunidades = Array.from(comMap.entries())
                 .map(([name, count]) => ({ name, count }))
@@ -247,7 +262,8 @@ export default function DashboardPage() {
                 incidenciasStatus: [
                     { name: 'Resuelta', value: resueltas },
                     { name: 'Pendiente', value: pendientes }
-                ]
+                ],
+                sentimentDistribution: sentimentData
             });
 
         } catch (error) {
@@ -284,6 +300,7 @@ export default function DashboardPage() {
             const charts = {
                 evolution: await captureChart('chart-evolution'),
                 urgency: await captureChart('chart-urgency'),
+                sentiment: await captureChart('chart-sentiment'),
                 debtStatus: await captureChart('chart-debt-status'),
                 incidentStatus: await captureChart('chart-incident-status'),
                 topCommunities: await captureChart('chart-top-communities'),
@@ -360,7 +377,8 @@ export default function DashboardPage() {
         };
     }, [isInitialized, fetchDashboardData]); // Re-subscribe when fetchDashboardData changes (on period change)
 
-    const COLORS = ['#00C49F', '#FFBB28', '#FF8042']; // Green, Yellow, Orange/Red
+    const COLORS = ['#FF8042', '#FFBB28', '#00C49F']; // Alta (Orange/Red), Media (Yellow), Baja (Green)
+    const SENTIMENT_COLORS = ['#94a3b8', '#10b981', '#ef4444', '#f59e0b', '#3b82f6']; // Gray, Green, Red, Orange, Blue
 
     return (
         <div className="space-y-6 md:space-y-8 pb-10">
@@ -470,7 +488,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Charts Row */}
-            <div className={`grid grid-cols-1 ${selectedCommunity === 'all' ? 'lg:grid-cols-3' : 'lg:grid-cols-1'} gap-6`}>
+            <div className={`grid grid-cols-1 ${selectedCommunity === 'all' ? 'lg:grid-cols-4' : 'lg:grid-cols-1'} gap-6`}>
                 {/* Evolution Chart */}
                 <div className={`${selectedCommunity === 'all' ? 'lg:col-span-2' : ''} bg-white p-4 md:p-6 rounded-xl border border-neutral-200 shadow-sm`}>
                     <h3 className="text-base md:text-lg font-bold text-neutral-800 mb-4 md:mb-6 flex items-center gap-2">
@@ -515,32 +533,59 @@ export default function DashboardPage() {
                     </div>
                 </div>
 
-                {/* Urgency Pie Chart - Only here if 'all' */}
+                {/* Urgency & Sentiment Pie Charts - Only here if 'all' */}
                 {selectedCommunity === 'all' && (
-                    <div className="bg-white p-4 md:p-6 rounded-xl border border-neutral-200 shadow-sm flex flex-col">
-                        <h3 className="text-base md:text-lg font-bold text-neutral-800 mb-2">Urgencia</h3>
-                        <div className="flex-1 min-h-[300px] md:min-h-[250px] relative" id="chart-urgency">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie
-                                        data={chartData.urgencyDistribution}
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius="60%"
-                                        outerRadius="80%"
-                                        paddingAngle={5}
-                                        dataKey="value"
-                                    >
-                                        {chartData.urgencyDistribution.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip />
-                                    <Legend verticalAlign="bottom" height={36} />
-                                </PieChart>
-                            </ResponsiveContainer>
+                    <>
+                        <div className="bg-white p-4 md:p-6 rounded-xl border border-neutral-200 shadow-sm flex flex-col">
+                            <h3 className="text-base md:text-lg font-bold text-neutral-800 mb-2">Urgencia (Pendientes)</h3>
+                            <div className="flex-1 min-h-[300px] md:min-h-[250px] relative" id="chart-urgency">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={chartData.urgencyDistribution}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius="60%"
+                                            outerRadius="80%"
+                                            paddingAngle={5}
+                                            dataKey="value"
+                                        >
+                                            {chartData.urgencyDistribution.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip />
+                                        <Legend verticalAlign="bottom" height={36} />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </div>
                         </div>
-                    </div>
+
+                        <div className="bg-white p-4 md:p-6 rounded-xl border border-neutral-200 shadow-sm flex flex-col">
+                            <h3 className="text-base md:text-lg font-bold text-neutral-800 mb-2">Sentimiento (Pendientes)</h3>
+                            <div className="flex-1 min-h-[300px] md:min-h-[250px] relative" id="chart-sentiment">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={chartData.sentimentDistribution}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius="60%"
+                                            outerRadius="80%"
+                                            paddingAngle={5}
+                                            dataKey="value"
+                                        >
+                                            {chartData.sentimentDistribution.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={SENTIMENT_COLORS[index % SENTIMENT_COLORS.length]} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip />
+                                        <Legend verticalAlign="bottom" height={36} />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+                    </>
                 )}
             </div>
 
@@ -549,7 +594,7 @@ export default function DashboardPage() {
                 <div className="grid grid-cols-1 gap-6">
                     {/* Top Communities Bar Chart */}
                     <div className="bg-white p-4 md:p-6 rounded-xl border border-neutral-200 shadow-sm">
-                        <h3 className="text-base md:text-lg font-bold text-neutral-800 mb-4 md:mb-6">Comunidades con Más Incidencias</h3>
+                        <h3 className="text-base md:text-lg font-bold text-neutral-800 mb-4 md:mb-6">Comunidades con Más Incidencias (Pendientes)</h3>
                         <div className="h-[250px] md:h-[300px]" id="chart-top-communities">
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart
@@ -577,7 +622,7 @@ export default function DashboardPage() {
             )}
 
             {/* Debt Analysis Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className={`grid grid-cols-1 ${selectedCommunity === 'all' ? 'lg:grid-cols-3' : 'lg:grid-cols-4'} gap-6`}>
                 {selectedCommunity === 'all' ? (
                     <>
                         {/* Debt by Community */}
@@ -638,7 +683,7 @@ export default function DashboardPage() {
                     <>
                         {/* When a community is selected, we show Urgency and Debt Status side by side to match PDF sizes */}
                         <div className="bg-white p-4 md:p-6 rounded-xl border border-neutral-200 shadow-sm flex flex-col">
-                            <h3 className="text-base md:text-lg font-bold text-neutral-800 mb-2">Estado de Incidencias</h3>
+                            <h3 className="text-base md:text-lg font-bold text-neutral-800 mb-2">Incidencias</h3>
                             <div className="flex-1 min-h-[300px] md:min-h-[250px] relative" id="chart-incident-status">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
@@ -666,7 +711,7 @@ export default function DashboardPage() {
                         </div>
 
                         <div className="bg-white p-4 md:p-6 rounded-xl border border-neutral-200 shadow-sm flex flex-col">
-                            <h3 className="text-base md:text-lg font-bold text-neutral-800 mb-2">Urgencia</h3>
+                            <h3 className="text-base md:text-lg font-bold text-neutral-800 mb-2">Urgencia (Pend.)</h3>
                             <div className="flex-1 min-h-[300px] md:min-h-[250px] relative" id="chart-urgency">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
@@ -691,7 +736,32 @@ export default function DashboardPage() {
                         </div>
 
                         <div className="bg-white p-4 md:p-6 rounded-xl border border-neutral-200 shadow-sm flex flex-col">
-                            <h3 className="text-base md:text-lg font-bold text-neutral-800 mb-2">Estado de Deuda</h3>
+                            <h3 className="text-base md:text-lg font-bold text-neutral-800 mb-2">Sentimiento (Pend.)</h3>
+                            <div className="flex-1 min-h-[300px] md:min-h-[250px] relative" id="chart-sentiment">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={chartData.sentimentDistribution}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius="60%"
+                                            outerRadius="80%"
+                                            paddingAngle={5}
+                                            dataKey="value"
+                                        >
+                                            {chartData.sentimentDistribution.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={SENTIMENT_COLORS[index % SENTIMENT_COLORS.length]} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip />
+                                        <Legend verticalAlign="bottom" height={36} />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+
+                        <div className="bg-white p-4 md:p-6 rounded-xl border border-neutral-200 shadow-sm flex flex-col">
+                            <h3 className="text-base md:text-lg font-bold text-neutral-800 mb-2">Estado Deuda</h3>
                             <div className="flex-1 min-h-[300px] md:min-h-[250px] relative" id="chart-debt-status">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
