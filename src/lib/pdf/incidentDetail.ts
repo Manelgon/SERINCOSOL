@@ -1,0 +1,342 @@
+import { PDFDocument, rgb, StandardFonts, PDFFont } from "pdf-lib";
+import { createClient } from "@supabase/supabase-js";
+
+// Helper for Service Role (bypassing RLS for assets)
+const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+// Helper: Download Asset with Admin Client
+async function downloadAssetPng(filePath: string) {
+    let { data, error } = await supabaseAdmin.storage
+        .from("doc-assets")
+        .download(filePath);
+
+    if (error && filePath.includes('/')) {
+        const rootPath = filePath.split('/').pop()!;
+        const retry = await supabaseAdmin.storage
+            .from("doc-assets")
+            .download(rootPath);
+        if (!retry.error) {
+            data = retry.data;
+            error = null;
+        }
+    }
+
+    if (error || !data) {
+        console.warn(`Asset ${filePath} not found:`, error?.message);
+        return null;
+    }
+
+    const ab = await data.arrayBuffer();
+    return Buffer.from(ab);
+}
+
+// -----------------------------------------------------------
+// Text Wrapping & Drawing Helpers
+// -----------------------------------------------------------
+
+function wrapText(text: string, maxWidth: number, font: PDFFont, size: number): string[] {
+    if (!text) return [];
+    // Replace newlines with spaces for single block, or split paragraphs if needed.
+    // For this UI, preserving paragraphs is better:
+    const paragraphs = text.split('\n');
+    let lines: string[] = [];
+
+    paragraphs.forEach(paragraph => {
+        const words = paragraph.split(' ');
+        let currentLine = words[0] || '';
+
+        for (let i = 1; i < words.length; i++) {
+            const word = words[i];
+            const width = font.widthOfTextAtSize(currentLine + " " + word, size);
+            if (width < maxWidth) {
+                currentLine += " " + word;
+            } else {
+                lines.push(currentLine);
+                currentLine = word;
+            }
+        }
+        lines.push(currentLine);
+    });
+    return lines;
+}
+
+// -----------------------------------------------------------
+// Main Generation Function
+// -----------------------------------------------------------
+
+export async function generateIncidentDetailPdf({ incident }: { incident: any }) {
+    // --- ASSETS ---
+    const logoBytes = await downloadAssetPng("certificados/logo-retenciones.png");
+
+    // --- PDF SETUP ---
+    const pdfDoc = await PDFDocument.create();
+    // A4 Portrait: 595.28 x 841.89
+    let page = pdfDoc.addPage([595.28, 841.89]);
+    const { width, height } = page.getSize();
+
+    // Fonts
+    const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    // Note: StandardFonts doesn't support emojis or complex charset.
+    // For 'Check' icons etc, we might need a separate font or just text simulation.
+
+    const margin = 40;
+    let y = height - margin;
+
+    // --- 1. LOGO (Full width header) ---
+    if (logoBytes) {
+        try {
+            const img = await pdfDoc.embedPng(logoBytes);
+            // Full width, maintain aspect
+            const targetW = width;
+            const targetH = (img.height / img.width) * targetW;
+
+            // Draw at absolute top-left
+            page.drawImage(img, {
+                x: 0,
+                y: height - targetH,
+                width: targetW,
+                height: targetH
+            });
+
+            // Adjust y for subsequent content
+            // Leave a little space below banner
+            y = height - targetH - 30;
+        } catch (e) {
+            console.error("Logo embed error", e);
+            y -= 20;
+        }
+    } else {
+        y -= 20;
+    }
+
+    // --- 2. HEADER: Ticket #ID ---
+    const ticketTitle = `Ticket #${incident.id}`;
+    page.drawText(ticketTitle, {
+        x: margin,
+        y: y,
+        size: 24,
+        font: fontBold,
+        color: rgb(0, 0, 0),
+    });
+    y -= 20;
+
+    const createdText = `Creado el ${new Date(incident.created_at).toLocaleString('es-ES')}`;
+    page.drawText(createdText, {
+        x: margin,
+        y: y,
+        size: 10,
+        font: fontRegular,
+        color: rgb(0.5, 0.5, 0.5), // Gray
+    });
+    y -= 40;
+
+    // --- 3. STATUS BAR (Highlighted Box) ---
+    // Box
+    const statusBarHeight = 40;
+    page.drawRectangle({
+        x: margin,
+        y: y - statusBarHeight,
+        width: width - (margin * 2),
+        height: statusBarHeight,
+        color: rgb(0.98, 0.98, 0.98), // Very light gray bg
+        borderColor: rgb(0.9, 0.9, 0.9),
+        borderWidth: 1,
+    });
+
+    // We need to layout: "Estado: [Badge]", "Urgencia: [Badge]", "Categoría: text"
+    // Simplified: Just draw text for now, simulating layout.
+
+    const drawLabelValue = (label: string, value: string, xPos: number, yPos: number, valueColor: any = rgb(0, 0, 0), valueBg?: any) => {
+        page.drawText(label, { x: xPos, y: yPos, size: 10, font: fontRegular, color: rgb(0.5, 0.5, 0.5) });
+        const labelW = fontRegular.widthOfTextAtSize(label, 10);
+
+        const valX = xPos + labelW + 5;
+
+        if (valueBg) {
+            const valW = fontBold.widthOfTextAtSize(value, 10);
+            page.drawRectangle({
+                x: valX - 4,
+                y: yPos - 4,
+                width: valW + 8,
+                height: 18,
+                color: valueBg,
+                opacity: 0.3 // Light pastel
+            });
+        }
+
+        page.drawText(value, { x: valX, y: yPos, size: 10, font: fontBold, color: valueColor });
+        return valX + fontBold.widthOfTextAtSize(value, 10) + 20; // Return next X
+    };
+
+    const statusY = y - (statusBarHeight / 2) - 4; // Vertically centered
+    let curX = margin + 15;
+
+    // Estado
+    const estadoTxt = incident.resuelto ? 'Resuelto' : 'Pendiente';
+    const estadoColor = incident.resuelto ? rgb(0, 0.5, 0) : rgb(0.8, 0.5, 0); // Green vs Orange
+    const estadoBg = incident.resuelto ? rgb(0, 1, 0) : rgb(1, 0.9, 0);
+    curX = drawLabelValue("Estado:", estadoTxt, curX, statusY, rgb(0, 0, 0), estadoBg);
+
+    // Separator
+    page.drawLine({ start: { x: curX - 10, y: statusY - 5 }, end: { x: curX - 10, y: statusY + 12 }, color: rgb(0.8, 0.8, 0.8) });
+
+    // Urgencia
+    const urgenciaTxt = incident.urgencia || 'No definida';
+    const urgenciaColor = urgenciaTxt === 'Alta' ? rgb(0.8, 0, 0) : rgb(0, 0, 0);
+    const urgenciaBg = urgenciaTxt === 'Alta' ? rgb(1, 0, 0) : rgb(0.8, 0.8, 1);
+    curX = drawLabelValue("Urgencia:", urgenciaTxt, curX, statusY, urgenciaColor, urgenciaBg);
+
+    // Separator
+    page.drawLine({ start: { x: curX - 10, y: statusY - 5 }, end: { x: curX - 10, y: statusY + 12 }, color: rgb(0.8, 0.8, 0.8) });
+
+    // Categoria
+    const catTxt = incident.categoria || 'Otro';
+    drawLabelValue("Categoría:", catTxt, curX, statusY);
+
+    y -= (statusBarHeight + 40);
+
+    // --- 4. DETAILS COLUMNS ---
+    const colGap = 40;
+    const colWidth = (width - margin * 2 - colGap) / 2;
+    const leftColX = margin;
+    const rightColX = margin + colWidth + colGap;
+    let currentSectionsY = y;
+
+    // --- LEFT COLUMN: Contacto y Ubicación ---
+    const drawSectionHeader = (title: string, x: number, y: number) => {
+        // Icon placeholder (simple circle) + Text
+        page.drawText(title, { x: x, y: y, size: 12, font: fontBold, color: rgb(0.1, 0.1, 0.1) });
+        // Underline
+        page.drawLine({ start: { x: x, y: y - 5 }, end: { x: x + colWidth, y: y - 5 }, color: rgb(0, 0, 0), thickness: 1.5 });
+        return y - 25;
+    };
+
+    let leftY = drawSectionHeader("CONTACTO Y UBICACIÓN", leftColX, currentSectionsY);
+
+    const drawRow = (label: string, value: string, x: number, curY: number) => {
+        page.drawText(label, { x: x, y: curY, size: 10, font: fontRegular, color: rgb(0.5, 0.5, 0.5) });
+        // Value aligned to right of label? Or fixed tab?
+        // UI shows 2 cols within the column: Label (left) | Value (right)
+        // Let's us fixed offset for value.
+        const valX = x + 80;
+        // Wrap value if too long?
+        const maxValW = colWidth - 80;
+        const valueLines = wrapText(value, maxValW, fontBold, 10);
+
+        valueLines.forEach((line, i) => {
+            page.drawText(line, { x: valX, y: curY - (i * 12), size: 10, font: fontBold, color: rgb(0, 0, 0) });
+        });
+
+        // Return next Y
+        const heightUsed = Math.max(1, valueLines.length) * 12 + 12; // + spacing
+        // Divider line? UI has faint divider
+        page.drawLine({ start: { x, y: curY - (heightUsed - 8) }, end: { x: x + colWidth, y: curY - (heightUsed - 8) }, color: rgb(0.9, 0.9, 0.9) });
+
+        return curY - heightUsed;
+    };
+
+    const commName = incident.comunidad || incident.comunidades?.nombre_cdad || '-';
+
+    leftY = drawRow("Cliente", incident.nombre_cliente || '-', leftColX, leftY);
+    leftY = drawRow("Teléfono", incident.telefono || '-', leftColX, leftY);
+    leftY = drawRow("Email", incident.email || '-', leftColX, leftY);
+    leftY = drawRow("Comunidad", commName, leftColX, leftY);
+
+    // --- RIGHT COLUMN: Gestión Interna ---
+    let rightY = drawSectionHeader("GESTIÓN INTERNA", rightColX, currentSectionsY);
+
+    const gestorName = incident.gestor?.nombre || incident.gestor_asignado || '-';
+    const receptorName = incident.receptor?.nombre || incident.quien_lo_recibe || '-';
+    const sentimento = incident.sentimiento || '-';
+
+    rightY = drawRow("Recibido por", receptorName, rightColX, rightY);
+    rightY = drawRow("Gestor", gestorName, rightColX, rightY);
+    rightY = drawRow("Sentimiento", sentimento, rightColX, rightY);
+    rightY = drawRow("Fecha Creación", new Date(incident.created_at).toLocaleString('es-ES'), rightColX, rightY);
+
+    // Move Y to below the longest column
+    y = Math.min(leftY, rightY) - 40;
+
+    // --- 5. MENSAJE DEL CLIENTE ---
+    page.drawText("MENSAJE DEL CLIENTE", { x: margin, y: y, size: 12, font: fontBold });
+    page.drawLine({ start: { x: margin, y: y - 5 }, end: { x: width - margin, y: y - 5 }, color: rgb(0, 0, 0), thickness: 1.5 });
+    y -= 25;
+
+    // Background box
+    const messageLines = wrapText(incident.mensaje || '', width - (margin * 2) - 20, fontRegular, 10);
+    const msgHeight = (messageLines.length * 15) + 20;
+
+    // Check pagination
+    if (y - msgHeight < 40) {
+        page = pdfDoc.addPage([595.28, 841.89]);
+        y = page.getSize().height - 40;
+    }
+
+    page.drawRectangle({
+        x: margin,
+        y: y - msgHeight,
+        width: width - (margin * 2),
+        height: msgHeight,
+        color: rgb(0.98, 0.98, 0.98),
+        borderColor: rgb(0.9, 0.9, 0.9),
+        borderWidth: 1
+    });
+
+    messageLines.forEach((line, i) => {
+        page.drawText(line, {
+            x: margin + 10,
+            y: y - 20 - (i * 15),
+            size: 10,
+            font: fontRegular,
+            color: rgb(0.2, 0.2, 0.2)
+        });
+    });
+
+    y -= (msgHeight + 40);
+
+    // --- 6. ATTACHMENTS (Links) ---
+    if (incident.adjuntos && incident.adjuntos.length > 0) {
+        // Check pagination
+        if (y - 80 < 40) {
+            page = pdfDoc.addPage([595.28, 841.89]);
+            y = page.getSize().height - 40;
+        }
+
+        page.drawText("ARCHIVOS ADJUNTOS", { x: margin, y: y, size: 12, font: fontBold });
+        page.drawLine({ start: { x: margin, y: y - 5 }, end: { x: width - margin, y: y - 5 }, color: rgb(0, 0, 0), thickness: 1.5 });
+        y -= 25;
+
+        incident.adjuntos.forEach((url: string, i: number) => {
+            const label = `Adjunto ${i + 1}: ${url.split('/').pop()?.substring(0, 50)}...`;
+            page.drawText(label, {
+                x: margin,
+                y: y,
+                size: 9,
+                font: fontRegular,
+                color: rgb(0, 0, 1), // Blue link color
+            });
+            // We cannot easily make actual clickable links in pdf-lib without annotations, 
+            // but displaying the list indicates existence.
+            y -= 15;
+        });
+    }
+
+    // --- FOOTER ---
+    const allPages = pdfDoc.getPages();
+    for (const p of allPages) {
+        const { width: pW } = p.getSize();
+        p.drawText("Serincosol | Administración de Fincas", {
+            x: pW / 2 - 80,
+            y: 20,
+            size: 8,
+            font: fontRegular,
+            color: rgb(0.6, 0.6, 0.6)
+        });
+    }
+
+    return await pdfDoc.save();
+}

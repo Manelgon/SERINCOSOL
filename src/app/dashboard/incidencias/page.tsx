@@ -332,16 +332,22 @@ export default function IncidenciasPage() {
         }
     };
 
-    const handleExport = async (type: 'csv' | 'pdf') => {
-        if (selectedIds.size === 0) return;
+    const handleExport = async (type: 'csv' | 'pdf', idsOverride?: number[]) => {
+        const idsToExport = idsOverride || Array.from(selectedIds);
+        if (idsToExport.length === 0) return;
+
+        // If overriding IDs (from modal), imply detail view if single item
+        const isDetailView = !!idsOverride && idsToExport.length === 1 && type === 'pdf';
+
         setExporting(true);
         try {
             const res = await fetch('/api/incidencias/export', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    ids: Array.from(selectedIds),
-                    type
+                    ids: idsToExport,
+                    type,
+                    layout: isDetailView ? 'detail' : 'list'
                 })
             });
 
@@ -351,7 +357,17 @@ export default function IncidenciasPage() {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = type === 'pdf' ? 'incidencias.pdf' : 'incidencias.csv';
+
+            // Filename Logic
+            const now = new Date();
+            const dateStr = `${now.getDate().toString().padStart(2, '0')}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getFullYear()}`;
+
+            if (isDetailView) {
+                a.download = `ticket_${idsToExport[0]}_${dateStr}.${type === 'csv' ? 'csv' : 'pdf'}`;
+            } else {
+                a.download = `listado_incidencias_${dateStr}.${type === 'csv' ? 'csv' : 'pdf'}`;
+            }
+
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
@@ -915,12 +931,22 @@ export default function IncidenciasPage() {
                                     </p>
                                 )}
                             </div>
-                            <button
-                                onClick={() => setShowDetailModal(false)}
-                                className="text-gray-400 hover:text-gray-600 transition p-1 hover:bg-gray-200 rounded-full"
-                            >
-                                <X className="w-6 h-6" />
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => handleExport('pdf', [selectedDetailIncidencia.id])}
+                                    className="text-gray-400 hover:text-red-600 transition p-1 hover:bg-red-50 rounded-full"
+                                    title="Descargar PDF"
+                                    disabled={exporting}
+                                >
+                                    {exporting ? <Loader2 className="w-6 h-6 animate-spin" /> : <Download className="w-6 h-6" />}
+                                </button>
+                                <button
+                                    onClick={() => setShowDetailModal(false)}
+                                    className="text-gray-400 hover:text-gray-600 transition p-1 hover:bg-gray-200 rounded-full"
+                                >
+                                    <X className="w-6 h-6" />
+                                </button>
+                            </div>
                         </div>
 
                         {/* Body */}

@@ -192,6 +192,47 @@ export default function AvisosPage() {
         },
     ];
 
+    const [exporting, setExporting] = useState(false);
+
+    const handleExport = async (notification: Notification) => {
+        setExporting(true);
+        try {
+            const res = await fetch('/api/avisos/export', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ids: [notification.id],
+                    type: 'pdf',
+                    layout: 'detail'
+                })
+            });
+
+            if (!res.ok) throw new Error('Export failed');
+
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+
+            // Filename: AVISO_ID_DATE
+            const now = new Date();
+            const dateStr = `${now.getDate().toString().padStart(2, '0')}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getFullYear()}`;
+            a.download = `AVISO_${notification.id.substring(0, 8)}_${dateStr}.pdf`;
+
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            toast.success('Descarga completada');
+        } catch (error) {
+            console.error(error);
+            toast.error('Error al descargar PDF');
+        } finally {
+            setExporting(false);
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -264,12 +305,22 @@ export default function AvisosPage() {
                                     {new Date(selectedNotification.created_at).toLocaleString()}
                                 </p>
                             </div>
-                            <button
-                                onClick={() => setShowDetailModal(false)}
-                                className="text-gray-400 hover:text-gray-600 transition p-1 hover:bg-gray-200 rounded-full"
-                            >
-                                <X className="w-6 h-6" />
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => handleExport(selectedNotification)}
+                                    className="text-gray-400 hover:text-blue-600 transition p-1 hover:bg-blue-50 rounded-full"
+                                    title="Descargar PDF"
+                                    disabled={exporting}
+                                >
+                                    {exporting ? <div className="animate-spin w-6 h-6 border-2 border-current border-t-transparent rounded-full" /> : <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-download"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" /></svg>}
+                                </button>
+                                <button
+                                    onClick={() => setShowDetailModal(false)}
+                                    className="text-gray-400 hover:text-gray-600 transition p-1 hover:bg-gray-200 rounded-full"
+                                >
+                                    <X className="w-6 h-6" />
+                                </button>
+                            </div>
                         </div>
 
                         {/* Body */}

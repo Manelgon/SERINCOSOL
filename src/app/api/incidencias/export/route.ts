@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { supabaseRouteClient } from "@/lib/supabase/route";
+import { generateIncidentDetailPdf } from "@/lib/pdf/incidentDetail";
 import { generateIncidentsPdf } from "@/lib/pdf/incidentsList";
 
 /**
  * POST /api/incidencias/export
- * Body: { ids: number[], type: 'csv' | 'pdf' }
+ * Body: { ids: number[], type: 'csv' | 'pdf', layout?: 'list' | 'detail' }
  */
 export async function POST(req: Request) {
-    const { ids, type } = await req.json();
+    const { ids, type, layout } = await req.json();
 
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
         return NextResponse.json({ error: "No Items Selected" }, { status: 400 });
@@ -21,7 +22,8 @@ export async function POST(req: Request) {
         .select(`
             *,
             comunidades (nombre_cdad),
-            gestor:profiles!gestor_asignado (nombre)
+            gestor:profiles!gestor_asignado (nombre),
+            receptor:profiles!quien_lo_recibe (nombre)
         `)
         .in('id', ids)
         .order('created_at', { ascending: false });
@@ -35,7 +37,15 @@ export async function POST(req: Request) {
 
     try {
         if (type === 'pdf') {
-            const pdfBytes = await generateIncidentsPdf({ incidents });
+            let pdfBytes;
+
+            // Check if detail View requested (Single Item)
+            if (layout === 'detail' && incidents.length === 1) {
+                pdfBytes = await generateIncidentDetailPdf({ incident: incidents[0] });
+            } else {
+                pdfBytes = await generateIncidentsPdf({ incidents });
+            }
+
             return new NextResponse(Buffer.from(pdfBytes), {
                 headers: {
                     'Content-Type': 'application/pdf',

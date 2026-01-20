@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { supabaseRouteClient } from "@/lib/supabase/route";
+import { generateDebtDetailPdf } from "@/lib/pdf/debtDetail";
 import { generateDebtsPdf } from "@/lib/pdf/debtsList";
 
 /**
  * POST /api/morosidad/export
- * Body: { ids: number[], type: 'csv' | 'pdf' }
+ * Body: { ids: number[], type: 'csv' | 'pdf', layout?: 'list' | 'detail' }
  */
 export async function POST(req: Request) {
-    const { ids, type } = await req.json();
+    const { ids, type, layout } = await req.json();
 
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
         return NextResponse.json({ error: "No Items Selected" }, { status: 400 });
@@ -36,7 +37,14 @@ export async function POST(req: Request) {
 
     try {
         if (type === 'pdf') {
-            const pdfBytes = await generateDebtsPdf({ debts });
+            let pdfBytes;
+            // Check if detail View requested (Single Item)
+            if (layout === 'detail' && debts.length === 1) {
+                pdfBytes = await generateDebtDetailPdf({ debt: debts[0] });
+            } else {
+                pdfBytes = await generateDebtsPdf({ debts });
+            }
+
             return new NextResponse(Buffer.from(pdfBytes), {
                 headers: {
                     'Content-Type': 'application/pdf',
