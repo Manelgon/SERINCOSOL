@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { Plus, Trash2, X, Edit2, Phone, Mail } from 'lucide-react';
+import { Plus, Trash2, X, Edit2, Phone, Mail, MapPin, Building2, CreditCard, Clock } from 'lucide-react';
 import DataTable, { Column } from '@/components/DataTable';
 import { logActivity } from '@/lib/logActivity';
 
@@ -30,6 +30,10 @@ export default function ProveedoresPage() {
     const [deletePassword, setDeletePassword] = useState('');
     const [deleteId, setDeleteId] = useState<number | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+
+    // Detail Modal
+    const [showDetailModal, setShowDetailModal] = useState(false);
+    const [selectedDetailProveedor, setSelectedDetailProveedor] = useState<Proveedor | null>(null);
 
     const [formData, setFormData] = useState({
         nombre: '',
@@ -485,7 +489,163 @@ export default function ProveedoresPage() {
                 storageKey="proveedores"
                 loading={loading}
                 emptyMessage="No hay proveedores registrados"
+                onRowClick={(row) => {
+                    setSelectedDetailProveedor(row);
+                    setShowDetailModal(true);
+                }}
             />
+
+            {/* Detail Modal */}
+            {showDetailModal && selectedDetailProveedor && (
+                <div
+                    className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 md:p-8 backdrop-blur-sm"
+                    onClick={() => setShowDetailModal(false)}
+                >
+                    <div
+                        className="bg-white rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-gray-900/10 w-full max-w-2xl max-h-[90vh] overflow-y-auto custom-scrollbar flex flex-col animate-in fade-in zoom-in duration-200"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Header */}
+                        <div className="px-6 sm:px-8 pt-6 sm:pt-7 pb-4 border-b border-slate-100 flex justify-between items-center bg-white flex-shrink-0 rounded-t-xl">
+                            <div>
+                                <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+                                    Proveedor #{selectedDetailProveedor.id}
+                                </h3>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${selectedDetailProveedor.activo
+                                        ? 'bg-yellow-400 text-neutral-950'
+                                        : 'bg-neutral-900 text-white'
+                                        }`}>
+                                        {selectedDetailProveedor.activo ? 'ACTIVO' : 'INACTIVO'}
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => {
+                                        handleEdit(selectedDetailProveedor);
+                                        setShowDetailModal(false);
+                                    }}
+                                    className="p-2 hover:bg-slate-50 rounded-full transition-colors text-slate-400 hover:text-blue-600"
+                                    title="Editar Proveedor"
+                                >
+                                    <Edit2 className="w-5 h-5" />
+                                </button>
+                                <button
+                                    onClick={() => setShowDetailModal(false)}
+                                    className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Body */}
+                        <div className="p-6 sm:p-8 space-y-8 flex-grow">
+                            {/* Information Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                {/* Left: Contact Info */}
+                                <div className="space-y-6">
+                                    <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
+                                        <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
+                                            <Phone className="w-4 h-4 text-indigo-600" />
+                                        </div>
+                                        Contacto
+                                    </h4>
+                                    <div className="space-y-4">
+                                        <div className="space-y-1">
+                                            <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Nombre / Razón Social</span>
+                                            <span className="text-sm font-semibold text-slate-900">{selectedDetailProveedor.nombre}</span>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Teléfono</span>
+                                            <span className="text-sm font-semibold text-slate-900">{selectedDetailProveedor.telefono || '-'}</span>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Email</span>
+                                            <span className="text-sm text-slate-900">{selectedDetailProveedor.email || '-'}</span>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">CIF</span>
+                                            <span className="text-sm font-mono text-slate-900">{selectedDetailProveedor.cif || '-'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Right: Location Info */}
+                                <div className="space-y-6">
+                                    <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
+                                        <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                                            <MapPin className="w-4 h-4 text-emerald-600" />
+                                        </div>
+                                        Ubicación
+                                    </h4>
+                                    <div className="space-y-4">
+                                        <div className="space-y-1">
+                                            <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Dirección</span>
+                                            <span className="text-sm text-slate-900">{selectedDetailProveedor.direccion || '-'}</span>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-1">
+                                                <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">CP</span>
+                                                <span className="text-sm text-slate-900">{selectedDetailProveedor.cp || '-'}</span>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ciudad</span>
+                                                <span className="text-sm text-slate-900">{selectedDetailProveedor.ciudad || '-'}</span>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Provincia</span>
+                                            <span className="text-sm text-slate-900">{selectedDetailProveedor.provincia || '-'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Footer Actions */}
+                        <div className="p-6 sm:p-8 border-t border-slate-100 bg-slate-50/30 rounded-b-xl flex justify-between items-center flex-shrink-0">
+                            <button
+                                onClick={() => {
+                                    handleDeleteClick(selectedDetailProveedor.id);
+                                    setShowDetailModal(false);
+                                }}
+                                className="flex items-center gap-2 text-red-500 hover:text-red-600 hover:bg-red-50/50 px-4 py-2 rounded-xl transition font-semibold text-sm"
+                            >
+                                <Trash2 className="w-4 h-4" />
+                                <span>Eliminar Proveedor</span>
+                            </button>
+
+                            <button
+                                onClick={() => {
+                                    toggleActive(selectedDetailProveedor.id, selectedDetailProveedor.activo);
+                                    setSelectedDetailProveedor({
+                                        ...selectedDetailProveedor,
+                                        activo: !selectedDetailProveedor.activo
+                                    });
+                                }}
+                                className={`h-11 px-6 rounded-xl font-bold shadow-sm transition flex items-center gap-2 ${selectedDetailProveedor.activo
+                                    ? 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+                                    : 'bg-yellow-400 text-neutral-950 hover:bg-yellow-500 shadow-yellow-200/50 hover:shadow-lg'
+                                    }`}
+                            >
+                                {selectedDetailProveedor.activo ? (
+                                    <>
+                                        <X className="w-4 h-4 text-red-500" />
+                                        Desactivar Proveedor
+                                    </>
+                                ) : (
+                                    <>
+                                        < Plus className="w-4 h-4" />
+                                        Activar Proveedor
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {showDeleteModal && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] backdrop-blur-sm">

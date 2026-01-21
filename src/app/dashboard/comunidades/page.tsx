@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { Plus, Trash2, X, Edit2, Eye } from 'lucide-react';
+import { Plus, Trash2, X, Edit2, Eye, MapPin, Hash, Building2, Clock } from 'lucide-react';
 import DataTable, { Column } from '@/components/DataTable';
 import { logActivity } from '@/lib/logActivity';
 
@@ -30,6 +30,10 @@ export default function ComunidadesPage() {
     const [deletePassword, setDeletePassword] = useState('');
     const [deleteId, setDeleteId] = useState<number | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+
+    // Detail Modal
+    const [showDetailModal, setShowDetailModal] = useState(false);
+    const [selectedDetailComunidad, setSelectedDetailComunidad] = useState<Comunidad | null>(null);
 
     const [formData, setFormData] = useState({
         codigo: '',
@@ -499,7 +503,160 @@ export default function ComunidadesPage() {
                 storageKey="comunidades"
                 loading={loading}
                 emptyMessage="No hay comunidades registradas"
+                onRowClick={(row) => {
+                    setSelectedDetailComunidad(row);
+                    setShowDetailModal(true);
+                }}
             />
+
+            {/* Detail Modal */}
+            {showDetailModal && selectedDetailComunidad && (
+                <div
+                    className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 md:p-8 backdrop-blur-sm"
+                    onClick={() => setShowDetailModal(false)}
+                >
+                    <div
+                        className="bg-white rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-gray-900/10 w-full max-w-2xl max-h-[90vh] overflow-y-auto custom-scrollbar flex flex-col animate-in fade-in zoom-in duration-200"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Header */}
+                        <div className="px-6 sm:px-8 pt-6 sm:pt-7 pb-4 border-b border-slate-100 flex justify-between items-center bg-white flex-shrink-0 rounded-t-xl">
+                            <div>
+                                <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+                                    Comunidad #{selectedDetailComunidad.id}
+                                </h3>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${selectedDetailComunidad.activo
+                                        ? 'bg-yellow-400 text-neutral-950'
+                                        : 'bg-neutral-900 text-white'
+                                        }`}>
+                                        {selectedDetailComunidad.activo ? 'ACTIVO' : 'INACTIVO'}
+                                    </span>
+                                    <span className="text-xs text-slate-500 font-mono">[{selectedDetailComunidad.codigo}]</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => {
+                                        handleEdit(selectedDetailComunidad);
+                                        setShowDetailModal(false);
+                                    }}
+                                    className="p-2 hover:bg-slate-50 rounded-full transition-colors text-slate-400 hover:text-blue-600"
+                                    title="Editar Comunidad"
+                                >
+                                    <Edit2 className="w-5 h-5" />
+                                </button>
+                                <button
+                                    onClick={() => setShowDetailModal(false)}
+                                    className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Body */}
+                        <div className="p-6 sm:p-8 space-y-8 flex-grow">
+                            {/* Information Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                {/* Left: Basic Info */}
+                                <div className="space-y-6">
+                                    <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
+                                        <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
+                                            <Building2 className="w-4 h-4 text-indigo-600" />
+                                        </div>
+                                        Datos Generales
+                                    </h4>
+                                    <div className="space-y-4">
+                                        <div className="space-y-1">
+                                            <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Nombre Comunidad</span>
+                                            <span className="text-sm font-semibold text-slate-900">{selectedDetailComunidad.nombre_cdad}</span>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Código Interno</span>
+                                            <span className="text-sm font-mono font-bold text-slate-900">{selectedDetailComunidad.codigo}</span>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">CIF</span>
+                                            <span className="text-sm font-mono text-slate-900">{selectedDetailComunidad.cif || '-'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Right: Location Info */}
+                                <div className="space-y-6">
+                                    <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
+                                        <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                                            <MapPin className="w-4 h-4 text-emerald-600" />
+                                        </div>
+                                        Ubicación
+                                    </h4>
+                                    <div className="space-y-4">
+                                        <div className="space-y-1">
+                                            <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Dirección</span>
+                                            <span className="text-sm text-slate-900">{selectedDetailComunidad.direccion || '-'}</span>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-1">
+                                                <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">CP</span>
+                                                <span className="text-sm text-slate-900">{selectedDetailComunidad.cp || '-'}</span>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ciudad</span>
+                                                <span className="text-sm text-slate-900">{selectedDetailComunidad.ciudad || '-'}</span>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Provincia</span>
+                                            <span className="text-sm text-slate-900">{selectedDetailComunidad.provincia || '-'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Footer Actions */}
+                        <div className="p-6 sm:p-8 border-t border-slate-100 bg-slate-50/30 rounded-b-xl flex justify-between items-center flex-shrink-0">
+                            <button
+                                onClick={() => {
+                                    handleDeleteClick(selectedDetailComunidad.id);
+                                    setShowDetailModal(false);
+                                }}
+                                className="flex items-center gap-2 text-red-500 hover:text-red-600 hover:bg-red-50/50 px-4 py-2 rounded-xl transition font-semibold text-sm"
+                            >
+                                <Trash2 className="w-4 h-4" />
+                                <span>Eliminar Comunidad</span>
+                            </button>
+
+                            <button
+                                onClick={() => {
+                                    toggleActive(selectedDetailComunidad.id, selectedDetailComunidad.activo);
+                                    setSelectedDetailComunidad({
+                                        ...selectedDetailComunidad,
+                                        activo: !selectedDetailComunidad.activo
+                                    });
+                                }}
+                                className={`h-11 px-6 rounded-xl font-bold shadow-sm transition flex items-center gap-2 ${selectedDetailComunidad.activo
+                                    ? 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+                                    : 'bg-yellow-400 text-neutral-950 hover:bg-yellow-500 shadow-yellow-200/50 hover:shadow-lg'
+                                    }`}
+                            >
+                                {selectedDetailComunidad.activo ? (
+                                    <>
+                                        <X className="w-4 h-4 text-red-500" />
+                                        Desactivar Comunidad
+                                    </>
+                                ) : (
+                                    <>
+                                        <Plus className="w-4 h-4" />
+                                        Activar Comunidad
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Delete Confirmation Modal */}
             {showDeleteModal && (
