@@ -51,6 +51,7 @@ export default function IncidenciasPage() {
     const [profiles, setProfiles] = useState<any[]>([]);
     const [files, setFiles] = useState<File[]>([]);
     const [uploading, setUploading] = useState(false);
+    const [enviarAviso, setEnviarAviso] = useState<boolean | null>(null);
 
     const [formData, setFormData] = useState({
         comunidad_id: '',
@@ -200,7 +201,8 @@ export default function IncidenciasPage() {
                 // @ts-ignore
                 adjuntos: adjuntos,
                 // @ts-ignore
-                gestor_asignado: formData.gestor_asignado || null
+                gestor_asignado: formData.gestor_asignado || null,
+                aviso: enviarAviso
             }]).select();
 
             if (error) throw error;
@@ -251,6 +253,7 @@ export default function IncidenciasPage() {
                 if (incidenciaId) {
                     webhookPayload.append('incidencia_id', incidenciaId.toString());
                 }
+                webhookPayload.append('aviso', enviarAviso ? 'true' : 'false');
 
                 // Append attachment count and filenames
                 webhookPayload.append('adjuntos_count', files.length.toString());
@@ -285,6 +288,7 @@ export default function IncidenciasPage() {
                 proveedor: '',
             });
             setFiles([]);
+            setEnviarAviso(null);
             fetchIncidencias();
         } catch (error: any) {
             toast.error('Error: ' + error.message);
@@ -873,8 +877,40 @@ export default function IncidenciasPage() {
                             )}
                         </div>
 
+                        {/* Row 9: Enviar Aviso al Propietario (Mandatory) */}
+                        <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Enviar aviso al propietario <span className="text-red-600">*</span>
+                            </label>
+                            <div className="flex gap-4">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name="enviarAviso"
+                                        checked={enviarAviso === true}
+                                        onChange={() => setEnviarAviso(true)}
+                                        className="w-4 h-4 text-yellow-400 border-gray-300 focus:ring-yellow-400"
+                                    />
+                                    <span className="text-sm text-gray-700">Sí</span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name="enviarAviso"
+                                        checked={enviarAviso === false}
+                                        onChange={() => setEnviarAviso(false)}
+                                        className="w-4 h-4 text-yellow-400 border-gray-300 focus:ring-yellow-400"
+                                    />
+                                    <span className="text-sm text-gray-700">No</span>
+                                </label>
+                            </div>
+                            {enviarAviso === null && (
+                                <p className="mt-1 text-xs text-red-600">Debe seleccionar una opción</p>
+                            )}
+                        </div>
+
                         <div className="md:col-span-2 pt-4">
-                            <button type="submit" disabled={uploading} className="w-full bg-yellow-400 hover:bg-yellow-500 text-neutral-950 py-3 rounded-md font-bold transition disabled:opacity-50 flex justify-center gap-2">
+                            <button type="submit" disabled={uploading || enviarAviso === null} className="w-full bg-yellow-400 hover:bg-yellow-500 text-neutral-950 py-3 rounded-md font-bold transition disabled:opacity-50 flex justify-center gap-2">
                                 {uploading ? 'Subiendo archivos...' : (
                                     <>
                                         <Plus className="w-5 h-5" />
