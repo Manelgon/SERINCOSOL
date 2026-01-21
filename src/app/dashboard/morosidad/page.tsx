@@ -369,6 +369,21 @@ export default function MorosidadPage() {
 
             toast.success('Marcado como pagado');
 
+            // Trigger Resolved Webhook
+            try {
+                fetch('/api/webhooks/trigger-resolved-debt', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ...moroso,
+                        estado: 'Pagado',
+                        fecha_pago: new Date().toISOString(),
+                    })
+                }).catch(e => console.error('Resolved Debt Webhook Error:', e));
+            } catch (e) {
+                console.error('Resolved Debt Webhook Trigger Error:', e);
+            }
+
             // Log activity
             const moroso = morosos.find(m => m.id === id);
             await logActivity({
