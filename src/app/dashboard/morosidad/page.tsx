@@ -518,7 +518,7 @@ export default function MorosidadPage() {
                 // "DEV_id_fecha"
                 a.download = `DEV_${idsToExport[0]}_${dateStr}.pdf`;
             } else {
-                a.download = `listado_morosidad_${dateStr}.${type === 'csv' ? 'csv' : 'pdf'}`;
+                a.download = `listado_deudas_${dateStr}.${type === 'csv' ? 'csv' : 'pdf'}`;
             }
 
             document.body.appendChild(a);
@@ -728,7 +728,7 @@ export default function MorosidadPage() {
     return (
         <div className="space-y-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <h1 className="text-xl font-bold text-neutral-900">Gestión de Morosidad</h1>
+                <h1 className="text-xl font-bold text-neutral-900">Gestión de Deudas</h1>
                 <button
                     onClick={() => {
                         setShowForm(!showForm);
