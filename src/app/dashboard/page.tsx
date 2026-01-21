@@ -508,7 +508,7 @@ export default function DashboardPage() {
                     value={`${stats.totalDeuda.toLocaleString()}€`}
                     icon={FileText}
                     color="text-yellow-600"
-                    href="/dashboard/morosidad"
+                    href="/dashboard/deudas"
                 />
             </div>
 

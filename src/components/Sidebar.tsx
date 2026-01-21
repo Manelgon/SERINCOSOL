@@ -48,7 +48,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         { name: 'Dashboard', href: '/dashboard', icon: Home },
         { name: 'Comunidades', href: '/dashboard/comunidades', icon: Building },
         { name: 'Gestión de Tickets', href: '/dashboard/incidencias', icon: AlertCircle },
-        { name: 'Gestión de Deudas', href: '/dashboard/morosidad', icon: FileText },
+        { name: 'Gestión de Deudas', href: '/dashboard/deudas', icon: FileText },
         { name: 'Fichaje', href: '/dashboard/fichaje', icon: Clock },
         { name: 'Documentos', href: '/dashboard/documentos', icon: FileText },
         { name: 'Avisos', href: '/dashboard/avisos', icon: AlertCircle },
