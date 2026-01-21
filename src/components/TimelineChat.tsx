@@ -27,35 +27,37 @@ export default function TimelineChat({ entityType, entityId }: TimelineChatProps
     const [isExpanded, setIsExpanded] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    // Debugging
-    useEffect(() => {
-        console.log(`TimelineChat mounted for ${entityType} ID: ${entityId} (Type: ${typeof entityId})`);
-    }, [entityType, entityId]);
-
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
     useEffect(() => {
+        const numericId = typeof entityId === 'string' ? parseInt(entityId, 10) : entityId;
+
         fetchMessages();
 
-        // Real-time subscription
+        // Real-time subscription - Note: We filter in JS because Supabase doesn't support 
+        // multiple filters (&) in a single subscription reliably.
         const channel = supabase
-            .channel(`record_messages:${entityType}:${entityId}`)
+            .channel(`record_messages:${entityType}:${numericId}`)
             .on(
                 'postgres_changes',
                 {
                     event: 'INSERT',
                     schema: 'public',
-                    table: 'record_messages',
-                    filter: `entity_type=eq.${entityType}&entity_id=eq.${entityId}`
+                    table: 'record_messages'
                 },
                 async (payload) => {
+                    const { entity_type, entity_id, user_id } = payload.new;
+
+                    // Filter in JS
+                    if (entity_type !== entityType || String(entity_id) !== String(numericId)) return;
+
                     // Fetch the user info for the new message
                     const { data: userData } = await supabase
                         .from('profiles')
                         .select('nombre, avatar_url')
-                        .eq('user_id', payload.new.user_id)
+                        .eq('user_id', user_id)
                         .single();
 
                     const fullMessage: Message = {
@@ -63,7 +65,11 @@ export default function TimelineChat({ entityType, entityId }: TimelineChatProps
                         profiles: userData || { nombre: 'Usuario', avatar_url: null }
                     };
 
-                    setMessages((prev) => [...prev, fullMessage]);
+                    setMessages((prev) => {
+                        // Avoid duplicates if the local insert already added it or race condition
+                        if (prev.find(m => m.id === fullMessage.id)) return prev;
+                        return [...prev, fullMessage];
+                    });
                 }
             )
             .subscribe();
@@ -80,7 +86,6 @@ export default function TimelineChat({ entityType, entityId }: TimelineChatProps
     const fetchMessages = async () => {
         setLoading(true);
         try {
-            console.log(`Fetching messages for ${entityType} ID: ${entityId}`);
             // Ensure entityId is treated as number for BIGINT column if it looks like one
             const numericId = typeof entityId === 'string' ? parseInt(entityId, 10) : entityId;
 
@@ -98,11 +103,8 @@ export default function TimelineChat({ entityType, entityId }: TimelineChatProps
                 .order('created_at', { ascending: true });
 
             if (error) {
-                console.error('Supabase error fetching messages:', error);
                 throw error;
             }
-
-            console.log(`Fetched ${data?.length || 0} messages for ${entityType} ${numericId}`);
 
             // Fix: Supabase might return profiles as an array or object
             const formattedMessages = (data as any[])?.map(msg => ({
@@ -171,8 +173,8 @@ export default function TimelineChat({ entityType, entityId }: TimelineChatProps
 
             {isExpanded && (
                 <div className="animate-in slide-in-from-top-2 duration-200">
-                    {/* Messages Area */}
-                    <div className="p-4 overflow-y-auto min-h-[300px] max-h-[400px] custom-scrollbar space-y-4 border-b border-gray-100">
+                    {/* Messages Area - Fixed height for 5 messages approx + scroll */}
+                    <div className="p-4 overflow-y-auto h-[380px] custom-scrollbar space-y-4 border-b border-gray-100 bg-gray-50/50">
                         {loading ? (
                             <div className="flex items-center justify-center h-full">
                                 <Loader2 className="w-8 h-8 animate-spin text-yellow-500" />
