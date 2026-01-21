@@ -596,13 +596,25 @@ export default function MorosidadPage() {
         {
             key: 'titulo_documento',
             label: 'Concepto',
+        },
+        {
+            key: 'documento',
+            label: 'Adjuntos',
             render: (row) => (
-                <div className="flex items-center gap-2">
-                    <span>{row.titulo_documento}</span>
-                    {row.documento && (
-                        <a href={row.documento} target="_blank" rel="noopener noreferrer" className="text-yellow-600 hover:text-yellow-800">
+                <div className="flex justify-center">
+                    {row.documento ? (
+                        <a
+                            href={row.documento}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1.5 rounded-full bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-colors"
+                            title="Ver Documento"
+                            onClick={(e) => e.stopPropagation()}
+                        >
                             <FileText className="w-4 h-4" />
                         </a>
+                    ) : (
+                        <span className="text-slate-400">-</span>
                     )}
                 </div>
             ),
