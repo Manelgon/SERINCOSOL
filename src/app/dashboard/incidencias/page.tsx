@@ -8,6 +8,7 @@ import { Plus, Check, RotateCcw, Paperclip, Trash2, X, FileText, Download, Loade
 import DataTable, { Column } from '@/components/DataTable';
 import SearchableSelect from '@/components/SearchableSelect';
 import { logActivity } from '@/lib/logActivity';
+import TimelineChat from '@/components/TimelineChat';
 
 interface Incidencia {
     id: number;
@@ -1154,6 +1155,14 @@ export default function IncidenciasPage() {
                                     </div>
                                 </div>
                             )}
+
+                            {/* Timeline Chat */}
+                            <div className="pt-4">
+                                <TimelineChat
+                                    entityType="incidencia"
+                                    entityId={selectedDetailIncidencia.id}
+                                />
+                            </div>
                         </div>
 
                         {/* Footer Actions */}

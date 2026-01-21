@@ -8,6 +8,7 @@ import { Plus, FileText, Check, Trash2, X, RotateCcw, Paperclip, Download, Loade
 import DataTable, { Column } from '@/components/DataTable';
 import SearchableSelect from '@/components/SearchableSelect';
 import { logActivity } from '@/lib/logActivity';
+import TimelineChat from '@/components/TimelineChat';
 
 interface Morosidad {
     id: number;
@@ -1176,6 +1177,14 @@ export default function MorosidadPage() {
                                     </a>
                                 </div>
                             )}
+
+                            {/* Timeline Chat */}
+                            <div className="pt-4">
+                                <TimelineChat
+                                    entityType="morosidad"
+                                    entityId={selectedDetailMorosidad.id}
+                                />
+                            </div>
                         </div>
 
                         {/* Footer Actions */}
