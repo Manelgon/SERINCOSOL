@@ -778,7 +778,7 @@ export default function IncidenciasPage() {
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre Cliente</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre Cliente <span className="text-red-600">*</span></label>
                             <input
                                 required
                                 type="text"
@@ -790,7 +790,7 @@ export default function IncidenciasPage() {
 
                         {/* Row 3: Comunidad */}
                         <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Comunidad</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Comunidad <span className="text-red-600">*</span></label>
                             <SearchableSelect
                                 value={formData.comunidad_id}
                                 onChange={(val) => setFormData({ ...formData, comunidad_id: String(val) })}
@@ -815,7 +815,7 @@ export default function IncidenciasPage() {
 
                         {/* Row 5: Mensaje */}
                         <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Mensaje</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Mensaje <span className="text-red-600">*</span></label>
                             <textarea
                                 required
                                 rows={3}
