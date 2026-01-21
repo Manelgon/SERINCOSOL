@@ -62,6 +62,7 @@ export default function MorosidadPage() {
     // Selection & Export
     const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set());
     const [exporting, setExporting] = useState(false);
+    const [enviarNotificacion, setEnviarNotificacion] = useState<boolean | null>(null);
 
     const handleRowClick = (morosidad: Morosidad) => {
         setSelectedDetailMorosidad(morosidad);
@@ -263,7 +264,8 @@ export default function MorosidadPage() {
                         comunidad_codigo: comunidad?.codigo,
                         comunidad_direccion: comunidad?.direccion,
                         gestor_nombre: gestorProfile?.nombre || 'Desconocido',
-                        documento_url: docUrl
+                        documento_url: docUrl,
+                        notificacion: enviarNotificacion ? 'true' : 'false'
                     })
                 }).catch(err => console.error('Webhook trigger error:', err));
 
@@ -282,6 +284,7 @@ export default function MorosidadPage() {
                     documento: '',
                     aviso: null,
                 });
+                setEnviarNotificacion(null);
                 setFile(null);
                 fetchMorosidad();
             } catch (error: any) {
@@ -761,7 +764,7 @@ export default function MorosidadPage() {
                 <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
                     <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Comunidad</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Comunidad <span className="text-red-600">*</span></label>
                             <SearchableSelect
                                 value={formData.comunidad_id}
                                 onChange={(val) => setFormData({ ...formData, comunidad_id: String(val) })}
@@ -774,7 +777,7 @@ export default function MorosidadPage() {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre Deudor</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre Deudor <span className="text-red-600">*</span></label>
                             <input
                                 required
                                 type="text"
@@ -795,27 +798,35 @@ export default function MorosidadPage() {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Teléfono</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                Teléfono {enviarNotificacion && !formData.email_deudor && <span className="text-red-600">*</span>}
+                            </label>
                             <input
+                                required={enviarNotificacion === true && !formData.email_deudor}
                                 type="tel"
-                                className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
+                                className={`w-full rounded-lg border px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100 ${enviarNotificacion && !formData.telefono_deudor && !formData.email_deudor ? 'border-red-300' : 'border-neutral-200'
+                                    }`}
                                 value={formData.telefono_deudor}
                                 onChange={e => setFormData({ ...formData, telefono_deudor: e.target.value })}
                             />
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                Email {enviarNotificacion && !formData.telefono_deudor && <span className="text-red-600">*</span>}
+                            </label>
                             <input
+                                required={enviarNotificacion === true && !formData.telefono_deudor}
                                 type="email"
-                                className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
+                                className={`w-full rounded-lg border px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100 ${enviarNotificacion && !formData.email_deudor && !formData.telefono_deudor ? 'border-red-300' : 'border-neutral-200'
+                                    }`}
                                 value={formData.email_deudor}
                                 onChange={e => setFormData({ ...formData, email_deudor: e.target.value })}
                             />
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Título del Documento</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Título del Documento <span className="text-red-600">*</span></label>
                             <input
                                 required
                                 type="text"
@@ -837,7 +848,7 @@ export default function MorosidadPage() {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Importe (€)</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Importe (€) <span className="text-red-600">*</span></label>
                             <input
                                 required
                                 type="number"
@@ -848,7 +859,7 @@ export default function MorosidadPage() {
                             />
                         </div>
 
-                        <div>
+                        <div className="md:col-span-2">
                             <label className="block text-sm font-medium text-gray-700 mb-1.5">Gestor</label>
                             <SearchableSelect
                                 value={formData.gestor}
@@ -859,6 +870,37 @@ export default function MorosidadPage() {
                                 }))}
                                 placeholder="Selecciona un gestor..."
                             />
+                        </div>
+
+                        <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Enviar notificación al propietario <span className="text-red-600">*</span>
+                            </label>
+                            <div className="flex gap-4">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name="enviarNotificacion"
+                                        checked={enviarNotificacion === true}
+                                        onChange={() => setEnviarNotificacion(true)}
+                                        className="w-4 h-4 text-yellow-400 border-gray-300 focus:ring-yellow-400"
+                                    />
+                                    <span className="text-sm text-gray-700">Sí</span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name="enviarNotificacion"
+                                        checked={enviarNotificacion === false}
+                                        onChange={() => setEnviarNotificacion(false)}
+                                        className="w-4 h-4 text-yellow-400 border-gray-300 focus:ring-yellow-400"
+                                    />
+                                    <span className="text-sm text-gray-700">No</span>
+                                </label>
+                            </div>
+                            {enviarNotificacion === true && !formData.email_deudor && !formData.telefono_deudor && (
+                                <p className="mt-1 text-xs text-red-500">Debe indicar email o teléfono para enviar la notificación</p>
+                            )}
                         </div>
 
 
@@ -892,8 +934,20 @@ export default function MorosidadPage() {
                         </div>
 
                         <div className="md:col-span-2 pt-2">
-                            <button type="submit" disabled={uploading} className="w-full bg-yellow-400 hover:bg-yellow-500 text-neutral-950 py-2 rounded-md font-semibold transition disabled:opacity-50">
-                                Guardar Registro
+                            <button
+                                type="submit"
+                                disabled={
+                                    uploading ||
+                                    !formData.comunidad_id ||
+                                    !formData.nombre_deudor ||
+                                    !formData.titulo_documento ||
+                                    !formData.importe ||
+                                    enviarNotificacion === null ||
+                                    (enviarNotificacion === true && !formData.email_deudor && !formData.telefono_deudor)
+                                }
+                                className="w-full bg-yellow-400 hover:bg-yellow-500 text-neutral-950 py-2 rounded-md font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Registrar Deuda
                             </button>
                         </div>
                     </form>

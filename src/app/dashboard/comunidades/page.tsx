@@ -385,7 +385,7 @@ export default function ComunidadesPage() {
                     </h2>
                     <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Código</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Código <span className="text-red-600">*</span></label>
                             <input
                                 required
                                 type="text"
@@ -396,7 +396,7 @@ export default function ComunidadesPage() {
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre Comunidad</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre Comunidad <span className="text-red-600">*</span></label>
                             <input
                                 required
                                 type="text"
@@ -457,7 +457,11 @@ export default function ComunidadesPage() {
                             />
                         </div>
                         <div className="md:col-span-2 pt-2">
-                            <button type="submit" className="w-full bg-yellow-400 hover:bg-yellow-500 text-neutral-950 py-2 rounded-md font-semibold transition">
+                            <button
+                                type="submit"
+                                disabled={!formData.codigo || !formData.nombre_cdad}
+                                className="w-full bg-yellow-400 hover:bg-yellow-500 text-neutral-950 py-2 rounded-md font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
                                 Guardar Comunidad
                             </button>
                         </div>

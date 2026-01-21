@@ -253,7 +253,7 @@ export default function IncidenciasPage() {
                 if (incidenciaId) {
                     webhookPayload.append('incidencia_id', incidenciaId.toString());
                 }
-                webhookPayload.append('aviso', enviarAviso ? 'true' : 'false');
+                webhookPayload.append('notificacion', enviarAviso ? 'true' : 'false');
 
                 // Append attachment count and filenames
                 webhookPayload.append('adjuntos_count', files.length.toString());
@@ -755,7 +755,7 @@ export default function IncidenciasPage() {
                     <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Row 1: Quien lo recibe */}
                         <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Quién lo recibe</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Quién lo recibe <span className="text-red-600">*</span></label>
                             <SearchableSelect
                                 value={formData.recibido_por}
                                 onChange={(val) => setFormData({ ...formData, recibido_por: String(val) })}
@@ -829,7 +829,7 @@ export default function IncidenciasPage() {
 
                         {/* Row 6: Gestor Asignado */}
                         <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Gestor Asignado</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Gestor Asignado <span className="text-red-600">*</span></label>
                             <SearchableSelect
                                 value={formData.gestor_asignado}
                                 onChange={(val) => setFormData({ ...formData, gestor_asignado: String(val) })}
@@ -877,10 +877,9 @@ export default function IncidenciasPage() {
                             )}
                         </div>
 
-                        {/* Row 9: Enviar Aviso al Propietario (Mandatory) */}
                         <div className="md:col-span-2">
                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Enviar aviso al propietario <span className="text-red-600">*</span>
+                                Enviar notificación al propietario <span className="text-red-600">*</span>
                             </label>
                             <div className="flex gap-4">
                                 <label className="flex items-center gap-2 cursor-pointer">
@@ -910,11 +909,23 @@ export default function IncidenciasPage() {
                         </div>
 
                         <div className="md:col-span-2 pt-4">
-                            <button type="submit" disabled={uploading || enviarAviso === null} className="w-full bg-yellow-400 hover:bg-yellow-500 text-neutral-950 py-3 rounded-md font-bold transition disabled:opacity-50 flex justify-center gap-2">
+                            <button
+                                type="submit"
+                                disabled={
+                                    uploading ||
+                                    enviarAviso === null ||
+                                    !formData.recibido_por ||
+                                    !formData.nombre_cliente ||
+                                    !formData.comunidad_id ||
+                                    !formData.mensaje ||
+                                    !formData.gestor_asignado
+                                }
+                                className="w-full bg-yellow-400 hover:bg-yellow-500 text-neutral-950 py-3 rounded-md font-bold transition disabled:opacity-50 disabled:cursor-not-allowed flex justify-center gap-2"
+                            >
                                 {uploading ? 'Subiendo archivos...' : (
                                     <>
                                         <Plus className="w-5 h-5" />
-                                        Registrar Incidencia
+                                        Registrar Ticket
                                     </>
                                 )}
                             </button>
