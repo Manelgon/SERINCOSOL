@@ -1,7 +1,7 @@
 import { supabase as defaultSupabase } from './supabaseClient';
 
 export type ActivityAction = 'create' | 'update' | 'delete' | 'mark_paid' | 'toggle_active' | 'update_password' | 'clock_in' | 'clock_out' | 'generate' | 'read';
-export type EntityType = 'comunidad' | 'incidencia' | 'morosidad' | 'profile' | 'fichaje' | 'documento' | 'aviso';
+export type EntityType = 'comunidad' | 'incidencia' | 'morosidad' | 'profile' | 'fichaje' | 'documento' | 'aviso' | 'proveedor';
 
 interface LogActivityParams {
     action: ActivityAction;

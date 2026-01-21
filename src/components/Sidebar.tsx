@@ -47,6 +47,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     const menuItems = [
         { name: 'Dashboard', href: '/dashboard', icon: Home },
         { name: 'Comunidades', href: '/dashboard/comunidades', icon: Building },
+        { name: 'Proveedores', href: '/dashboard/proveedores', icon: Users },
         { name: 'Gestión de Tickets', href: '/dashboard/incidencias', icon: AlertCircle },
         { name: 'Gestión de Deudas', href: '/dashboard/deudas', icon: FileText },
         { name: 'Fichaje', href: '/dashboard/fichaje', icon: Clock },

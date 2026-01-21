@@ -65,6 +65,9 @@ export async function POST(request: Request) {
         } else if (type === 'document') {
             const { error } = await supabaseAdmin.from('doc_submissions').delete().eq('id', id);
             deleteError = error;
+        } else if (type === 'proveedor') {
+            const { error } = await supabaseAdmin.from('proveedores').delete().eq('id', id);
+            deleteError = error;
         } else {
             return NextResponse.json({ error: 'Tipo de entidad no válido' }, { status: 400 });
         }
