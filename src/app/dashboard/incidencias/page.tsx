@@ -252,9 +252,10 @@ export default function IncidenciasPage() {
                 webhookPayload.append('mensaje', formData.mensaje);
                 // urgencia removed from webhook
 
-                // Comunidad: ID and Name
+                // Comunidad: ID, Name and Code
                 webhookPayload.append('comunidad_id', formData.comunidad_id);
                 webhookPayload.append('comunidad_nombre', comunidad?.nombre_cdad || '');
+                webhookPayload.append('codigo_comunidad', comunidad?.codigo || '');
 
                 // Gestor Asignado: UUID and Name
                 const gestorObj = profiles.find(p => p.user_id === formData.gestor_asignado);

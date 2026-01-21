@@ -277,6 +277,7 @@ export default function MorosidadPage() {
                         id: newDebt.id,
                         comunidad_nombre: comunidad?.nombre_cdad,
                         comunidad_codigo: comunidad?.codigo,
+                        codigo_comunidad: comunidad?.codigo || '',
                         comunidad_direccion: comunidad?.direccion,
                         gestor_nombre: gestorProfile?.nombre || 'Desconocido',
                         documento_url: docUrl,
