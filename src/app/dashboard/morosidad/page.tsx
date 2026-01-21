@@ -277,7 +277,6 @@ export default function MorosidadPage() {
                         id: newDebt.id,
                         comunidad_nombre: comunidad?.nombre_cdad,
                         comunidad_codigo: comunidad?.codigo,
-                        codigo_comunidad: comunidad?.codigo || '',
                         comunidad_direccion: comunidad?.direccion,
                         gestor_nombre: gestorProfile?.nombre || 'Desconocido',
                         documento_url: docUrl,
@@ -354,6 +353,7 @@ export default function MorosidadPage() {
 
     const markAsPaid = async (id: number) => {
         try {
+            const moroso = morosos.find(m => m.id === id);
             const { data: { user } } = await supabase.auth.getUser();
             const { error } = await supabase
                 .from('morosidad')
@@ -376,6 +376,8 @@ export default function MorosidadPage() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         ...moroso,
+                        comunidad_nombre: moroso?.comunidades?.nombre_cdad,
+                        comunidad_codigo: moroso?.comunidades?.codigo,
                         estado: 'Pagado',
                         fecha_pago: new Date().toISOString(),
                     })
@@ -385,7 +387,6 @@ export default function MorosidadPage() {
             }
 
             // Log activity
-            const moroso = morosos.find(m => m.id === id);
             await logActivity({
                 action: 'mark_paid',
                 entityType: 'morosidad',
