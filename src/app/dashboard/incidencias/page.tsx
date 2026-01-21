@@ -35,7 +35,7 @@ interface Incidencia {
     resuelto_por?: string;
     resolver?: { nombre: string }; // Joined profile
     adjuntos?: string[];
-    aviso?: boolean;
+    aviso?: string | boolean;
     id_email_gestion?: string;
 }
 
@@ -411,15 +411,15 @@ export default function IncidenciasPage() {
             // Trigger Resolved Webhook
             if (!currentStatus) {
                 try {
-                    // Note: Using a hardcoded fallback or checking process.env
-                    const webhookUrl = "https://serinwebhook.afcademia.com/webhook/90f845a7-96a8-4447-920f-0cf04403362c";
-
-                    fetch(webhookUrl, {
+                    fetch('/api/webhooks/trigger-resolved-ticket', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             id: id,
-                            id_email_gestion: incidencia?.id_email_gestion || ''
+                            id_email_gestion: incidencia?.id_email_gestion || '',
+                            aviso: incidencia?.aviso || '',
+                            telefono: incidencia?.telefono || '',
+                            email: incidencia?.email || ''
                         })
                     }).catch(e => console.error('Resolved Webhook Error:', e));
                 } catch (e) {
@@ -649,17 +649,25 @@ export default function IncidenciasPage() {
         {
             key: 'aviso',
             label: 'Aviso',
-            render: (row) => (
-                <div className="flex justify-center">
-                    {row.aviso === true ? (
-                        <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full text-[10px] font-bold">ENVIADO</span>
-                    ) : row.aviso === false ? (
-                        <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full text-[10px] font-bold">NO ENVIADO</span>
-                    ) : (
-                        <span className="text-slate-400">-</span>
-                    )}
-                </div>
-            ),
+            render: (row) => {
+                const isSent = row.aviso === true || row.aviso === 'true';
+                const isNotSent = row.aviso === false || row.aviso === 'false';
+                const hasValue = row.aviso && !isSent && !isNotSent;
+
+                return (
+                    <div className="flex justify-center">
+                        {isSent ? (
+                            <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full text-[10px] font-bold">ENVIADO</span>
+                        ) : isNotSent ? (
+                            <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full text-[10px] font-bold">NO ENVIADO</span>
+                        ) : hasValue ? (
+                            <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase">{String(row.aviso)}</span>
+                        ) : (
+                            <span className="text-slate-400">-</span>
+                        )}
+                    </div>
+                );
+            },
         },
         {
             key: 'categoria',
@@ -1402,11 +1410,15 @@ export default function IncidenciasPage() {
                             <button
                                 onClick={() => {
                                     toggleResuelto(selectedDetailIncidencia.id, selectedDetailIncidencia.resuelto);
-                                    setSelectedDetailIncidencia({
-                                        ...selectedDetailIncidencia,
-                                        resuelto: !selectedDetailIncidencia.resuelto,
-                                        dia_resuelto: !selectedDetailIncidencia.resuelto ? new Date().toISOString() : undefined
-                                    });
+                                    if (!selectedDetailIncidencia.resuelto) {
+                                        setShowDetailModal(false);
+                                    } else {
+                                        setSelectedDetailIncidencia({
+                                            ...selectedDetailIncidencia,
+                                            resuelto: !selectedDetailIncidencia.resuelto,
+                                            dia_resuelto: !selectedDetailIncidencia.resuelto ? new Date().toISOString() : undefined
+                                        });
+                                    }
                                 }}
                                 className={`h-11 px-6 rounded-xl font-bold shadow-sm transition flex items-center gap-2 ${selectedDetailIncidencia.resuelto
                                     ? 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
