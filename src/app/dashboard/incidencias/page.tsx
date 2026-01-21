@@ -77,6 +77,10 @@ export default function IncidenciasPage() {
     const [isUpdatingRecord, setIsUpdatingRecord] = useState(false);
     const detailFileInputRef = useRef<HTMLInputElement>(null);
 
+    // PDF Notes Modal State
+    const [showExportModal, setShowExportModal] = useState(false);
+    const [pendingExportParams, setPendingExportParams] = useState<{ type: 'csv' | 'pdf', ids?: number[], includeNotes?: boolean } | null>(null);
+
     const handleRowClick = (incidencia: Incidencia) => {
         setSelectedDetailIncidencia(incidencia);
         setShowDetailModal(true);
@@ -385,17 +389,21 @@ export default function IncidenciasPage() {
         }
     };
 
-    const handleExport = async (type: 'csv' | 'pdf', idsOverride?: number[]) => {
+    const handleExport = async (type: 'csv' | 'pdf', idsOverride?: number[], includeNotesFromModal?: boolean) => {
         const idsToExport = idsOverride || Array.from(selectedIds);
         if (idsToExport.length === 0) return;
 
         // If overriding IDs (from modal), imply detail view if single item
         const isDetailView = !!idsOverride && idsToExport.length === 1 && type === 'pdf';
 
-        let includeNotes = false;
-        if (isDetailView) {
-            includeNotes = window.confirm('¿Desea incluir las notas de gestión en el PDF?');
+        // Custom Modal Logic
+        if (isDetailView && includeNotesFromModal === undefined) {
+            setPendingExportParams({ type, ids: idsOverride });
+            setShowExportModal(true);
+            return;
         }
+
+        const includeNotes = includeNotesFromModal !== undefined ? includeNotesFromModal : false;
 
         setExporting(true);
         try {
@@ -943,6 +951,49 @@ export default function IncidenciasPage() {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Export Notes Modal */}
+            {showExportModal && (
+                <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 relative overflow-hidden">
+                        <div className="text-center">
+                            <h3 className="text-lg font-semibold text-gray-900 mb-4">Exportar PDF</h3>
+                            <p className="text-sm text-gray-600 mb-8 px-2">
+                                ¿Desea incluir las notas de gestión en el documento PDF?
+                            </p>
+
+                            <div className="flex flex-col gap-3">
+                                <button
+                                    onClick={() => {
+                                        const params = pendingExportParams;
+                                        setPendingExportParams(null);
+                                        setShowExportModal(false);
+                                        if (params) {
+                                            handleExport(params.type, params.ids, true);
+                                        }
+                                    }}
+                                    className="w-full py-3 bg-[#633e33] text-white rounded-full font-bold hover:bg-[#4d3027] transition shadow-md"
+                                >
+                                    Aceptar
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        const params = pendingExportParams;
+                                        setPendingExportParams(null);
+                                        setShowExportModal(false);
+                                        if (params) {
+                                            handleExport(params.type, params.ids, false);
+                                        }
+                                    }}
+                                    className="w-full py-3 bg-[#ffe7e1] text-[#633e33] rounded-full font-bold hover:bg-[#ffd9d1] transition transition shadow-sm"
+                                >
+                                    Cancelar
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}
