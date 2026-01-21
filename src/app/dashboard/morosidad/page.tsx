@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { Plus, FileText, Check, Trash2, X, RotateCcw, Paperclip, Download, Loader2 } from 'lucide-react';
@@ -50,6 +50,8 @@ export default function MorosidadPage() {
     // Detail Modal State
     const [selectedDetailMorosidad, setSelectedDetailMorosidad] = useState<Morosidad | null>(null);
     const [showDetailModal, setShowDetailModal] = useState(false);
+    const [isUpdatingRecord, setIsUpdatingRecord] = useState(false);
+    const detailFileInputRef = useRef<HTMLInputElement>(null);
 
     // Selection & Export
     const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set());
@@ -279,6 +281,49 @@ export default function MorosidadPage() {
             } catch (error: any) {
                 toast.error('Error: ' + error.message);
             }
+        }
+    };
+
+    const handleDetailFileUpload = async (file: File) => {
+        if (!selectedDetailMorosidad) return;
+
+        setIsUpdatingRecord(true);
+        const loadingToast = toast.loading('Subiendo archivo...');
+
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Math.random()}.${fileExt}`;
+            const filePath = `morosidad/${fileName}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from('documentos')
+                .upload(filePath, file);
+
+            if (uploadError) throw uploadError;
+
+            const { data } = supabase.storage.from('documentos').getPublicUrl(filePath);
+            const docUrl = data.publicUrl;
+
+            const { error: updateError } = await supabase
+                .from('morosidad')
+                .update({ documento: docUrl })
+                .eq('id', selectedDetailMorosidad.id);
+
+            if (updateError) throw updateError;
+
+            setSelectedDetailMorosidad({
+                ...selectedDetailMorosidad,
+                documento: docUrl
+            });
+
+            setMorosos(prev => prev.map(m => m.id === selectedDetailMorosidad.id ? { ...m, documento: docUrl } : m));
+
+            toast.success('Documento actualizado', { id: loadingToast });
+        } catch (error: any) {
+            console.error(error);
+            toast.error('Error al subir archivo', { id: loadingToast });
+        } finally {
+            setIsUpdatingRecord(false);
         }
     };
 
@@ -954,6 +999,24 @@ export default function MorosidadPage() {
                                 )}
                             </div>
                             <div className="flex items-center gap-2">
+                                <input
+                                    type="file"
+                                    className="hidden"
+                                    ref={detailFileInputRef}
+                                    onChange={(e) => {
+                                        if (e.target.files && e.target.files.length > 0) {
+                                            handleDetailFileUpload(e.target.files[0]);
+                                        }
+                                    }}
+                                />
+                                <button
+                                    onClick={() => detailFileInputRef.current?.click()}
+                                    className="text-gray-400 hover:text-yellow-600 transition p-1 hover:bg-yellow-50 rounded-full"
+                                    title="Actualizar documento"
+                                    disabled={isUpdatingRecord}
+                                >
+                                    {isUpdatingRecord ? <Loader2 className="w-6 h-6 animate-spin text-yellow-600" /> : <Paperclip className="w-6 h-6" />}
+                                </button>
                                 <button
                                     onClick={() => handleExport('pdf', [selectedDetailMorosidad.id])}
                                     className="text-gray-400 hover:text-red-600 transition p-1 hover:bg-red-50 rounded-full"

@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { Plus, Check, RotateCcw, Paperclip, Trash2, X, FileText, Download, Loader2 } from 'lucide-react';
@@ -73,6 +73,8 @@ export default function IncidenciasPage() {
     // Detail Modal State
     const [selectedDetailIncidencia, setSelectedDetailIncidencia] = useState<Incidencia | null>(null);
     const [showDetailModal, setShowDetailModal] = useState(false);
+    const [isUpdatingRecord, setIsUpdatingRecord] = useState(false);
+    const detailFileInputRef = useRef<HTMLInputElement>(null);
 
     const handleRowClick = (incidencia: Incidencia) => {
         setSelectedDetailIncidencia(incidencia);
@@ -281,6 +283,56 @@ export default function IncidenciasPage() {
             fetchIncidencias();
         } catch (error: any) {
             toast.error('Error: ' + error.message);
+        }
+    };
+
+    const handleDetailFileUpload = async (files: FileList) => {
+        if (!selectedDetailIncidencia) return;
+
+        setIsUpdatingRecord(true);
+        const loadingToast = toast.loading('Subiendo archivos...');
+
+        try {
+            const newUrls: string[] = [];
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${Math.random()}.${fileExt}`;
+                const filePath = `incidencias/${fileName}`;
+
+                const { error: uploadError } = await supabase.storage
+                    .from('documentos')
+                    .upload(filePath, file);
+
+                if (uploadError) throw uploadError;
+
+                const { data } = supabase.storage.from('documentos').getPublicUrl(filePath);
+                newUrls.push(data.publicUrl);
+            }
+
+            const currentAdjuntos = selectedDetailIncidencia.adjuntos || [];
+            const updatedAdjuntos = [...currentAdjuntos, ...newUrls];
+
+            const { error: updateError } = await supabase
+                .from('incidencias')
+                .update({ adjuntos: updatedAdjuntos })
+                .eq('id', selectedDetailIncidencia.id);
+
+            if (updateError) throw updateError;
+
+            setSelectedDetailIncidencia({
+                ...selectedDetailIncidencia,
+                adjuntos: updatedAdjuntos
+            });
+
+            setIncidencias(prev => prev.map(i => i.id === selectedDetailIncidencia.id ? { ...i, adjuntos: updatedAdjuntos } : i));
+
+            toast.success('Archivos añadidos hoy', { id: loadingToast });
+        } catch (error: any) {
+            console.error(error);
+            toast.error('Error al subir archivos', { id: loadingToast });
+        } finally {
+            setIsUpdatingRecord(false);
         }
     };
 
@@ -932,6 +984,25 @@ export default function IncidenciasPage() {
                                 )}
                             </div>
                             <div className="flex items-center gap-2">
+                                <input
+                                    type="file"
+                                    multiple
+                                    className="hidden"
+                                    ref={detailFileInputRef}
+                                    onChange={(e) => {
+                                        if (e.target.files && e.target.files.length > 0) {
+                                            handleDetailFileUpload(e.target.files);
+                                        }
+                                    }}
+                                />
+                                <button
+                                    onClick={() => detailFileInputRef.current?.click()}
+                                    className="text-gray-400 hover:text-yellow-600 transition p-1 hover:bg-yellow-50 rounded-full"
+                                    title="Adjuntar archivos"
+                                    disabled={isUpdatingRecord}
+                                >
+                                    {isUpdatingRecord ? <Loader2 className="w-6 h-6 animate-spin text-yellow-600" /> : <Paperclip className="w-6 h-6" />}
+                                </button>
                                 <button
                                     onClick={() => handleExport('pdf', [selectedDetailIncidencia.id])}
                                     className="text-gray-400 hover:text-red-600 transition p-1 hover:bg-red-50 rounded-full"
