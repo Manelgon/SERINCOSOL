@@ -1,20 +1,38 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Link from 'next/link';
-import { FileText, Settings, History } from 'lucide-react';
-import { supabaseServer } from '@/lib/supabase/server';
+import { FileText, Settings, History, X } from 'lucide-react';
+import { createBrowserClient } from "@supabase/ssr";
 
-export default async function DocumentosPage() {
-    const supabase = await supabaseServer();
-    const { data: { user } } = await supabase.auth.getUser();
+// Forms
+import SuplidosForm from "./suplidos/suplidos-form";
+import VariosForm from "./varios/varios-form";
+import CertificadoForm from "./certificado-renta/certificado-form";
 
-    let isAdmin = false;
-    if (user) {
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('rol')
-            .eq('user_id', user.id)
-            .single();
-        isAdmin = profile?.rol === 'admin';
-    }
+export default function DocumentosPage() {
+    const [isAdmin, setIsAdmin] = useState(false);
+    const [activeModal, setActiveModal] = useState<"suplidos" | "varios" | "certificado_renta" | null>(null);
+
+    const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
+    useEffect(() => {
+        const checkRole = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('rol')
+                    .eq('user_id', user.id)
+                    .single();
+                setIsAdmin(profile?.rol === 'admin');
+            }
+        };
+        checkRole();
+    }, []);
 
     const documentTypes = [
         {
@@ -98,12 +116,12 @@ export default async function DocumentosPage() {
 
                         <div className="mt-6">
                             {doc.available ? (
-                                <Link
-                                    href={doc.href}
+                                <button
+                                    onClick={() => setActiveModal(doc.key as any)}
                                     className="inline-flex rounded-md bg-yellow-400 px-4 py-2 text-sm font-semibold text-neutral-950 hover:bg-yellow-500 transition shadow-sm hover:shadow"
                                 >
                                     Crear documento
-                                </Link>
+                                </button>
                             ) : (
                                 <div className="inline-flex rounded-md bg-neutral-100 px-4 py-2 text-sm font-semibold text-neutral-500">
                                     Próximamente
@@ -113,6 +131,41 @@ export default async function DocumentosPage() {
                     </div>
                 ))}
             </div>
+
+            {/* Modal Overlay */}
+            {activeModal && (
+                <div
+                    className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto"
+                    onClick={() => setActiveModal(null)}
+                >
+                    <div
+                        className="w-[calc(100vw-24px)] sm:w-full sm:max-w-4xl max-h-[calc(100vh-24px)] bg-white rounded-xl shadow-xl flex flex-col animate-in fade-in zoom-in duration-200"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* Modal Header */}
+                        <div className="px-6 sm:px-8 pt-6 sm:pt-7 pb-4 border-b border-slate-100 flex justify-between items-center">
+                            <h2 className="text-lg font-semibold text-slate-900">
+                                {activeModal === "suplidos" && "Nuevo Documento de Suplidos"}
+                                {activeModal === "varios" && "Nuevas Facturas Varios"}
+                                {activeModal === "certificado_renta" && "Nuevo Certificado Renta"}
+                            </h2>
+                            <button
+                                onClick={() => setActiveModal(null)}
+                                className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="p-6 sm:p-8 overflow-y-auto custom-scrollbar">
+                            {activeModal === "suplidos" && <SuplidosForm onSuccess={() => setActiveModal(null)} />}
+                            {activeModal === "varios" && <VariosForm onSuccess={() => setActiveModal(null)} />}
+                            {activeModal === "certificado_renta" && <CertificadoForm onSuccess={() => setActiveModal(null)} />}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

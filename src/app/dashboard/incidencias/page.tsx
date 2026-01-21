@@ -35,6 +35,7 @@ interface Incidencia {
     resuelto_por?: string;
     resolver?: { nombre: string }; // Joined profile
     adjuntos?: string[];
+    aviso?: boolean;
 }
 
 export default function IncidenciasPage() {
@@ -609,6 +610,21 @@ export default function IncidenciasPage() {
             },
         },
         {
+            key: 'aviso',
+            label: 'Aviso',
+            render: (row) => (
+                <div className="flex justify-center">
+                    {row.aviso === true ? (
+                        <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full text-[10px] font-bold">ENVIADO</span>
+                    ) : row.aviso === false ? (
+                        <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full text-[10px] font-bold">NO ENVIADO</span>
+                    ) : (
+                        <span className="text-slate-400">-</span>
+                    )}
+                </div>
+            ),
+        },
+        {
             key: 'categoria',
             label: 'Categoría',
         },
@@ -749,167 +765,195 @@ export default function IncidenciasPage() {
                 )}
             </div>
 
-            {/* Form */}
+            {/* Form Modal */}
             {showForm && (
-                <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
-                    <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Row 1: Quien lo recibe */}
-                        <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Quién lo recibe <span className="text-red-600">*</span></label>
-                            <SearchableSelect
-                                value={formData.recibido_por}
-                                onChange={(val) => setFormData({ ...formData, recibido_por: String(val) })}
-                                options={profiles.map(p => ({
-                                    value: p.user_id,
-                                    label: p.nombre
-                                }))}
-                                placeholder="Buscar persona..."
-                            />
-                        </div>
-
-                        {/* Row 2: Teléfono | Nombre Cliente */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Teléfono Cliente</label>
-                            <input
-                                type="tel"
-                                className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
-                                value={formData.telefono}
-                                onChange={e => setFormData({ ...formData, telefono: e.target.value })}
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre Cliente <span className="text-red-600">*</span></label>
-                            <input
-                                required
-                                type="text"
-                                className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
-                                value={formData.nombre_cliente}
-                                onChange={e => setFormData({ ...formData, nombre_cliente: e.target.value })}
-                            />
-                        </div>
-
-                        {/* Row 3: Comunidad */}
-                        <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Comunidad <span className="text-red-600">*</span></label>
-                            <SearchableSelect
-                                value={formData.comunidad_id}
-                                onChange={(val) => setFormData({ ...formData, comunidad_id: String(val) })}
-                                options={comunidades.map(cd => ({
-                                    value: String(cd.id),
-                                    label: cd.codigo ? `${cd.codigo} - ${cd.nombre_cdad}` : cd.nombre_cdad
-                                }))}
-                                placeholder="Buscar comunidad par nombre o código..."
-                            />
-                        </div>
-
-                        {/* Row 4: Email */}
-                        <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Email Cliente</label>
-                            <input
-                                type="email"
-                                className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
-                                value={formData.email}
-                                onChange={e => setFormData({ ...formData, email: e.target.value })}
-                            />
-                        </div>
-
-                        {/* Row 5: Mensaje */}
-                        <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Mensaje <span className="text-red-600">*</span></label>
-                            <textarea
-                                required
-                                rows={3}
-                                className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
-                                value={formData.mensaje}
-                                onChange={e => setFormData({ ...formData, mensaje: e.target.value })}
-                            />
-                        </div>
-
-                        {/* Urgency field removed from creation form */}
-
-                        {/* Row 6: Gestor Asignado */}
-                        <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Gestor Asignado <span className="text-red-600">*</span></label>
-                            <SearchableSelect
-                                value={formData.gestor_asignado}
-                                onChange={(val) => setFormData({ ...formData, gestor_asignado: String(val) })}
-                                options={profiles.map(p => ({
-                                    value: p.user_id,
-                                    label: `${p.nombre} (${p.rol})`
-                                }))}
-                                placeholder="Buscar un gestor..."
-                            />
-                        </div>
-
-                        {/* Row 7: Proveedor (Placeholder) */}
-                        <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Enviar email a Proveedor</label>
-                            <select
-                                disabled
-                                className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100 cursor-not-allowed"
-                                value={formData.proveedor}
-                                onChange={e => setFormData({ ...formData, proveedor: e.target.value })}
-                            >
-                                <option value="">Próximamente disponible...</option>
-                            </select>
-                        </div>
-
-                        {/* Row 8: Adjuntos */}
-                        <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Adjuntar documentos (pueden ser varios)</label>
-                            <input
-                                type="file"
-                                multiple
-                                className="block w-full text-sm text-gray-500
-                                file:mr-4 file:py-2 file:px-4
-                                file:rounded-full file:border-0
-                                file:text-sm file:font-semibold
-                                file:bg-yellow-50 file:text-yellow-700
-                                hover:file:bg-yellow-100"
-                                onChange={(e) => {
-                                    if (e.target.files) {
-                                        setFiles(Array.from(e.target.files));
-                                    }
-                                }}
-                            />
-                            {files.length > 0 && (
-                                <p className="mt-1 text-xs text-neutral-500">{files.length} archivos seleccionados</p>
-                            )}
-                        </div>
-
-                        <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Enviar notificación al propietario <span className="text-red-600">*</span>
-                            </label>
-                            <div className="flex gap-4">
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                    <input
-                                        type="radio"
-                                        name="enviarAviso"
-                                        checked={enviarAviso === true}
-                                        onChange={() => setEnviarAviso(true)}
-                                        className="w-4 h-4 text-yellow-400 border-gray-300 focus:ring-yellow-400"
-                                    />
-                                    <span className="text-sm text-gray-700">Sí</span>
-                                </label>
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                    <input
-                                        type="radio"
-                                        name="enviarAviso"
-                                        checked={enviarAviso === false}
-                                        onChange={() => setEnviarAviso(false)}
-                                        className="w-4 h-4 text-yellow-400 border-gray-300 focus:ring-yellow-400"
-                                    />
-                                    <span className="text-sm text-gray-700">No</span>
-                                </label>
-                            </div>
-                            {enviarAviso === null && (
-                                <p className="mt-1 text-xs text-red-600">Debe seleccionar una opción</p>
-                            )}
-                        </div>
-
-                        <div className="md:col-span-2 pt-4">
+                <div
+                    className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 md:p-8 backdrop-blur-sm overflow-y-auto"
+                    onClick={() => setShowForm(false)}
+                >
+                    <div
+                        className="w-[calc(100vw-24px)] sm:w-full sm:max-w-2xl max-h-[85vh] bg-white rounded-xl shadow-xl flex flex-col animate-in fade-in zoom-in duration-200"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* Modal Header */}
+                        <div className="px-6 sm:px-8 pt-6 sm:pt-7 pb-4 border-b border-slate-100 flex justify-between items-center">
+                            <h2 className="text-lg font-semibold text-slate-900">
+                                Registrar Nueva Incidencia
+                            </h2>
                             <button
+                                onClick={() => setShowForm(false)}
+                                className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="p-6 sm:p-8 overflow-y-auto custom-scrollbar">
+                            <form id="incidencia-form" onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                                {/* Row 1: Quien lo recibe */}
+                                <div className="sm:col-span-2">
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Quién lo recibe <span className="text-red-600">*</span></label>
+                                    <SearchableSelect
+                                        value={formData.recibido_por}
+                                        onChange={(val) => setFormData({ ...formData, recibido_por: String(val) })}
+                                        options={profiles.map(p => ({
+                                            value: p.user_id,
+                                            label: p.nombre
+                                        }))}
+                                        placeholder="Buscar persona..."
+                                    />
+                                </div>
+
+                                {/* Row 2: Teléfono | Nombre Cliente */}
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Teléfono Cliente</label>
+                                    <input
+                                        type="tel"
+                                        placeholder="Ej: 600000000"
+                                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400"
+                                        value={formData.telefono}
+                                        onChange={e => setFormData({ ...formData, telefono: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Nombre Cliente <span className="text-red-600">*</span></label>
+                                    <input
+                                        required
+                                        type="text"
+                                        placeholder="Nombre completo"
+                                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400"
+                                        value={formData.nombre_cliente}
+                                        onChange={e => setFormData({ ...formData, nombre_cliente: e.target.value })}
+                                    />
+                                </div>
+
+                                {/* Row 3: Comunidad */}
+                                <div className="sm:col-span-2">
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Comunidad <span className="text-red-600">*</span></label>
+                                    <SearchableSelect
+                                        value={formData.comunidad_id}
+                                        onChange={(val) => setFormData({ ...formData, comunidad_id: String(val) })}
+                                        options={comunidades.map(cd => ({
+                                            value: String(cd.id),
+                                            label: cd.codigo ? `${cd.codigo} - ${cd.nombre_cdad}` : cd.nombre_cdad
+                                        }))}
+                                        placeholder="Buscar comunidad par nombre o código..."
+                                    />
+                                </div>
+
+                                {/* Row 4: Email */}
+                                <div className="sm:col-span-2">
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Email Cliente</label>
+                                    <input
+                                        type="email"
+                                        placeholder="ejemplo@correo.com"
+                                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400"
+                                        value={formData.email}
+                                        onChange={e => setFormData({ ...formData, email: e.target.value })}
+                                    />
+                                </div>
+
+                                {/* Row 5: Mensaje */}
+                                <div className="sm:col-span-2">
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Mensaje <span className="text-red-600">*</span></label>
+                                    <textarea
+                                        required
+                                        rows={3}
+                                        placeholder="Detalles de la incidencia..."
+                                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400 min-h-[120px] resize-y"
+                                        value={formData.mensaje}
+                                        onChange={e => setFormData({ ...formData, mensaje: e.target.value })}
+                                    />
+                                </div>
+
+                                {/* Row 6: Gestor Asignado */}
+                                <div className="sm:col-span-2">
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Gestor Asignado <span className="text-red-600">*</span></label>
+                                    <SearchableSelect
+                                        value={formData.gestor_asignado}
+                                        onChange={(val) => setFormData({ ...formData, gestor_asignado: String(val) })}
+                                        options={profiles.map(p => ({
+                                            value: p.user_id,
+                                            label: `${p.nombre} (${p.rol})`
+                                        }))}
+                                        placeholder="Buscar un gestor..."
+                                    />
+                                </div>
+
+                                {/* Row 7: Proveedor (Placeholder) */}
+                                <div className="sm:col-span-2">
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Enviar email a Proveedor</label>
+                                    <select
+                                        disabled
+                                        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-400 focus:outline-none cursor-not-allowed"
+                                        value={formData.proveedor}
+                                        onChange={e => setFormData({ ...formData, proveedor: e.target.value })}
+                                    >
+                                        <option value="">Próximamente disponible...</option>
+                                    </select>
+                                </div>
+
+                                {/* Row 8: Adjuntos */}
+                                <div className="sm:col-span-2">
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Adjuntar documentos (pueden ser varios)</label>
+                                    <input
+                                        type="file"
+                                        multiple
+                                        className="block w-full text-sm text-slate-500
+                                        file:mr-4 file:py-2 file:px-4
+                                        file:rounded-full file:border-0
+                                        file:text-sm file:font-semibold
+                                        file:bg-slate-100 file:text-slate-700
+                                        hover:file:bg-slate-200 cursor-pointer"
+                                        onChange={(e) => {
+                                            if (e.target.files) {
+                                                setFiles(Array.from(e.target.files));
+                                            }
+                                        }}
+                                    />
+                                    {files.length > 0 && (
+                                        <p className="mt-1 text-xs text-slate-500">{files.length} archivos seleccionados</p>
+                                    )}
+                                </div>
+
+                                <div className="sm:col-span-2">
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                        Enviar notificación al propietario <span className="text-red-600">*</span>
+                                    </label>
+                                    <div className="flex items-center gap-6 mt-2">
+                                        <label className="flex items-center gap-2 cursor-pointer group">
+                                            <input
+                                                type="radio"
+                                                name="enviarAviso"
+                                                checked={enviarAviso === true}
+                                                onChange={() => setEnviarAviso(true)}
+                                                className="w-4 h-4 text-slate-900 border-slate-300 focus:ring-slate-900/20"
+                                            />
+                                            <span className="text-sm text-slate-700 group-hover:text-slate-900 transition-colors">Sí</span>
+                                        </label>
+                                        <label className="flex items-center gap-2 cursor-pointer group">
+                                            <input
+                                                type="radio"
+                                                name="enviarAviso"
+                                                checked={enviarAviso === false}
+                                                onChange={() => setEnviarAviso(false)}
+                                                className="w-4 h-4 text-slate-900 border-slate-300 focus:ring-slate-900/20"
+                                            />
+                                            <span className="text-sm text-slate-700 group-hover:text-slate-900 transition-colors">No</span>
+                                        </label>
+                                    </div>
+                                    {enviarAviso === null && (
+                                        <p className="mt-1 text-xs text-red-600">Debe seleccionar una opción</p>
+                                    )}
+                                </div>
+                            </form>
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="px-6 sm:px-8 pb-6 sm:pb-7 pt-4 border-t border-slate-100">
+                            <button
+                                form="incidencia-form"
                                 type="submit"
                                 disabled={
                                     uploading ||
@@ -920,9 +964,14 @@ export default function IncidenciasPage() {
                                     !formData.mensaje ||
                                     !formData.gestor_asignado
                                 }
-                                className="w-full bg-yellow-400 hover:bg-yellow-500 text-neutral-950 py-3 rounded-md font-bold transition disabled:opacity-50 disabled:cursor-not-allowed flex justify-center gap-2"
+                                className="w-full sm:w-auto h-12 px-8 bg-yellow-400 hover:bg-yellow-500 text-neutral-950 rounded-xl font-bold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm hover:shadow-md active:scale-[0.98]"
                             >
-                                {uploading ? 'Subiendo archivos...' : (
+                                {uploading ? (
+                                    <>
+                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                        Subiendo archivos...
+                                    </>
+                                ) : (
                                     <>
                                         <Plus className="w-5 h-5" />
                                         Registrar Ticket
@@ -930,7 +979,7 @@ export default function IncidenciasPage() {
                                 )}
                             </button>
                         </div>
-                    </form>
+                    </div>
                 </div>
             )}
 
@@ -1083,23 +1132,23 @@ export default function IncidenciasPage() {
                     onClick={() => setShowDetailModal(false)}
                 >
                     <div
-                        className="bg-white rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-gray-900/10 w-full max-w-2xl max-h-[80vh] md:max-h-[95vh] overflow-y-auto custom-scrollbar flex flex-col"
+                        className="bg-white rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-gray-900/10 w-full max-w-2xl max-h-[90vh] overflow-y-auto custom-scrollbar flex flex-col animate-in fade-in zoom-in duration-200"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Header */}
-                        <div className="px-6 py-8 border-b border-gray-100 flex justify-between items-start bg-gray-50 flex-shrink-0 rounded-t-xl">
+                        <div className="px-6 sm:px-8 pt-6 sm:pt-7 pb-4 border-b border-slate-100 flex justify-between items-center bg-white flex-shrink-0 rounded-t-xl">
                             <div>
-                                <h3 className="text-xl font-bold text-neutral-900 flex items-center gap-2">
+                                <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
                                     Ticket #{selectedDetailIncidencia.id}
                                 </h3>
-                                <p className="text-sm text-gray-500 mt-1">
+                                <p className="text-xs text-slate-500 mt-0.5">
                                     Creado el {new Date(selectedDetailIncidencia.created_at).toLocaleString()}
                                 </p>
                                 {selectedDetailIncidencia.resuelto && selectedDetailIncidencia.dia_resuelto && (
-                                    <p className="text-sm text-green-600 mt-0.5 font-medium flex items-center gap-1">
+                                    <p className="text-xs text-green-600 mt-0.5 font-medium flex items-center gap-1">
                                         Resuelto el {new Date(selectedDetailIncidencia.dia_resuelto).toLocaleString()}
                                         {selectedDetailIncidencia.resolver?.nombre && (
-                                            <span className="text-gray-500 font-normal">
+                                            <span className="text-slate-400 font-normal">
                                                 ({selectedDetailIncidencia.resolver.nombre})
                                             </span>
                                         )}
@@ -1120,158 +1169,165 @@ export default function IncidenciasPage() {
                                 />
                                 <button
                                     onClick={() => detailFileInputRef.current?.click()}
-                                    className="text-gray-400 hover:text-yellow-600 transition p-1 hover:bg-yellow-50 rounded-full"
+                                    className="p-2 hover:bg-slate-50 rounded-full transition-colors text-slate-400 hover:text-slate-600"
                                     title="Adjuntar archivos"
                                     disabled={isUpdatingRecord}
                                 >
-                                    {isUpdatingRecord ? <Loader2 className="w-6 h-6 animate-spin text-yellow-600" /> : <Paperclip className="w-6 h-6" />}
+                                    {isUpdatingRecord ? <Loader2 className="w-5 h-5 animate-spin text-slate-600" /> : <Paperclip className="w-5 h-5" />}
                                 </button>
                                 <button
                                     onClick={() => handleExport('pdf', [selectedDetailIncidencia.id])}
-                                    className="text-gray-400 hover:text-red-600 transition p-1 hover:bg-red-50 rounded-full"
+                                    className="p-2 hover:bg-slate-50 rounded-full transition-colors text-slate-400 hover:text-slate-600"
                                     title="Descargar PDF"
                                     disabled={exporting}
                                 >
-                                    {exporting ? <Loader2 className="w-6 h-6 animate-spin" /> : <Download className="w-6 h-6" />}
+                                    {exporting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
                                 </button>
                                 <button
                                     onClick={() => setShowDetailModal(false)}
-                                    className="text-gray-400 hover:text-gray-600 transition p-1 hover:bg-gray-200 rounded-full"
+                                    className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500"
                                 >
-                                    <X className="w-6 h-6" />
+                                    <X className="w-5 h-5" />
                                 </button>
                             </div>
                         </div>
 
                         {/* Body */}
-                        <div className="px-6 pb-6 pt-2 space-y-6 flex-grow">
+                        <div className="p-6 sm:p-8 space-y-8 flex-grow">
                             {/* Top Status Bar */}
-                            <div className="flex flex-wrap items-center gap-4 bg-gray-50 p-3 rounded-lg border border-gray-100">
-                                <div className="flex items-center gap-2 text-sm">
-                                    <span className="text-gray-500">Estado:</span>
-                                    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded font-medium ${selectedDetailIncidencia.resuelto
-                                        ? 'bg-gray-100 text-gray-700'
-                                        : 'bg-yellow-100 text-yellow-800'
+                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                                <div className="space-y-1">
+                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Estado</span>
+                                    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-semibold ${selectedDetailIncidencia.resuelto
+                                        ? 'bg-slate-100 text-slate-700'
+                                        : 'bg-yellow-100/50 text-yellow-700 border border-yellow-200/50'
                                         }`}>
-                                        {selectedDetailIncidencia.resuelto ? <Check className="w-3.5 h-3.5" /> : <RotateCcw className="w-3.5 h-3.5" />}
+                                        {selectedDetailIncidencia.resuelto ? <Check className="w-3 h-3" /> : <RotateCcw className="w-3 h-3" />}
                                         {selectedDetailIncidencia.resuelto ? 'Resuelto' : 'Pendiente'}
                                     </span>
                                 </div>
 
-                                <div className="h-6 w-px bg-gray-300 hidden sm:block"></div>
-
-                                <div className="flex items-center gap-2 text-sm">
-                                    <span className="text-gray-500">Urgencia:</span>
-                                    <span className={`px-2 py-0.5 rounded font-medium ${selectedDetailIncidencia.urgencia === 'Alta' ? 'bg-red-100 text-red-700' :
-                                        selectedDetailIncidencia.urgencia === 'Media' ? 'bg-yellow-100 text-yellow-700' :
-                                            'bg-blue-100 text-blue-700'
+                                <div className="space-y-1">
+                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Urgencia</span>
+                                    <span className={`inline-flex px-2 py-0.5 rounded text-xs font-semibold ${selectedDetailIncidencia.urgencia === 'Alta' ? 'bg-red-50 text-red-700 border border-red-100' :
+                                        selectedDetailIncidencia.urgencia === 'Media' ? 'bg-orange-50 text-orange-700 border border-orange-100' :
+                                            'bg-blue-50 text-blue-700 border border-blue-100'
                                         }`}>
                                         {selectedDetailIncidencia.urgencia || 'No definida'}
                                     </span>
                                 </div>
 
-                                <div className="flex items-center gap-2 text-sm">
-                                    <span className="text-gray-500">Categoría:</span>
-                                    <span className="font-medium text-gray-900">{selectedDetailIncidencia.categoria || '-'}</span>
+                                <div className="space-y-1">
+                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Categoría</span>
+                                    <span className="text-sm font-semibold text-slate-700">{selectedDetailIncidencia.categoria || '-'}</span>
+                                </div>
+
+                                <div className="space-y-1">
+                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Aviso Propietario</span>
+                                    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold ${selectedDetailIncidencia.aviso === true
+                                        ? 'bg-emerald-100 text-emerald-700'
+                                        : selectedDetailIncidencia.aviso === false
+                                            ? 'bg-slate-100 text-slate-500'
+                                            : 'bg-slate-50 text-slate-400'
+                                        }`}>
+                                        {selectedDetailIncidencia.aviso === true ? 'ENVIADO' : selectedDetailIncidencia.aviso === false ? 'NO ENVIADO' : 'N/A'}
+                                    </span>
                                 </div>
                             </div>
 
                             {/* Tables Grid */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-10">
                                 {/* Left Column: Cliente & Comunidad */}
                                 <div className="space-y-6">
-                                    <div>
-                                        <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 border-b pb-2 flex items-center gap-2">
-                                            👤 Contacto y Ubicación
-                                        </h4>
-                                        <table className="w-full text-sm">
-                                            <tbody className="divide-y divide-gray-100">
-                                                <tr>
-                                                    <td className="py-2.5 text-gray-500 w-1/3">Cliente</td>
-                                                    <td className="py-2.5 font-medium text-gray-900">{selectedDetailIncidencia.nombre_cliente}</td>
-                                                </tr>
-                                                <tr>
-                                                    <td className="py-2.5 text-gray-500">Teléfono</td>
-                                                    <td className="py-2.5 font-medium text-gray-900">{selectedDetailIncidencia.telefono}</td>
-                                                </tr>
-                                                <tr>
-                                                    <td className="py-2.5 text-gray-500">Email</td>
-                                                    <td className="py-2.5 text-gray-900">{selectedDetailIncidencia.email || '-'}</td>
-                                                </tr>
-                                                <tr>
-                                                    <td className="py-2.5 text-gray-500">Comunidad</td>
-                                                    <td className="py-2.5 font-medium text-gray-900">
-                                                        {selectedDetailIncidencia.comunidad || selectedDetailIncidencia.comunidades?.nombre_cdad || '-'}
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
+                                    <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
+                                        <span className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-base">👤</span>
+                                        Contacto y Ubicación
+                                    </h4>
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center text-sm border-b border-slate-50 pb-3">
+                                            <span className="text-slate-500">Cliente</span>
+                                            <span className="font-semibold text-slate-900">{selectedDetailIncidencia.nombre_cliente}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-sm border-b border-slate-50 pb-3">
+                                            <span className="text-slate-500">Teléfono</span>
+                                            <span className="font-semibold text-slate-900">{selectedDetailIncidencia.telefono}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-sm border-b border-slate-50 pb-3">
+                                            <span className="text-slate-500">Email</span>
+                                            <span className="text-slate-900">{selectedDetailIncidencia.email || '-'}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-slate-500">Comunidad</span>
+                                            <span className="font-semibold text-slate-900">
+                                                {selectedDetailIncidencia.comunidad || selectedDetailIncidencia.comunidades?.nombre_cdad || '-'}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
 
                                 {/* Right Column: Gestión Interna */}
                                 <div className="space-y-6">
-                                    <div>
-                                        <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 border-b pb-2 flex items-center gap-2">
-                                            📋 Gestión Interna
-                                        </h4>
-                                        <table className="w-full text-sm">
-                                            <tbody className="divide-y divide-gray-100">
-                                                <tr>
-                                                    <td className="py-2.5 text-gray-500 w-1/3">Recibido por</td>
-                                                    <td className="py-2.5 font-medium text-gray-900">
-                                                        {(selectedDetailIncidencia as any).receptor?.nombre || selectedDetailIncidencia.quien_lo_recibe || '-'}
-                                                    </td>
-                                                </tr>
-                                                <tr>
-                                                    <td className="py-2.5 text-gray-500">Gestor Asignado</td>
-                                                    <td className="py-2.5 font-medium text-gray-900">
-                                                        {(selectedDetailIncidencia as any).gestor?.nombre || selectedDetailIncidencia.gestor_asignado || '-'}
-                                                    </td>
-                                                </tr>
-                                                <tr>
-                                                    <td className="py-2.5 text-gray-500">Sentimiento</td>
-                                                    <td className="py-2.5 font-medium text-gray-900">{selectedDetailIncidencia.sentimiento || '-'}</td>
-                                                </tr>
-                                                <tr>
-                                                    <td className="py-2.5 text-gray-500">Fecha Creación</td>
-                                                    <td className="py-2.5 text-gray-900">{new Date(selectedDetailIncidencia.created_at).toLocaleString()}</td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
+                                    <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
+                                        <span className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-base">📋</span>
+                                        Gestión Interna
+                                    </h4>
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center text-sm border-b border-slate-50 pb-3">
+                                            <span className="text-slate-500">Recibido por</span>
+                                            <span className="font-semibold text-slate-900">
+                                                {(selectedDetailIncidencia as any).receptor?.nombre || selectedDetailIncidencia.quien_lo_recibe || '-'}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-sm border-b border-slate-50 pb-3">
+                                            <span className="text-slate-500">Gestor Asignado</span>
+                                            <span className="font-semibold text-slate-900">
+                                                {(selectedDetailIncidencia as any).gestor?.nombre || selectedDetailIncidencia.gestor_asignado || '-'}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-sm border-b border-slate-50 pb-3">
+                                            <span className="text-slate-500">Sentimiento</span>
+                                            <span className="font-semibold text-slate-900">{selectedDetailIncidencia.sentimiento || '-'}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-slate-500">Fecha Creación</span>
+                                            <span className="text-slate-900">{new Date(selectedDetailIncidencia.created_at).toLocaleString()}</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Message */}
-                            <div>
-                                <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 border-b pb-2">
+                            <div className="space-y-3">
+                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
                                     Mensaje del Cliente
                                 </h4>
-                                <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
-                                    {selectedDetailIncidencia.mensaje}
+                                <div className="bg-slate-50/50 p-6 rounded-xl border border-slate-100 text-slate-700 text-sm leading-relaxed whitespace-pre-wrap italic">
+                                    "{selectedDetailIncidencia.mensaje}"
                                 </div>
                             </div>
 
                             {/* Attachments */}
                             {selectedDetailIncidencia.adjuntos && selectedDetailIncidencia.adjuntos.length > 0 && (
-                                <div>
-                                    <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 border-b pb-2 flex items-center gap-2">
+                                <div className="space-y-3">
+                                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
                                         📎 Archivos Adjuntos
                                     </h4>
-                                    <div className="flex flex-wrap gap-3">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         {selectedDetailIncidencia.adjuntos.map((url, i) => (
                                             <a
                                                 key={i}
                                                 href={url}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="flex items-center gap-2 bg-white border border-gray-200 px-4 py-3 rounded-lg text-sm font-medium text-gray-700 hover:text-yellow-600 hover:border-yellow-400 hover:shadow-sm transition group"
+                                                className="flex items-center gap-3 bg-white border border-slate-200 p-3 rounded-xl text-sm font-medium text-slate-600 hover:text-slate-900 hover:border-slate-300 hover:shadow-sm transition group"
                                             >
-                                                <div className="p-1.5 bg-gray-50 rounded-md group-hover:bg-yellow-50 transition">
-                                                    <Paperclip className="w-5 h-5 text-gray-500 group-hover:text-yellow-600" />
+                                                <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center group-hover:bg-slate-100 transition">
+                                                    <Paperclip className="w-5 h-5 text-slate-400 group-hover:text-slate-600" />
                                                 </div>
-                                                <span>Archivo {i + 1}</span>
+                                                <div className="flex flex-col">
+                                                    <span className="font-semibold">Archivo {i + 1}</span>
+                                                    <span className="text-[10px] text-slate-400">Clic para ver</span>
+                                                </div>
                                             </a>
                                         ))}
                                     </div>
@@ -1279,7 +1335,10 @@ export default function IncidenciasPage() {
                             )}
 
                             {/* Timeline Chat */}
-                            <div className="pt-4">
+                            <div className="space-y-4 pt-4">
+                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                    Timeline de Gestión
+                                </h4>
                                 <TimelineChat
                                     entityType="incidencia"
                                     entityId={selectedDetailIncidencia.id}
@@ -1288,17 +1347,16 @@ export default function IncidenciasPage() {
                         </div>
 
                         {/* Footer Actions */}
-                        <div className="px-6 py-8 border-t border-gray-100 bg-gray-50 rounded-b-xl flex justify-between items-center flex-shrink-0">
+                        <div className="p-6 sm:p-8 border-t border-slate-100 bg-slate-50/30 rounded-b-xl flex justify-between items-center flex-shrink-0">
                             <button
                                 onClick={() => {
                                     handleDeleteClick(selectedDetailIncidencia.id);
                                     setShowDetailModal(false);
                                 }}
-                                className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 px-4 py-2 rounded-lg transition font-medium"
+                                className="flex items-center gap-2 text-red-500 hover:text-red-600 hover:bg-red-50/50 px-4 py-2 rounded-xl transition font-semibold text-sm"
                             >
-                                <Trash2 className="w-5 h-5" />
-                                <span className="hidden sm:inline">Eliminar Ticket</span>
-                                <span className="sm:hidden">Eliminar</span>
+                                <Trash2 className="w-4 h-4" />
+                                <span>Eliminar Ticket</span>
                             </button>
 
                             <button
@@ -1310,19 +1368,19 @@ export default function IncidenciasPage() {
                                         dia_resuelto: !selectedDetailIncidencia.resuelto ? new Date().toISOString() : undefined
                                     });
                                 }}
-                                className={`px-6 py-2.5 rounded-lg font-bold shadow-sm transition flex items-center gap-2 ${selectedDetailIncidencia.resuelto
-                                    ? 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-                                    : 'bg-yellow-400 text-neutral-950 hover:bg-yellow-500'
+                                className={`h-11 px-6 rounded-xl font-bold shadow-sm transition flex items-center gap-2 ${selectedDetailIncidencia.resuelto
+                                    ? 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+                                    : 'bg-yellow-400 text-neutral-950 hover:bg-yellow-500 shadow-yellow-200/50 hover:shadow-lg'
                                     }`}
                             >
                                 {selectedDetailIncidencia.resuelto ? (
                                     <>
-                                        <RotateCcw className="w-5 h-5" />
+                                        <RotateCcw className="w-4 h-4" />
                                         Reabrir Ticket
                                     </>
                                 ) : (
                                     <>
-                                        <Check className="w-5 h-5" />
+                                        <Check className="w-4 h-4" />
                                         Marcar Resuelto
                                     </>
                                 )}

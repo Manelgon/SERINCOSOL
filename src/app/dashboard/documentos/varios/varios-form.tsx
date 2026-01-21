@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
-import { Download, Loader2 } from "lucide-react";
+import { Download, Loader2, FileText, Plus } from "lucide-react";
 import SearchableSelect from "@/components/SearchableSelect";
 import { createBrowserClient } from "@supabase/ssr";
 
@@ -17,7 +17,7 @@ interface Comunidad {
     provincia: string;
 }
 
-export default function VariosForm() {
+export default function VariosForm({ onSuccess }: { onSuccess?: () => void }) {
     const [values, setValues] = useState<Record<string, any>>({
         // Inicializar filas vacías
         fecha_emision: new Date().toISOString().split('T')[0],
@@ -266,13 +266,13 @@ export default function VariosForm() {
     const isDisabled = status === "generating";
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-8">
             {/* Cliente */}
-            <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm space-y-4">
-                <h3 className="text-lg font-semibold text-neutral-900 border-b pb-2">Datos Cliente</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <label className="flex flex-col gap-1.5">
-                        <span className="text-sm font-medium text-gray-700">Código</span>
+            <div className="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm space-y-6">
+                <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-100 pb-3">Información del Cliente</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                    <div className="sm:col-span-2 lg:col-span-1">
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">Comunidad</label>
                         <SearchableSelect
                             value={values.codigo || ""}
                             onChange={(val) => handleCommunityChange(String(val))}
@@ -280,34 +280,36 @@ export default function VariosForm() {
                                 value: c.codigo,
                                 label: `${c.codigo} - ${c.nombre_cdad}`
                             }))}
-                            placeholder="Seleccionar código"
+                            placeholder="Selecciona comunidad..."
                         />
-                    </label>
-                    <label className="flex flex-col gap-1.5">
-                        <span className="text-sm font-medium text-gray-700">Cliente / Comunidad</span>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">Cliente / Comunidad</label>
                         <input
                             disabled={isDisabled}
                             type="text"
-                            className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
+                            placeholder="Nombre de la comunidad"
+                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400"
                             value={values.cliente || ""}
                             onChange={e => handleChange("cliente", e.target.value)}
                         />
-                    </label>
-                    <label className="flex flex-col gap-1.5">
-                        <span className="text-sm font-medium text-gray-700">Nombre y Apellidos</span>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">Nombre y Apellidos</label>
                         <input
                             disabled={isDisabled}
                             type="text"
-                            className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
+                            placeholder="Ej: Juan Pérez"
+                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400"
                             value={values.nombre_apellidos || ""}
                             onChange={e => handleChange("nombre_apellidos", e.target.value)}
                         />
-                    </label>
-                    <label className="flex flex-col gap-1.5">
-                        <span className="text-sm font-medium text-gray-700">Tipo Inmueble</span>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">Tipo Inmueble</label>
                         <select
                             disabled={isDisabled}
-                            className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 appearance-none disabled:bg-neutral-100"
+                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 appearance-none disabled:bg-slate-50 disabled:text-slate-400"
                             value={values.tipo_inmueble || ""}
                             onChange={(e) => handleChange("tipo_inmueble", e.target.value)}
                         >
@@ -316,155 +318,177 @@ export default function VariosForm() {
                             <option value="Trastero">Trastero</option>
                             <option value="Aparcamiento">Aparcamiento</option>
                         </select>
-                    </label>
-                    <label className="flex flex-col gap-1.5">
-                        <span className="text-sm font-medium text-gray-700">NIF</span>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">NIF</label>
                         <input
                             disabled={isDisabled}
                             type="text"
-                            className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
+                            placeholder="Ej: 12345678Z"
+                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400"
                             value={values.nif || ""}
                             onChange={e => handleChange("nif", e.target.value)}
                         />
-                    </label>
-                    <label className="flex flex-col gap-1.5">
-                        <span className="text-sm font-medium text-gray-700">Domicilio</span>
+                    </div>
+                    <div className="sm:col-span-2">
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">Domicilio</label>
                         <input
                             disabled={isDisabled}
                             type="text"
-                            className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
+                            placeholder="Ej: C/ Mayor 123"
+                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400"
                             value={values.domicilio || ""}
                             onChange={e => handleChange("domicilio", e.target.value)}
                         />
-                    </label>
-                    <label className="flex flex-col gap-1.5">
-                        <span className="text-sm font-medium text-gray-700">C.P</span>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">C.P</label>
                         <input
                             disabled={isDisabled}
                             type="text"
-                            className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
+                            placeholder="Ej: 29001"
+                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400"
                             value={values.cp || ""}
                             onChange={e => handleChange("cp", e.target.value)}
                         />
-                    </label>
-                    <label className="flex flex-col gap-1.5">
-                        <span className="text-sm font-medium text-gray-700">Ciudad</span>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">Ciudad</label>
                         <input
                             disabled={isDisabled}
                             type="text"
-                            className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
+                            placeholder="Ej: Málaga"
+                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400"
                             value={values.ciudad || ""}
                             onChange={e => handleChange("ciudad", e.target.value)}
                         />
-                    </label>
-                    <label className="flex flex-col gap-1.5">
-                        <span className="text-sm font-medium text-gray-700">Provincia</span>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">Provincia</label>
                         <input
                             disabled={isDisabled}
                             type="text"
-                            className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
+                            placeholder="Ej: Málaga"
+                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400"
                             value={values.provincia || ""}
                             onChange={e => handleChange("provincia", e.target.value)}
                         />
-                    </label>
-                    <label className="flex flex-col gap-1.5">
-                        <span className="text-sm font-medium text-gray-700">Fecha Emisión</span>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">Fecha Emisión</label>
                         <input
                             disabled={isDisabled}
                             type="date"
-                            className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
+                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400"
                             value={values.fecha_emision || ""}
                             onChange={e => handleChange("fecha_emision", e.target.value)}
                         />
-                    </label>
+                    </div>
                 </div>
             </div>
 
             {/* Factura Lines */}
-            <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm space-y-4">
-                <h3 className="text-lg font-semibold text-neutral-900 border-b pb-2">Conceptos Factura</h3>
+            <div className="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm space-y-6">
+                <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-100 pb-3">Conceptos Factura</h3>
 
                 {[1, 2, 3].map(i => (
-                    <div key={i} className="grid grid-cols-12 gap-2 items-center bg-gray-50 p-3 rounded">
-                        <div className="col-span-1">
-                            <label className="text-xs text-gray-500">Und</label>
+                    <div key={i} className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                        <div className="sm:col-span-1">
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Und</label>
                             <input
                                 disabled={isDisabled}
                                 type="number"
-                                className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
+                                placeholder="0"
+                                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400"
                                 value={values[`und${i}`] || ""}
                                 onChange={e => handleChange(`und${i}`, e.target.value)}
                             />
                         </div>
-                        <div className="col-span-5">
-                            <label className="text-xs text-gray-500">Descripción {i}</label>
+                        <div className="sm:col-span-5">
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Descripción {i}</label>
                             <input
                                 disabled={isDisabled}
                                 type="text"
-                                className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
+                                placeholder="Concepto..."
+                                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400"
                                 value={values[`descripcion${i}`] || ""}
                                 onChange={e => handleChange(`descripcion${i}`, e.target.value)}
                             />
                         </div>
-                        <div className="col-span-2">
-                            <label className="text-xs text-gray-500">Importe</label>
+                        <div className="sm:col-span-2">
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Importe</label>
                             <input
                                 disabled={isDisabled}
                                 type="number"
-                                className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
+                                step="0.01"
+                                placeholder="0.00"
+                                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400"
                                 value={values[`importe${i}`] || ""}
                                 onChange={e => handleChange(`importe${i}`, e.target.value)}
                             />
                         </div>
-                        <div className="col-span-1">
-                            <label className="text-xs text-gray-500">IVA%</label>
+                        <div className="sm:col-span-1">
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">IVA%</label>
                             <input
                                 disabled={isDisabled}
                                 type="number"
-                                className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
+                                placeholder="21"
+                                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400"
                                 value={values[`iva${i}`] ?? ""}
                                 onChange={e => handleChange(`iva${i}`, e.target.value)}
                             />
                         </div>
-                        <div className="col-span-3">
-                            <label className="text-xs text-gray-500">Total (Auto)</label>
+                        <div className="sm:col-span-3">
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Total (Auto)</label>
                             <input
                                 disabled
                                 readOnly
                                 type="text"
-                                className="w-full rounded-lg border border-neutral-200 bg-neutral-100 px-3 py-2 text-sm text-right font-medium text-neutral-500 focus:outline-none"
+                                className="w-full rounded-lg border border-slate-100 bg-slate-100/50 px-3 py-2 text-sm text-right font-semibold text-slate-600 focus:outline-none"
                                 value={values[`suma${i}`] || 0}
                             />
                         </div>
                     </div>
                 ))}
 
-                {/* Totals */}
-                <div className="flex justify-end gap-6 pt-4 border-t">
-                    <div className="text-right">
-                        <p className="text-xs text-gray-500">Base Imponible</p>
-                        <p className="font-semibold">{values.importe_total || "0.00"} €</p>
-                    </div>
-                    <div className="text-right">
-                        <p className="text-xs text-gray-500">IVA Total</p>
-                        <p className="font-semibold">{values.iva_total || "0.00"} €</p>
-                    </div>
-                    <div className="text-right">
-                        <p className="text-xs text-gray-500">Total Factura</p>
-                        <p className="text-xl font-bold text-yellow-600">{values.suma_final || "0.00"} €</p>
+                {/* Totals Section */}
+                <div className="bg-slate-50 p-6 rounded-xl border border-slate-100 mt-6">
+                    <div className="flex flex-col sm:flex-row justify-end gap-6 sm:gap-12">
+                        <div className="text-right">
+                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Base Imponible</p>
+                            <p className="text-lg font-bold text-slate-900">{values.importe_total || "0.00"} €</p>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">IVA Total</p>
+                            <p className="text-lg font-bold text-slate-900">{values.iva_total || "0.00"} €</p>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Total Factura</p>
+                            <p className="text-2xl font-black text-slate-900">{values.suma_final || "0.00"} €</p>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div className="flex pt-4">
-                <button
-                    onClick={generate}
-                    disabled={status === "generating"}
-                    className="ml-auto bg-yellow-400 hover:bg-yellow-500 text-neutral-950 px-8 py-3 rounded-lg font-bold shadow-lg transition disabled:opacity-50 flex items-center gap-2"
-                >
-                    {status === "generating" ? <Loader2 className="animate-spin" /> : <Download />}
-                    Generar Factura + Certificado
-                </button>
+                {/* Modal Footer (Actions) */}
+                <div className="mt-8 pt-6 border-t border-slate-100 flex justify-end">
+                    <button
+                        onClick={generate}
+                        disabled={status === "generating"}
+                        className="w-full sm:w-auto h-12 px-8 bg-yellow-400 hover:bg-yellow-500 text-neutral-950 rounded-xl font-bold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm hover:shadow-md active:scale-[0.98]"
+                    >
+                        {status === "generating" ? (
+                            <>
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                                Generando Documentos...
+                            </>
+                        ) : (
+                            <>
+                                <FileText className="w-5 h-5" />
+                                Generar Factura + Certificado
+                            </>
+                        )}
+                    </button>
+                </div>
             </div>
         </div>
     );

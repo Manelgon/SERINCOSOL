@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
-import { Download, Loader2 } from "lucide-react";
+import { Download, Loader2, FileText, Plus } from "lucide-react";
 import SearchableSelect from "@/components/SearchableSelect";
 import { createBrowserClient } from "@supabase/ssr";
 
@@ -63,7 +63,7 @@ const INITIAL_DATA: RecordData = {
     Mail: "",
 };
 
-export default function CertificadoForm() {
+export default function CertificadoForm({ onSuccess }: { onSuccess?: () => void }) {
     const [values, setValues] = useState<RecordData>(INITIAL_DATA);
     const [status, setStatus] = useState<"idle" | "generating" | "ready" | "sending" | "error">("idle");
     const [submissionId, setSubmissionId] = useState<number | null>(null);
@@ -238,13 +238,13 @@ export default function CertificadoForm() {
     }
 
     return (
-        <div className="space-y-6">
-            <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm space-y-6">
-                <h3 className="text-lg font-semibold text-neutral-900 border-b pb-2">Datos del Declarante</h3>
+        <div className="space-y-8">
+            <div className="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm space-y-6">
+                <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-100 pb-3">Datos del Declarante</h3>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <label className="flex flex-col gap-1.5">
-                        <span className="text-sm font-medium text-gray-700">Código</span>
+                    <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">Comunidad</label>
                         <SearchableSelect
                             value={selectedCode}
                             onChange={(val) => handleCommunityChange(String(val))}
@@ -252,9 +252,9 @@ export default function CertificadoForm() {
                                 value: c.codigo,
                                 label: `${c.codigo} - ${c.nombre_cdad}`
                             }))}
-                            placeholder="Seleccionar código"
+                            placeholder="Selecciona comunidad..."
                         />
-                    </label>
+                    </div>
 
                     <Field label="Apellidos" value={values.Apellidos} onChange={(v) => handleChange("Apellidos", v)} />
                     <Field label="Nombre" value={values.Nombre} onChange={(v) => handleChange("Nombre", v)} />
@@ -269,8 +269,8 @@ export default function CertificadoForm() {
                     <Field label="Mail" value={values.Mail} onChange={(v) => handleChange("Mail", v)} type="email" />
                 </div>
 
-                <h3 className="text-lg font-semibold text-neutral-900 border-b pb-2 pt-4">Datos Económicos</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-100 pb-3 pt-6">Datos Económicos</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6">
                     <Field label="DIAS" value={values.DIAS} onChange={(v) => handleChange("DIAS", v)} type="number" />
                     <Field label="%" value={values["%"]} onChange={(v) => handleChange("%", v)} type="number" />
                     <Field label="Participación" value={values.Participación} onChange={(v) => handleChange("Participación", v)} />
@@ -278,8 +278,8 @@ export default function CertificadoForm() {
                     <Field label="Retenciones" value={values.Retenciones} onChange={(v) => handleChange("Retenciones", v)} type="number" />
                 </div>
 
-                <h3 className="text-lg font-semibold text-neutral-900 border-b pb-2 pt-4">Claves Fiscales</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-100 pb-3 pt-6">Claves Fiscales</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                     <Field label="Clave 1" value={values["Clave 1"]} onChange={(v) => handleChange("Clave 1", v)} />
                     <Field label="Subclave" value={values.Subclave} onChange={(v) => handleChange("Subclave", v)} />
                     <Field label="Clave 2" value={values["Clave 2"]} onChange={(v) => handleChange("Clave 2", v)} />
@@ -289,14 +289,24 @@ export default function CertificadoForm() {
                 </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            {/* Modal Footer (Actions) */}
+            <div className="mt-8 pt-6 border-t border-slate-100 flex justify-end">
                 <button
                     onClick={generate}
                     disabled={status === "generating"}
-                    className="bg-yellow-400 hover:bg-yellow-500 text-neutral-950 px-5 py-2.5 rounded-md text-sm font-semibold transition disabled:opacity-50 flex items-center gap-2"
+                    className="w-full sm:w-auto h-12 px-8 bg-yellow-400 hover:bg-yellow-500 text-neutral-950 rounded-xl font-bold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm hover:shadow-md active:scale-[0.98]"
                 >
-                    {status === "generating" ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                    {status === "generating" ? "Generando..." : "Generar PDF"}
+                    {status === "generating" ? (
+                        <>
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            Generando PDF...
+                        </>
+                    ) : (
+                        <>
+                            <FileText className="w-5 h-5" />
+                            Generar PDF
+                        </>
+                    )}
                 </button>
             </div>
         </div>
@@ -305,14 +315,14 @@ export default function CertificadoForm() {
 
 function Field({ label, value, onChange, type = "text" }: { label: string; value: string; onChange: (v: string) => void; type?: string }) {
     return (
-        <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-gray-700">{label}</span>
+        <div className="flex flex-col">
+            <label className="block text-sm font-semibold text-slate-700 mb-2">{label}</label>
             <input
                 type={type}
                 value={value ?? ""}
                 onChange={(e) => onChange(e.target.value)}
-                className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none"
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400"
             />
-        </label>
+        </div>
     );
 }

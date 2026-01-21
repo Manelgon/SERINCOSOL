@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
-import { Download, Send, Loader2 } from "lucide-react";
+import { Download, Send, Loader2, FileText } from "lucide-react";
 import SearchableSelect from "@/components/SearchableSelect";
 import { createBrowserClient } from "@supabase/ssr";
 
@@ -134,7 +134,7 @@ const compute = (vals: Record<string, any>) => {
     };
 };
 
-export default function SuplidosForm() {
+export default function SuplidosForm({ onSuccess }: { onSuccess?: () => void }) {
     const [values, setValues] = useState<Record<string, any>>({
         "Número de Cartas": "",
         "Copias": "",
@@ -573,20 +573,23 @@ export default function SuplidosForm() {
             </div>
 
             {/* Actions (Botón de generar) */}
-            <div className="flex flex-col md:flex-row items-start gap-3">
+            <div className="pt-6 border-t border-slate-100 flex justify-end">
                 <button
                     type="button"
                     onClick={generate}
                     disabled={status === "generating"}
-                    className="bg-yellow-400 hover:bg-yellow-500 text-neutral-950 px-5 py-2.5 rounded-md text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="w-full sm:w-auto h-12 px-8 bg-yellow-400 hover:bg-yellow-500 text-neutral-950 rounded-xl font-bold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm hover:shadow-md active:scale-[0.98]"
                 >
                     {status === "generating" ? (
                         <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            Generando...
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            Generando PDF...
                         </>
                     ) : (
-                        "Generar PDF"
+                        <>
+                            <FileText className="w-5 h-5" />
+                            Generar PDF
+                        </>
                     )}
                 </button>
             </div>
@@ -612,17 +615,17 @@ function Field({
     className?: string;
 }) {
     return (
-        <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-gray-700">{label}</span>
+        <div className="flex flex-col">
+            <label className="block text-sm font-semibold text-slate-700 mb-2">{label}</label>
             <input
                 type={type}
                 value={value ?? ""}
                 onChange={(e) => onChange(e.target.value)}
                 disabled={disabled}
                 readOnly={readOnly}
-                className={`w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-50 ${className}`}
+                className={`w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400 ${className}`}
             />
-        </label>
+        </div>
     );
 }
 

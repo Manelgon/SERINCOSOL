@@ -706,8 +706,8 @@ export default function MorosidadPage() {
                     }}
                     className="bg-yellow-400 hover:bg-yellow-500 text-neutral-950 px-4 py-2 rounded-md flex items-center gap-2 transition font-semibold text-sm"
                 >
-                    <Plus className="w-4 h-4" />
-                    Registrar Deuda
+                    <Plus className={`w-4 h-4 ${showForm ? 'rotate-45' : ''} transition-transform`} />
+                    {showForm ? 'Cancelar' : 'Registrar Deuda'}
                 </button>
             </div>
 
@@ -760,181 +760,212 @@ export default function MorosidadPage() {
                 )}
             </div>
 
+            {/* Form Modal */}
             {showForm && (
-                <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
-                    <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Comunidad <span className="text-red-600">*</span></label>
-                            <SearchableSelect
-                                value={formData.comunidad_id}
-                                onChange={(val) => setFormData({ ...formData, comunidad_id: String(val) })}
-                                options={comunidades.map(cd => ({
-                                    value: String(cd.id),
-                                    label: cd.codigo ? `${cd.codigo} - ${cd.nombre_cdad}` : cd.nombre_cdad
-                                }))}
-                                placeholder="Selecciona una comunidad..."
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre Deudor <span className="text-red-600">*</span></label>
-                            <input
-                                required
-                                type="text"
-                                className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
-                                value={formData.nombre_deudor}
-                                onChange={e => setFormData({ ...formData, nombre_deudor: e.target.value })}
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Apellidos</label>
-                            <input
-                                type="text"
-                                className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
-                                value={formData.apellidos}
-                                onChange={e => setFormData({ ...formData, apellidos: e.target.value })}
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                Teléfono {enviarNotificacion && !formData.email_deudor && <span className="text-red-600">*</span>}
-                            </label>
-                            <input
-                                required={enviarNotificacion === true && !formData.email_deudor}
-                                type="tel"
-                                className={`w-full rounded-lg border px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100 ${enviarNotificacion && !formData.telefono_deudor && !formData.email_deudor ? 'border-red-300' : 'border-neutral-200'
-                                    }`}
-                                value={formData.telefono_deudor}
-                                onChange={e => setFormData({ ...formData, telefono_deudor: e.target.value })}
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                Email {enviarNotificacion && !formData.telefono_deudor && <span className="text-red-600">*</span>}
-                            </label>
-                            <input
-                                required={enviarNotificacion === true && !formData.telefono_deudor}
-                                type="email"
-                                className={`w-full rounded-lg border px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100 ${enviarNotificacion && !formData.email_deudor && !formData.telefono_deudor ? 'border-red-300' : 'border-neutral-200'
-                                    }`}
-                                value={formData.email_deudor}
-                                onChange={e => setFormData({ ...formData, email_deudor: e.target.value })}
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Título del Documento <span className="text-red-600">*</span></label>
-                            <input
-                                required
-                                type="text"
-                                placeholder="Ej. Recibo de Comunidad"
-                                className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
-                                value={formData.titulo_documento}
-                                onChange={e => setFormData({ ...formData, titulo_documento: e.target.value })}
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Fecha de Notificación</label>
-                            <input
-                                type="date"
-                                className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
-                                value={formData.fecha_notificacion}
-                                onChange={e => setFormData({ ...formData, fecha_notificacion: e.target.value })}
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Importe (€) <span className="text-red-600">*</span></label>
-                            <input
-                                required
-                                type="number"
-                                step="0.01"
-                                className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
-                                value={formData.importe}
-                                onChange={e => setFormData({ ...formData, importe: e.target.value })}
-                            />
-                        </div>
-
-                        <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Gestor</label>
-                            <SearchableSelect
-                                value={formData.gestor}
-                                onChange={(val) => setFormData({ ...formData, gestor: String(val) })}
-                                options={profiles.map(profile => ({
-                                    value: profile.user_id,
-                                    label: `${profile.nombre} (${profile.rol})`
-                                }))}
-                                placeholder="Selecciona un gestor..."
-                            />
-                        </div>
-
-                        <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Enviar notificación al propietario <span className="text-red-600">*</span>
-                            </label>
-                            <div className="flex gap-4">
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                    <input
-                                        type="radio"
-                                        name="enviarNotificacion"
-                                        checked={enviarNotificacion === true}
-                                        onChange={() => setEnviarNotificacion(true)}
-                                        className="w-4 h-4 text-yellow-400 border-gray-300 focus:ring-yellow-400"
-                                    />
-                                    <span className="text-sm text-gray-700">Sí</span>
-                                </label>
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                    <input
-                                        type="radio"
-                                        name="enviarNotificacion"
-                                        checked={enviarNotificacion === false}
-                                        onChange={() => setEnviarNotificacion(false)}
-                                        className="w-4 h-4 text-yellow-400 border-gray-300 focus:ring-yellow-400"
-                                    />
-                                    <span className="text-sm text-gray-700">No</span>
-                                </label>
-                            </div>
-                            {enviarNotificacion === true && !formData.email_deudor && !formData.telefono_deudor && (
-                                <p className="mt-1 text-xs text-red-500">Debe indicar email o teléfono para enviar la notificación</p>
-                            )}
-                        </div>
-
-
-
-                        <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Observaciones</label>
-                            <textarea
-                                rows={3}
-                                className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 focus:outline-none disabled:bg-neutral-100"
-                                value={formData.observaciones}
-                                onChange={e => setFormData({ ...formData, observaciones: e.target.value })}
-                            />
-                        </div>
-
-                        <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Documento Adjunto (Opcional)</label>
-                            <div className="flex items-center gap-2">
-                                <input
-                                    type="file"
-                                    className="block w-full text-sm text-gray-500
-                    file:mr-4 file:py-2 file:px-4
-                    file:rounded-full file:border-0
-                    file:text-sm file:font-semibold
-                    file:bg-yellow-50 file:text-yellow-700
-                    hover:file:bg-yellow-100
-                  "
-                                    onChange={(e) => setFile(e.target.files ? e.target.files[0] : null)}
-                                />
-                                {uploading && <span className="text-sm text-yellow-600">Subiendo...</span>}
-                            </div>
-                        </div>
-
-                        <div className="md:col-span-2 pt-2">
+                <div
+                    className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 md:p-8 backdrop-blur-sm overflow-y-auto"
+                    onClick={() => setShowForm(false)}
+                >
+                    <div
+                        className="w-[calc(100vw-24px)] sm:w-full sm:max-w-2xl max-h-[85vh] bg-white rounded-xl shadow-xl flex flex-col animate-in fade-in zoom-in duration-200"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* Modal Header */}
+                        <div className="px-6 sm:px-8 pt-6 sm:pt-7 pb-4 border-b border-slate-100 flex justify-between items-center">
+                            <h2 className="text-lg font-semibold text-slate-900">
+                                {editingId ? 'Editar Registro de Deuda' : 'Registrar Nueva Deuda'}
+                            </h2>
                             <button
+                                onClick={() => setShowForm(false)}
+                                className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="p-6 sm:p-8 overflow-y-auto custom-scrollbar">
+                            <form id="morosidad-form" onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                                <div className="sm:col-span-2">
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Comunidad <span className="text-red-600">*</span></label>
+                                    <SearchableSelect
+                                        value={formData.comunidad_id}
+                                        onChange={(val) => setFormData({ ...formData, comunidad_id: String(val) })}
+                                        options={comunidades.map(cd => ({
+                                            value: String(cd.id),
+                                            label: cd.codigo ? `${cd.codigo} - ${cd.nombre_cdad}` : cd.nombre_cdad
+                                        }))}
+                                        placeholder="Selecciona una comunidad..."
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Nombre Deudor <span className="text-red-600">*</span></label>
+                                    <input
+                                        required
+                                        type="text"
+                                        placeholder="Ej: Juan"
+                                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400"
+                                        value={formData.nombre_deudor}
+                                        onChange={e => setFormData({ ...formData, nombre_deudor: e.target.value })}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Apellidos</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Ej: García Pérez"
+                                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400"
+                                        value={formData.apellidos}
+                                        onChange={e => setFormData({ ...formData, apellidos: e.target.value })}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                        Teléfono {enviarNotificacion && !formData.email_deudor && <span className="text-red-600">*</span>}
+                                    </label>
+                                    <input
+                                        required={enviarNotificacion === true && !formData.email_deudor}
+                                        type="tel"
+                                        placeholder="Ej: 600000000"
+                                        className={`w-full rounded-lg border px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400 ${enviarNotificacion && !formData.telefono_deudor && !formData.email_deudor ? 'border-red-300' : 'border-slate-200'}`}
+                                        value={formData.telefono_deudor}
+                                        onChange={e => setFormData({ ...formData, telefono_deudor: e.target.value })}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                        Email {enviarNotificacion && !formData.telefono_deudor && <span className="text-red-600">*</span>}
+                                    </label>
+                                    <input
+                                        required={enviarNotificacion === true && !formData.telefono_deudor}
+                                        type="email"
+                                        placeholder="ejemplo@correo.com"
+                                        className={`w-full rounded-lg border px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400 ${enviarNotificacion && !formData.email_deudor && !formData.telefono_deudor ? 'border-red-300' : 'border-slate-200'}`}
+                                        value={formData.email_deudor}
+                                        onChange={e => setFormData({ ...formData, email_deudor: e.target.value })}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Título del Documento <span className="text-red-600">*</span></label>
+                                    <SearchableSelect
+                                        value={formData.titulo_documento}
+                                        onChange={(val) => setFormData({ ...formData, titulo_documento: String(val) })}
+                                        options={[
+                                            { value: 'Recibo Comunidad', label: 'Recibo Comunidad' },
+                                            { value: 'Factura', label: 'Factura' },
+                                            { value: 'Liquidación', label: 'Liquidación' },
+                                            { value: 'Otros', label: 'Otros' }
+                                        ]}
+                                        placeholder="Selecciona un tipo..."
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Fecha de Notificación</label>
+                                    <input
+                                        type="date"
+                                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400"
+                                        value={formData.fecha_notificacion}
+                                        onChange={e => setFormData({ ...formData, fecha_notificacion: e.target.value })}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Importe (€) <span className="text-red-600">*</span></label>
+                                    <input
+                                        required
+                                        type="number"
+                                        step="0.01"
+                                        placeholder="0.00"
+                                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400"
+                                        value={formData.importe}
+                                        onChange={e => setFormData({ ...formData, importe: e.target.value })}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Gestor</label>
+                                    <SearchableSelect
+                                        value={formData.gestor}
+                                        onChange={(val) => setFormData({ ...formData, gestor: String(val) })}
+                                        options={profiles.map(profile => ({
+                                            value: profile.user_id,
+                                            label: `${profile.nombre} (${profile.rol})`
+                                        }))}
+                                        placeholder="Selecciona un gestor..."
+                                    />
+                                </div>
+
+                                <div className="sm:col-span-2">
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                        Enviar notificación al propietario <span className="text-red-600">*</span>
+                                    </label>
+                                    <div className="flex items-center gap-6 mt-2">
+                                        <label className="flex items-center gap-2 cursor-pointer group">
+                                            <input
+                                                type="radio"
+                                                name="enviarNotificacion"
+                                                checked={enviarNotificacion === true}
+                                                onChange={() => setEnviarNotificacion(true)}
+                                                className="w-4 h-4 text-slate-900 border-slate-300 focus:ring-slate-900/20"
+                                            />
+                                            <span className="text-sm text-slate-700 group-hover:text-slate-900 transition-colors">Sí</span>
+                                        </label>
+                                        <label className="flex items-center gap-2 cursor-pointer group">
+                                            <input
+                                                type="radio"
+                                                name="enviarNotificacion"
+                                                checked={enviarNotificacion === false}
+                                                onChange={() => setEnviarNotificacion(false)}
+                                                className="w-4 h-4 text-slate-900 border-slate-300 focus:ring-slate-900/20"
+                                            />
+                                            <span className="text-sm text-slate-700 group-hover:text-slate-900 transition-colors">No</span>
+                                        </label>
+                                    </div>
+                                    {enviarNotificacion === true && !formData.email_deudor && !formData.telefono_deudor && (
+                                        <p className="mt-1 text-xs text-red-500">Debe indicar email o teléfono para enviar la notificación</p>
+                                    )}
+                                </div>
+
+                                <div className="sm:col-span-2">
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Observaciones</label>
+                                    <textarea
+                                        rows={3}
+                                        placeholder="Notas adicionales..."
+                                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400 min-h-[120px] resize-y"
+                                        value={formData.observaciones}
+                                        onChange={e => setFormData({ ...formData, observaciones: e.target.value })}
+                                    />
+                                </div>
+
+                                <div className="sm:col-span-2">
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Documento Adjunto (Opcional)</label>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="file"
+                                            className="block w-full text-sm text-slate-500
+                                                file:mr-4 file:py-2 file:px-4
+                                                file:rounded-full file:border-0
+                                                file:text-sm file:font-semibold
+                                                file:bg-slate-100 file:text-slate-700
+                                                hover:file:bg-slate-200 cursor-pointer"
+                                            onChange={(e) => setFile(e.target.files ? e.target.files[0] : null)}
+                                        />
+                                        {uploading && <span className="text-sm text-slate-600 animate-pulse">Subiendo...</span>}
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="px-6 sm:px-8 pb-6 sm:pb-7 pt-4 border-t border-slate-100">
+                            <button
+                                form="morosidad-form"
                                 type="submit"
                                 disabled={
                                     uploading ||
@@ -945,12 +976,22 @@ export default function MorosidadPage() {
                                     enviarNotificacion === null ||
                                     (enviarNotificacion === true && !formData.email_deudor && !formData.telefono_deudor)
                                 }
-                                className="w-full bg-yellow-400 hover:bg-yellow-500 text-neutral-950 py-2 rounded-md font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full sm:w-auto h-12 px-8 bg-yellow-400 hover:bg-yellow-500 text-neutral-950 rounded-xl font-bold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm hover:shadow-md active:scale-[0.98]"
                             >
-                                Registrar Deuda
+                                {uploading ? (
+                                    <>
+                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                        Registrando...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Plus className="w-5 h-5" />
+                                        {editingId ? 'Guardar Cambios' : 'Registrar Deuda'}
+                                    </>
+                                )}
                             </button>
                         </div>
-                    </form>
+                    </div>
                 </div>
             )}
 
@@ -1108,23 +1149,23 @@ export default function MorosidadPage() {
                     onClick={() => setShowDetailModal(false)}
                 >
                     <div
-                        className="bg-white rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-gray-900/10 w-full max-w-2xl max-h-[80vh] md:max-h-[95vh] overflow-y-auto custom-scrollbar flex flex-col"
+                        className="bg-white rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-gray-900/10 w-full max-w-2xl max-h-[90vh] overflow-y-auto custom-scrollbar flex flex-col animate-in fade-in zoom-in duration-200"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Header */}
-                        <div className="px-6 py-8 border-b border-gray-100 flex justify-between items-start bg-gray-50 flex-shrink-0 rounded-t-xl">
+                        <div className="px-6 sm:px-8 pt-6 sm:pt-7 pb-4 border-b border-slate-100 flex justify-between items-center bg-white flex-shrink-0 rounded-t-xl">
                             <div>
-                                <h3 className="text-xl font-bold text-neutral-900 flex items-center gap-2">
+                                <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
                                     Deuda #{selectedDetailMorosidad.id}
                                 </h3>
-                                <p className="text-sm text-gray-500 mt-1">
+                                <p className="text-xs text-slate-500 mt-0.5">
                                     Creado el {new Date(selectedDetailMorosidad.created_at).toLocaleString()}
                                 </p>
                                 {selectedDetailMorosidad.estado === 'Pagado' && selectedDetailMorosidad.fecha_resuelto && (
-                                    <p className="text-sm text-green-600 mt-0.5 font-medium flex items-center gap-1">
+                                    <p className="text-xs text-green-600 mt-0.5 font-medium flex items-center gap-1">
                                         Pagado el {new Date(selectedDetailMorosidad.fecha_resuelto).toLocaleString()}
                                         {selectedDetailMorosidad.resolver?.nombre && (
-                                            <span className="text-gray-500 font-normal">
+                                            <span className="text-slate-400 font-normal">
                                                 ({selectedDetailMorosidad.resolver.nombre})
                                             </span>
                                         )}
@@ -1144,174 +1185,172 @@ export default function MorosidadPage() {
                                 />
                                 <button
                                     onClick={() => detailFileInputRef.current?.click()}
-                                    className="text-gray-400 hover:text-yellow-600 transition p-1 hover:bg-yellow-50 rounded-full"
+                                    className="p-2 hover:bg-slate-50 rounded-full transition-colors text-slate-400 hover:text-slate-600"
                                     title="Actualizar documento"
                                     disabled={isUpdatingRecord}
                                 >
-                                    {isUpdatingRecord ? <Loader2 className="w-6 h-6 animate-spin text-yellow-600" /> : <Paperclip className="w-6 h-6" />}
+                                    {isUpdatingRecord ? <Loader2 className="w-5 h-5 animate-spin text-slate-600" /> : <Paperclip className="w-5 h-5" />}
                                 </button>
                                 <button
                                     onClick={() => handleExport('pdf', [selectedDetailMorosidad.id])}
-                                    className="text-gray-400 hover:text-red-600 transition p-1 hover:bg-red-50 rounded-full"
+                                    className="p-2 hover:bg-slate-50 rounded-full transition-colors text-slate-400 hover:text-slate-600"
                                     title="Descargar PDF"
                                     disabled={exporting}
                                 >
-                                    {exporting ? <Loader2 className="w-6 h-6 animate-spin" /> : <Download className="w-6 h-6" />}
+                                    {exporting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
                                 </button>
                                 <button
                                     onClick={() => setShowDetailModal(false)}
-                                    className="text-gray-400 hover:text-gray-600 transition p-1 hover:bg-gray-200 rounded-full"
+                                    className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500"
                                 >
-                                    <X className="w-6 h-6" />
+                                    <X className="w-5 h-5" />
                                 </button>
                             </div>
                         </div>
 
                         {/* Body */}
-                        <div className="px-6 pb-6 pt-2 space-y-6 flex-grow">
+                        <div className="p-6 sm:p-8 space-y-8 flex-grow">
                             {/* Top Status Bar */}
-                            <div className="flex flex-wrap items-center gap-4 bg-gray-50 p-3 rounded-lg border border-gray-100">
-                                <div className="flex items-center gap-2 text-sm">
-                                    <span className="text-gray-500">Estado:</span>
-                                    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded font-medium ${selectedDetailMorosidad.estado === 'Pagado'
-                                        ? 'bg-gray-100 text-gray-700'
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50/50 p-4 rounded-xl border border-slate-100 font-sm">
+                                <div className="space-y-1">
+                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Estado</span>
+                                    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-semibold ${selectedDetailMorosidad.estado === 'Pagado'
+                                        ? 'bg-slate-100 text-slate-700'
                                         : selectedDetailMorosidad.estado === 'En disputa'
-                                            ? 'bg-orange-100 text-orange-700'
-                                            : 'bg-yellow-100 text-yellow-800'
+                                            ? 'bg-orange-100/50 text-orange-700 border border-orange-200/50'
+                                            : 'bg-yellow-100/50 text-yellow-800 border border-yellow-200/50'
                                         }`}>
-                                        {selectedDetailMorosidad.estado === 'Pagado' ? <Check className="w-3.5 h-3.5" /> : <RotateCcw className="w-3.5 h-3.5" />}
+                                        {selectedDetailMorosidad.estado === 'Pagado' ? <Check className="w-3 h-3" /> : <RotateCcw className="w-3 h-3" />}
                                         {selectedDetailMorosidad.estado}
                                     </span>
                                 </div>
 
-                                <div className="h-6 w-px bg-gray-300 hidden sm:block"></div>
-
-                                <div className="flex items-center gap-2 text-sm">
-                                    <span className="text-gray-500">Importe:</span>
-                                    <span className="font-bold text-gray-900">{selectedDetailMorosidad.importe}€</span>
+                                <div className="space-y-1">
+                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Importe</span>
+                                    <span className="text-sm font-bold text-slate-900">{selectedDetailMorosidad.importe}€</span>
                                 </div>
 
-                                <div className="flex items-center gap-2 text-sm">
-                                    <span className="text-gray-500">Comunidad:</span>
-                                    <span className="font-medium text-gray-900">{selectedDetailMorosidad.comunidades?.nombre_cdad || '-'}</span>
+                                <div className="space-y-1">
+                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Comunidad</span>
+                                    <span className="text-sm font-semibold text-slate-700">{selectedDetailMorosidad.comunidades?.nombre_cdad || '-'}</span>
                                 </div>
                             </div>
 
                             {/* Tables Grid */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-10">
                                 {/* Left Column: Deudor Info */}
                                 <div className="space-y-6">
-                                    <div>
-                                        <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 border-b pb-2 flex items-center gap-2">
-                                            👤 Información del Deudor
-                                        </h4>
-                                        <table className="w-full text-sm">
-                                            <tbody className="divide-y divide-gray-100">
-                                                <tr>
-                                                    <td className="py-2.5 text-gray-500 w-1/3">Nombre</td>
-                                                    <td className="py-2.5 font-medium text-gray-900">{selectedDetailMorosidad.nombre_deudor}</td>
-                                                </tr>
-                                                <tr>
-                                                    <td className="py-2.5 text-gray-500">Apellidos</td>
-                                                    <td className="py-2.5 font-medium text-gray-900">{selectedDetailMorosidad.apellidos || '-'}</td>
-                                                </tr>
-                                                <tr>
-                                                    <td className="py-2.5 text-gray-500">Teléfono</td>
-                                                    <td className="py-2.5 font-medium text-gray-900">{selectedDetailMorosidad.telefono_deudor || '-'}</td>
-                                                </tr>
-                                                <tr>
-                                                    <td className="py-2.5 text-gray-500">Email</td>
-                                                    <td className="py-2.5 text-gray-900">{selectedDetailMorosidad.email_deudor || '-'}</td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
+                                    <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
+                                        <span className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-base">👤</span>
+                                        Información del Deudor
+                                    </h4>
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center text-sm border-b border-slate-50 pb-3">
+                                            <span className="text-slate-500">Nombre</span>
+                                            <span className="font-semibold text-slate-900">{selectedDetailMorosidad.nombre_deudor}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-sm border-b border-slate-50 pb-3">
+                                            <span className="text-slate-500">Apellidos</span>
+                                            <span className="font-semibold text-slate-900">{selectedDetailMorosidad.apellidos || '-'}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-sm border-b border-slate-50 pb-3">
+                                            <span className="text-slate-500">Teléfono</span>
+                                            <span className="font-semibold text-slate-900">{selectedDetailMorosidad.telefono_deudor || '-'}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-slate-500">Email</span>
+                                            <span className="text-slate-900">{selectedDetailMorosidad.email_deudor || '-'}</span>
+                                        </div>
                                     </div>
                                 </div>
 
                                 {/* Right Column: Gestión */}
                                 <div className="space-y-6">
-                                    <div>
-                                        <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 border-b pb-2 flex items-center gap-2">
-                                            📋 Gestión
-                                        </h4>
-                                        <table className="w-full text-sm">
-                                            <tbody className="divide-y divide-gray-100">
-                                                <tr>
-                                                    <td className="py-2.5 text-gray-500 w-1/3">Gestor</td>
-                                                    <td className="py-2.5 font-medium text-gray-900">
-                                                        {(() => {
-                                                            if (!selectedDetailMorosidad.gestor) return '-';
-                                                            const p = profiles.find(p => p.user_id === selectedDetailMorosidad.gestor);
-                                                            return p ? p.nombre : (selectedDetailMorosidad.gestor.length > 20 ? 'Usuario desconocido' : selectedDetailMorosidad.gestor);
-                                                        })()}
-                                                    </td>
-                                                </tr>
-                                                <tr>
-                                                    <td className="py-2.5 text-gray-500">F. Notificación</td>
-                                                    <td className="py-2.5 text-gray-900">
-                                                        {selectedDetailMorosidad.fecha_notificacion ? new Date(selectedDetailMorosidad.fecha_notificacion).toLocaleDateString() : '-'}
-                                                    </td>
-                                                </tr>
-                                                <tr>
-                                                    <td className="py-2.5 text-gray-500">F. Pago</td>
-                                                    <td className="py-2.5 text-gray-900">
-                                                        {selectedDetailMorosidad.fecha_pago ? new Date(selectedDetailMorosidad.fecha_pago).toLocaleDateString() : '-'}
-                                                    </td>
-                                                </tr>
-                                                <tr>
-                                                    <td className="py-2.5 text-gray-500">Aviso</td>
-                                                    <td className="py-2.5 font-medium text-gray-900">{selectedDetailMorosidad.aviso || '-'}</td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
+                                    <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
+                                        <span className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-base">📋</span>
+                                        Gestión
+                                    </h4>
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center text-sm border-b border-slate-50 pb-3">
+                                            <span className="text-slate-500">Gestor</span>
+                                            <span className="font-semibold text-slate-900">
+                                                {(() => {
+                                                    if (!selectedDetailMorosidad.gestor) return '-';
+                                                    const p = profiles.find(p => p.user_id === selectedDetailMorosidad.gestor);
+                                                    return p ? p.nombre : (selectedDetailMorosidad.gestor.length > 20 ? 'Usuario desconocido' : selectedDetailMorosidad.gestor);
+                                                })()}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-sm border-b border-slate-50 pb-3">
+                                            <span className="text-slate-500">F. Notificación</span>
+                                            <span className="text-slate-900">
+                                                {selectedDetailMorosidad.fecha_notificacion ? new Date(selectedDetailMorosidad.fecha_notificacion).toLocaleDateString() : '-'}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-sm border-b border-slate-50 pb-3">
+                                            <span className="text-slate-500">F. Pago</span>
+                                            <span className="text-slate-900">
+                                                {selectedDetailMorosidad.fecha_pago ? new Date(selectedDetailMorosidad.fecha_pago).toLocaleDateString() : '-'}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-slate-500">Aviso</span>
+                                            <span className="font-semibold text-slate-900">{selectedDetailMorosidad.aviso || '-'}</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Concepto */}
-                            <div>
-                                <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 border-b pb-2">
+                            <div className="space-y-3">
+                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
                                     Concepto
                                 </h4>
-                                <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 text-gray-700 text-sm leading-relaxed">
+                                <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 text-slate-900 font-semibold text-sm">
                                     {selectedDetailMorosidad.titulo_documento}
                                 </div>
                             </div>
 
                             {/* Observaciones */}
                             {selectedDetailMorosidad.observaciones && (
-                                <div>
-                                    <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 border-b pb-2">
+                                <div className="space-y-3">
+                                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
                                         Observaciones
                                     </h4>
-                                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
-                                        {selectedDetailMorosidad.observaciones}
+                                    <div className="bg-slate-50/50 p-6 rounded-xl border border-slate-100 text-slate-700 text-sm leading-relaxed whitespace-pre-wrap italic">
+                                        "{selectedDetailMorosidad.observaciones}"
                                     </div>
                                 </div>
                             )}
 
                             {/* Document */}
                             {selectedDetailMorosidad.documento && (
-                                <div>
-                                    <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 border-b pb-2 flex items-center gap-2">
+                                <div className="space-y-3">
+                                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
                                         📎 Documento
                                     </h4>
                                     <a
                                         href={selectedDetailMorosidad.documento}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="flex items-center gap-2 bg-white border border-gray-200 px-4 py-3 rounded-lg text-sm font-medium text-gray-700 hover:text-yellow-600 hover:border-yellow-400 hover:shadow-sm transition group w-fit"
+                                        className="flex items-center gap-3 bg-white border border-slate-200 p-3 rounded-xl text-sm font-medium text-slate-600 hover:text-slate-900 hover:border-slate-300 hover:shadow-sm transition group w-fit"
                                     >
-                                        <div className="p-1.5 bg-gray-50 rounded-md group-hover:bg-yellow-50 transition">
-                                            <FileText className="w-5 h-5 text-gray-500 group-hover:text-yellow-600" />
+                                        <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center group-hover:bg-slate-100 transition">
+                                            <FileText className="w-5 h-5 text-slate-400 group-hover:text-slate-600" />
                                         </div>
-                                        <span>Ver Documento</span>
+                                        <div className="flex flex-col pr-4">
+                                            <span className="font-semibold">Ver Documento</span>
+                                            <span className="text-[10px] text-slate-400">Clic para abrir</span>
+                                        </div>
                                     </a>
                                 </div>
                             )}
 
                             {/* Timeline Chat */}
-                            <div className="pt-4">
+                            <div className="space-y-4 pt-4">
+                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                    Timeline de Gestión
+                                </h4>
                                 <TimelineChat
                                     entityType="morosidad"
                                     entityId={selectedDetailMorosidad.id}
@@ -1320,17 +1359,16 @@ export default function MorosidadPage() {
                         </div>
 
                         {/* Footer Actions */}
-                        <div className="px-6 py-8 border-t border-gray-100 bg-gray-50 rounded-b-xl flex justify-between items-center flex-shrink-0">
+                        <div className="p-6 sm:p-8 border-t border-slate-100 bg-slate-50/30 rounded-b-xl flex justify-between items-center flex-shrink-0">
                             <button
                                 onClick={() => {
                                     handleDeleteClick(selectedDetailMorosidad.id);
                                     setShowDetailModal(false);
                                 }}
-                                className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 px-4 py-2 rounded-lg transition font-medium"
+                                className="flex items-center gap-2 text-red-500 hover:text-red-600 hover:bg-red-50/50 px-4 py-2 rounded-xl transition font-semibold text-sm"
                             >
-                                <Trash2 className="w-5 h-5" />
-                                <span className="hidden sm:inline">Eliminar Deuda</span>
-                                <span className="sm:hidden">Eliminar</span>
+                                <Trash2 className="w-4 h-4" />
+                                <span>Eliminar Registro</span>
                             </button>
 
                             {selectedDetailMorosidad.estado !== 'Pagado' && (
@@ -1339,9 +1377,9 @@ export default function MorosidadPage() {
                                         markAsPaid(selectedDetailMorosidad.id);
                                         setShowDetailModal(false);
                                     }}
-                                    className="px-6 py-2.5 rounded-lg font-bold shadow-sm transition flex items-center gap-2 bg-yellow-400 text-neutral-950 hover:bg-yellow-500"
+                                    className="h-11 px-6 bg-yellow-400 text-neutral-950 rounded-xl font-bold shadow-sm transition flex items-center gap-2 hover:bg-yellow-500 shadow-yellow-200/50 hover:shadow-lg"
                                 >
-                                    <Check className="w-5 h-5" />
+                                    <Check className="w-4 h-4" />
                                     Marcar como Pagado
                                 </button>
                             )}
