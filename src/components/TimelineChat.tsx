@@ -27,6 +27,11 @@ export default function TimelineChat({ entityType, entityId }: TimelineChatProps
     const [isExpanded, setIsExpanded] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
+    // Debugging
+    useEffect(() => {
+        console.log(`TimelineChat mounted for ${entityType} ID: ${entityId} (Type: ${typeof entityId})`);
+    }, [entityType, entityId]);
+
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
@@ -75,6 +80,10 @@ export default function TimelineChat({ entityType, entityId }: TimelineChatProps
     const fetchMessages = async () => {
         setLoading(true);
         try {
+            console.log(`Fetching messages for ${entityType} ID: ${entityId}`);
+            // Ensure entityId is treated as number for BIGINT column if it looks like one
+            const numericId = typeof entityId === 'string' ? parseInt(entityId, 10) : entityId;
+
             const { data, error } = await supabase
                 .from('record_messages')
                 .select(`
@@ -82,15 +91,20 @@ export default function TimelineChat({ entityType, entityId }: TimelineChatProps
                     created_at,
                     user_id,
                     content,
-                    profiles (nombre, avatar_url)
+                    profiles:user_id (nombre, avatar_url)
                 `)
                 .eq('entity_type', entityType)
-                .eq('entity_id', entityId)
+                .eq('entity_id', numericId)
                 .order('created_at', { ascending: true });
 
-            if (error) throw error;
+            if (error) {
+                console.error('Supabase error fetching messages:', error);
+                throw error;
+            }
 
-            // Fix: Supabase might return profiles as an array depending on the configuration
+            console.log(`Fetched ${data?.length || 0} messages for ${entityType} ${numericId}`);
+
+            // Fix: Supabase might return profiles as an array or object
             const formattedMessages = (data as any[])?.map(msg => ({
                 ...msg,
                 profiles: Array.isArray(msg.profiles) ? msg.profiles[0] : (msg.profiles || { nombre: 'Usuario', avatar_url: null })
