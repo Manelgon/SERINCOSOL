@@ -65,7 +65,7 @@ function wrapText(text: string, maxWidth: number, font: PDFFont, size: number): 
 // Main Generation Function
 // -----------------------------------------------------------
 
-export async function generateDebtDetailPdf({ debt }: { debt: any }) {
+export async function generateDebtDetailPdf({ debt, notes = [] }: { debt: any, notes?: any[] }) {
     // --- ASSETS ---
     const logoBytes = await downloadAssetPng("certificados/logo-retenciones.png");
 
@@ -168,14 +168,11 @@ export async function generateDebtDetailPdf({ debt }: { debt: any }) {
 
     // Estado
     const estado = debt.estado || 'Pendiente';
-    let estadoColor = rgb(0.8, 0.5, 0);
     let estadoBg = rgb(1, 0.9, 0);
 
     if (estado === 'Pagado') {
-        estadoColor = rgb(0, 0.5, 0);
         estadoBg = rgb(0, 1, 0);
     } else if (estado === 'En disputa') {
-        estadoColor = rgb(0.8, 0.2, 0);
         estadoBg = rgb(1, 0.8, 0.8);
     }
 
@@ -189,7 +186,6 @@ export async function generateDebtDetailPdf({ debt }: { debt: any }) {
 
     // Comunidad
     const commName = debt.comunidad || debt.comunidades?.nombre_cdad || '-';
-    // Truncate if too long
     const commShort = commName.length > 25 ? commName.substring(0, 25) + '...' : commName;
     drawLabelValue("Comunidad:", commShort, curX, statusY);
 
@@ -208,9 +204,6 @@ export async function generateDebtDetailPdf({ debt }: { debt: any }) {
         return y - 25;
     };
 
-    // --- LEFT COLUMN: Información del Deudor ---
-    let leftY = drawSectionHeader("INFORMACIÓN DEL DEUDOR", leftColX, currentSectionsY);
-
     const drawRow = (label: string, value: string, x: number, curY: number) => {
         page.drawText(label, { x: x, y: curY, size: 10, font: fontRegular, color: rgb(0.5, 0.5, 0.5) });
         const valX = x + 80;
@@ -224,17 +217,15 @@ export async function generateDebtDetailPdf({ debt }: { debt: any }) {
         return curY - heightUsed;
     };
 
+    let leftY = drawSectionHeader("INFORMACIÓN DEL DEUDOR", leftColX, currentSectionsY);
     leftY = drawRow("Nombre", debt.nombre_deudor || '-', leftColX, leftY);
     leftY = drawRow("Apellidos", debt.apellidos || '-', leftColX, leftY);
     leftY = drawRow("Teléfono", debt.telefono_deudor || '-', leftColX, leftY);
     leftY = drawRow("Email", debt.email_deudor || '-', leftColX, leftY);
 
-    // --- RIGHT COLUMN: Gestión ---
     let rightY = drawSectionHeader("GESTIÓN", rightColX, currentSectionsY);
-
     const gestorName = debt.gestor_profile?.nombre || (debt.gestor && debt.gestor.length > 20 ? 'Desconocido' : debt.gestor) || '-';
     const fechaNot = debt.fecha_notificacion ? new Date(debt.fecha_notificacion).toLocaleDateString('es-ES') : '-';
-
     rightY = drawRow("Gestor", gestorName, rightColX, rightY);
     rightY = drawRow("F. Notif.", fechaNot, rightColX, rightY);
     if (debt.estado === 'Pagado') {
@@ -253,6 +244,11 @@ export async function generateDebtDetailPdf({ debt }: { debt: any }) {
     const conceptoLines = wrapText(debt.titulo_documento || '', width - (margin * 2) - 20, fontRegular, 10);
     const conceptHeight = (conceptoLines.length * 15) + 20;
 
+    if (y - conceptHeight < 40) {
+        page = pdfDoc.addPage([595.28, 841.89]);
+        y = height - margin;
+    }
+
     page.drawRectangle({
         x: margin,
         y: y - conceptHeight,
@@ -264,30 +260,24 @@ export async function generateDebtDetailPdf({ debt }: { debt: any }) {
     });
 
     conceptoLines.forEach((line, i) => {
-        page.drawText(line, {
-            x: margin + 10,
-            y: y - 20 - (i * 15),
-            size: 10,
-            font: fontRegular,
-            color: rgb(0.2, 0.2, 0.2)
-        });
+        page.drawText(line, { x: margin + 10, y: y - 20 - (i * 15), size: 10, font: fontRegular, color: rgb(0.2, 0.2, 0.2) });
     });
 
     y -= (conceptHeight + 30);
 
     // --- 6. OBSERVACIONES ---
     if (debt.observaciones) {
-        if (y - 60 < 40) {
+        const obsLines = wrapText(debt.observaciones || '', width - (margin * 2) - 20, fontRegular, 10);
+        const obsHeight = (obsLines.length * 15) + 20;
+
+        if (y - obsHeight < 40) {
             page = pdfDoc.addPage([595.28, 841.89]);
-            y = page.getSize().height - 40;
+            y = height - margin;
         }
 
         page.drawText("OBSERVACIONES", { x: margin, y: y, size: 12, font: fontBold });
         page.drawLine({ start: { x: margin, y: y - 5 }, end: { x: width - margin, y: y - 5 }, color: rgb(0, 0, 0), thickness: 1.5 });
         y -= 25;
-
-        const obsLines = wrapText(debt.observaciones || '', width - (margin * 2) - 20, fontRegular, 10);
-        const obsHeight = (obsLines.length * 15) + 20;
 
         page.drawRectangle({
             x: margin,
@@ -300,13 +290,7 @@ export async function generateDebtDetailPdf({ debt }: { debt: any }) {
         });
 
         obsLines.forEach((line, i) => {
-            page.drawText(line, {
-                x: margin + 10,
-                y: y - 20 - (i * 15),
-                size: 10,
-                font: fontRegular,
-                color: rgb(0.2, 0.2, 0.2)
-            });
+            page.drawText(line, { x: margin + 10, y: y - 20 - (i * 15), size: 10, font: fontRegular, color: rgb(0.2, 0.2, 0.2) });
         });
 
         y -= (obsHeight + 30);
@@ -316,29 +300,68 @@ export async function generateDebtDetailPdf({ debt }: { debt: any }) {
     if (debt.documento) {
         if (y - 50 < 40) {
             page = pdfDoc.addPage([595.28, 841.89]);
-            y = page.getSize().height - 40;
+            y = height - margin;
         }
 
         page.drawText("DOCUMENTO ADJUNTO", { x: margin, y: y, size: 12, font: fontBold });
         page.drawLine({ start: { x: margin, y: y - 5 }, end: { x: width - margin, y: y - 5 }, color: rgb(0, 0, 0), thickness: 1.5 });
         y -= 25;
 
-        // Display just URL or "Ver Documento"
-        page.drawText(`Enlace: ${debt.documento}`, {
-            x: margin,
-            y: y,
-            size: 9,
-            font: fontRegular,
-            color: rgb(0, 0, 1),
+        page.drawText(`Enlace: ${debt.documento}`, { x: margin, y: y, size: 9, font: fontRegular, color: rgb(0, 0, 1) });
+        y -= 30;
+    }
+
+    // --- 7. NOTAS DE GESTIÓN (Timeline) ---
+    if (notes && notes.length > 0) {
+        if (y - 100 < 40) {
+            page = pdfDoc.addPage([595.28, 841.89]);
+            y = height - margin;
+        }
+
+        page.drawText("NOTAS DE GESTIÓN", { x: margin, y: y, size: 12, font: fontBold });
+        page.drawLine({ start: { x: margin, y: y - 5 }, end: { x: width - margin, y: y - 5 }, color: rgb(0, 0, 0), thickness: 1.5 });
+        y -= 30;
+
+        notes.forEach((msg) => {
+            const dateStr = new Date(msg.created_at).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            const author = msg.profiles?.nombre || 'Usuario';
+            const header = `${author} - ${dateStr}`;
+
+            const contentLines = wrapText(msg.content || '', width - margin * 2 - 20, fontRegular, 9);
+            const totalH = (contentLines.length * 12) + 25;
+
+            if (y - totalH < 40) {
+                page = pdfDoc.addPage([595.28, 841.89]);
+                y = height - margin;
+            }
+
+            page.drawText(header, { x: margin, y: y, size: 8, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
+            y -= 12;
+
+            contentLines.forEach((line) => {
+                page.drawText(line, { x: margin + 5, y: y, size: 9, font: fontRegular, color: rgb(0, 0, 0) });
+                y -= 12;
+            });
+
+            y -= 10;
+            page.drawLine({ start: { x: margin, y: y + 5 }, end: { x: width - margin, y: y + 5 }, color: rgb(0.9, 0.9, 0.9), thickness: 0.5 });
         });
     }
 
     // --- FOOTER ---
     const allPages = pdfDoc.getPages();
-    for (const p of allPages) {
+    for (let i = 0; i < allPages.length; i++) {
+        const p = allPages[i];
         const { width: pW } = p.getSize();
         p.drawText("Serincosol | Administración de Fincas", {
-            x: pW / 2 - 80,
+            x: margin,
+            y: 20,
+            size: 8,
+            font: fontRegular,
+            color: rgb(0.6, 0.6, 0.6)
+        });
+        p.drawText(`Página ${i + 1} de ${allPages.length}`, {
+            x: pW - margin - 60,
             y: 20,
             size: 8,
             font: fontRegular,
@@ -348,3 +371,4 @@ export async function generateDebtDetailPdf({ debt }: { debt: any }) {
 
     return await pdfDoc.save();
 }
+

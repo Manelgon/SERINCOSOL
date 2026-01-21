@@ -67,7 +67,7 @@ function wrapText(text: string, maxWidth: number, font: PDFFont, size: number): 
 // Main Generation Function
 // -----------------------------------------------------------
 
-export async function generateIncidentDetailPdf({ incident }: { incident: any }) {
+export async function generateIncidentDetailPdf({ incident, notes = [] }: { incident: any, notes?: any[] }) {
     // --- ASSETS ---
     const logoBytes = await downloadAssetPng("certificados/logo-retenciones.png");
 
@@ -80,6 +80,7 @@ export async function generateIncidentDetailPdf({ incident }: { incident: any })
     // Fonts
     const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const fontItalic = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);
     // Note: StandardFonts doesn't support emojis or complex charset.
     // For 'Check' icons etc, we might need a separate font or just text simulation.
 
@@ -273,7 +274,7 @@ export async function generateIncidentDetailPdf({ incident }: { incident: any })
     // Check pagination
     if (y - msgHeight < 40) {
         page = pdfDoc.addPage([595.28, 841.89]);
-        y = page.getSize().height - 40;
+        y = height - margin;
     }
 
     page.drawRectangle({
@@ -303,7 +304,7 @@ export async function generateIncidentDetailPdf({ incident }: { incident: any })
         // Check pagination
         if (y - 80 < 40) {
             page = pdfDoc.addPage([595.28, 841.89]);
-            y = page.getSize().height - 40;
+            y = height - margin;
         }
 
         page.drawText("ARCHIVOS ADJUNTOS", { x: margin, y: y, size: 12, font: fontBold });
@@ -322,15 +323,66 @@ export async function generateIncidentDetailPdf({ incident }: { incident: any })
             // We cannot easily make actual clickable links in pdf-lib without annotations, 
             // but displaying the list indicates existence.
             y -= 15;
+            if (y < 40) { // Check if next item will fit
+                page = pdfDoc.addPage([595.28, 841.89]);
+                y = height - margin;
+            }
+        });
+        y -= 20;
+    }
+
+    // --- 7. NOTAS DE GESTIÓN (Timeline) ---
+    if (notes && notes.length > 0) {
+        if (y - 100 < 40) { // Estimate space needed for header + first note
+            page = pdfDoc.addPage([595.28, 841.89]);
+            y = height - margin;
+        }
+
+        page.drawText("NOTAS DE GESTIÓN", { x: margin, y: y, size: 12, font: fontBold });
+        page.drawLine({ start: { x: margin, y: y - 5 }, end: { x: width - margin, y: y - 5 }, color: rgb(0, 0, 0), thickness: 1.5 });
+        y -= 30;
+
+        notes.forEach((msg) => {
+            const dateStr = new Date(msg.created_at).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            const author = msg.profiles?.nombre || 'Usuario';
+            const header = `${author} - ${dateStr}`;
+
+            const contentLines = wrapText(msg.content || '', width - margin * 2 - 20, fontRegular, 9);
+            const totalH = (contentLines.length * 12) + 25; // Header (12) + content lines (12 per line) + spacing (10)
+
+            if (y - totalH < 40) { // Check if this note fits on the current page
+                page = pdfDoc.addPage([595.28, 841.89]);
+                y = height - margin;
+            }
+
+            // Header line (Bold small)
+            page.drawText(header, { x: margin, y: y, size: 8, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
+            y -= 12;
+
+            contentLines.forEach((line) => {
+                page.drawText(line, { x: margin + 5, y: y, size: 9, font: fontRegular, color: rgb(0, 0, 0) });
+                y -= 12;
+            });
+
+            y -= 10; // Gap between notes
+            page.drawLine({ start: { x: margin, y: y + 5 }, end: { x: width - margin, y: y + 5 }, color: rgb(0.9, 0.9, 0.9), thickness: 0.5 });
         });
     }
 
     // --- FOOTER ---
     const allPages = pdfDoc.getPages();
-    for (const p of allPages) {
+    for (let i = 0; i < allPages.length; i++) {
+        const p = allPages[i];
         const { width: pW } = p.getSize();
         p.drawText("Serincosol | Administración de Fincas", {
-            x: pW / 2 - 80,
+            x: margin,
+            y: 20,
+            size: 8,
+            font: fontRegular,
+            color: rgb(0.6, 0.6, 0.6)
+        });
+        p.drawText(`Página ${i + 1} de ${allPages.length}`, {
+            x: pW - margin - 60,
             y: 20,
             size: 8,
             font: fontRegular,

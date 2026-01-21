@@ -392,6 +392,11 @@ export default function IncidenciasPage() {
         // If overriding IDs (from modal), imply detail view if single item
         const isDetailView = !!idsOverride && idsToExport.length === 1 && type === 'pdf';
 
+        let includeNotes = false;
+        if (isDetailView) {
+            includeNotes = window.confirm('¿Desea incluir las notas de gestión en el PDF?');
+        }
+
         setExporting(true);
         try {
             const res = await fetch('/api/incidencias/export', {
@@ -400,7 +405,8 @@ export default function IncidenciasPage() {
                 body: JSON.stringify({
                     ids: idsToExport,
                     type,
-                    layout: isDetailView ? 'detail' : 'list'
+                    layout: isDetailView ? 'detail' : 'list',
+                    includeNotes
                 })
             });
 

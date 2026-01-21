@@ -8,7 +8,7 @@ import { generateDebtsPdf } from "@/lib/pdf/debtsList";
  * Body: { ids: number[], type: 'csv' | 'pdf', layout?: 'list' | 'detail' }
  */
 export async function POST(req: Request) {
-    const { ids, type, layout } = await req.json();
+    const { ids, type, layout, includeNotes } = await req.json();
 
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
         return NextResponse.json({ error: "No Items Selected" }, { status: 400 });
@@ -40,7 +40,22 @@ export async function POST(req: Request) {
             let pdfBytes;
             // Check if detail View requested (Single Item)
             if (layout === 'detail' && debts.length === 1) {
-                pdfBytes = await generateDebtDetailPdf({ debt: debts[0] });
+                let notes: any[] = [];
+                if (includeNotes) {
+                    const { data: messages } = await supabase
+                        .from('record_messages')
+                        .select(`
+                            id,
+                            created_at,
+                            content,
+                            profiles (nombre)
+                        `)
+                        .eq('entity_type', 'morosidad')
+                        .eq('entity_id', debts[0].id)
+                        .order('created_at', { ascending: true });
+                    notes = messages || [];
+                }
+                pdfBytes = await generateDebtDetailPdf({ debt: debts[0], notes });
             } else {
                 pdfBytes = await generateDebtsPdf({ debts });
             }

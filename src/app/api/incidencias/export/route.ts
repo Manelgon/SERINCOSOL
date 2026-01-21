@@ -8,7 +8,7 @@ import { generateIncidentsPdf } from "@/lib/pdf/incidentsList";
  * Body: { ids: number[], type: 'csv' | 'pdf', layout?: 'list' | 'detail' }
  */
 export async function POST(req: Request) {
-    const { ids, type, layout } = await req.json();
+    const { ids, type, layout, includeNotes } = await req.json();
 
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
         return NextResponse.json({ error: "No Items Selected" }, { status: 400 });
@@ -41,7 +41,22 @@ export async function POST(req: Request) {
 
             // Check if detail View requested (Single Item)
             if (layout === 'detail' && incidents.length === 1) {
-                pdfBytes = await generateIncidentDetailPdf({ incident: incidents[0] });
+                let notes: any[] = [];
+                if (includeNotes) {
+                    const { data: messages } = await supabase
+                        .from('record_messages')
+                        .select(`
+                            id,
+                            created_at,
+                            content,
+                            profiles (nombre)
+                        `)
+                        .eq('entity_type', 'incidencia')
+                        .eq('entity_id', incidents[0].id)
+                        .order('created_at', { ascending: true });
+                    notes = messages || [];
+                }
+                pdfBytes = await generateIncidentDetailPdf({ incident: incidents[0], notes });
             } else {
                 pdfBytes = await generateIncidentsPdf({ incidents });
             }
