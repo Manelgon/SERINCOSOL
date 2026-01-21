@@ -419,7 +419,8 @@ export default function IncidenciasPage() {
                             id_email_gestion: incidencia?.id_email_gestion || '',
                             aviso: incidencia?.aviso || '',
                             telefono: incidencia?.telefono || '',
-                            email: incidencia?.email || ''
+                            email: incidencia?.email || '',
+                            gestor_asignado: incidencia?.gestor_asignado || ''
                         })
                     }).catch(e => console.error('Resolved Webhook Error:', e));
                 } catch (e) {
