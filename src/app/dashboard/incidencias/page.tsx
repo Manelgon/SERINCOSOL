@@ -36,6 +36,7 @@ interface Incidencia {
     resolver?: { nombre: string }; // Joined profile
     adjuntos?: string[];
     aviso?: boolean;
+    id_email_gestion?: string;
 }
 
 export default function IncidenciasPage() {
@@ -406,6 +407,25 @@ export default function IncidenciasPage() {
                     resuelto: !currentStatus
                 }
             });
+
+            // Trigger Resolved Webhook
+            if (!currentStatus) {
+                try {
+                    // Note: Using a hardcoded fallback or checking process.env
+                    const webhookUrl = "https://serinwebhook.afcademia.com/webhook/90f845a7-96a8-4447-920f-0cf04403362c";
+
+                    fetch(webhookUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            id: id,
+                            id_email_gestion: incidencia?.id_email_gestion || ''
+                        })
+                    }).catch(e => console.error('Resolved Webhook Error:', e));
+                } catch (e) {
+                    console.error('Resolved Webhook Trigger Error:', e);
+                }
+            }
         } catch (error) {
             toast.error('Error al actualizar estado');
         }
