@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabaseClient';
 import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Settings2 } from 'lucide-react';
 
 export interface Column<T> {
@@ -54,15 +55,29 @@ export default function DataTable<T extends Record<string, any>>({
     const [visibleColumns, setVisibleColumns] = useState<Set<string>>(new Set());
     const [showColumnSelector, setShowColumnSelector] = useState(false);
     const [isInitialized, setIsInitialized] = useState(false);
+    const [userId, setUserId] = useState<string | null>(null);
+
+    // Fetch user ID for persistence key
+    useEffect(() => {
+        const getUserId = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) setUserId(user.id);
+            else setUserId('anonymous'); // Fallback
+        };
+        getUserId();
+    }, []);
+
+    // Preference key
+    const prefKey = userId ? `table-${storageKey}-${userId}` : null;
 
     // Search
     const [searchTerm, setSearchTerm] = useState('');
 
-    // Load preferences from localStorage ONCE on mount
+    // Load preferences from localStorage ONCE on mount (when userId is available)
     useEffect(() => {
-        if (isInitialized) return; // Prevent re-initialization
+        if (isInitialized || !prefKey) return;
 
-        const saved = localStorage.getItem(`table-${storageKey}`);
+        const saved = localStorage.getItem(prefKey);
         if (saved) {
             try {
                 const prefs = JSON.parse(saved);
@@ -84,18 +99,18 @@ export default function DataTable<T extends Record<string, any>>({
         }
 
         setIsInitialized(true);
-    }, [storageKey]); // Only depend on storageKey, not columns
+    }, [prefKey, isInitialized]);
 
     // Save preferences to localStorage whenever they change
     useEffect(() => {
-        if (!isInitialized) return; // Don't save until initialized
+        if (!isInitialized || !prefKey) return;
 
         const prefs = {
             pageSize,
             visibleColumns: Array.from(visibleColumns),
         };
-        localStorage.setItem(`table-${storageKey}`, JSON.stringify(prefs));
-    }, [pageSize, visibleColumns, storageKey, isInitialized]);
+        localStorage.setItem(prefKey, JSON.stringify(prefs));
+    }, [pageSize, visibleColumns, prefKey, isInitialized]);
 
     // Sorting logic
     const handleSort = (columnKey: string) => {

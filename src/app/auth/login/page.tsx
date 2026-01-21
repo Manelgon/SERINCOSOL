@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -14,6 +14,34 @@ export default function LoginPage() {
     const [rememberMe, setRememberMe] = useState(false);
     const [loading, setLoading] = useState(false);
 
+    // Load remembered credentials on mount
+    useEffect(() => {
+        const saved = localStorage.getItem('remembered_credentials');
+        if (saved) {
+            try {
+                const { email: savedEmail, password: savedPassword, timestamp } = JSON.parse(saved);
+                const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+
+                if (Date.now() - timestamp < thirtyDays) {
+                    setEmail(savedEmail);
+                    setPassword(savedPassword);
+                    setRememberMe(true);
+                } else {
+                    localStorage.removeItem('remembered_credentials');
+                }
+            } catch (e) {
+                localStorage.removeItem('remembered_credentials');
+            }
+        }
+    }, []);
+
+    // Clear credentials if rememberMe is unchecked
+    useEffect(() => {
+        if (!rememberMe) {
+            localStorage.removeItem('remembered_credentials');
+        }
+    }, [rememberMe]);
+
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
@@ -24,11 +52,20 @@ export default function LoginPage() {
                 password,
             });
 
-            // Set session persistence based on remember me
+            // Handle credential persistence
             if (!error && rememberMe) {
+                const dataToSave = {
+                    email,
+                    password,
+                    timestamp: Date.now()
+                };
+                localStorage.setItem('remembered_credentials', JSON.stringify(dataToSave));
+
                 await supabase.auth.updateUser({
                     data: { remember_me: true }
                 });
+            } else if (!error && !rememberMe) {
+                localStorage.removeItem('remembered_credentials');
             }
 
             if (error) {
@@ -45,8 +82,15 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="bg-white p-8 rounded-xl shadow-lg border border-gray-100">
+        <div className="bg-white p-8 rounded-xl shadow-lg border border-gray-100 w-full max-w-md">
             <div className="mb-6 text-center">
+                <div className="flex justify-center mb-6">
+                    <img
+                        src="/serincosol-logo.png"
+                        alt="Serincosol Logo"
+                        className="h-20 w-auto object-contain"
+                    />
+                </div>
                 <h1 className="text-2xl font-bold text-gray-800">Iniciar Sesión</h1>
                 <p className="text-sm text-gray-500 mt-2">Accede al panel de administración</p>
             </div>
