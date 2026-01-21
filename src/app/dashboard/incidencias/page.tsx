@@ -26,6 +26,7 @@ interface Incidencia {
     quien_lo_recibe?: string;
     comunidad?: string; // String representation if needed
     gestor_asignado?: string;
+    gestor?: { nombre: string }; // Joined profile
     sentimiento?: string;
     categoria?: string;
     nota_gestor?: string;
@@ -420,7 +421,7 @@ export default function IncidenciasPage() {
                             aviso: incidencia?.aviso || '',
                             telefono: incidencia?.telefono || '',
                             email: incidencia?.email || '',
-                            gestor_asignado: incidencia?.gestor_asignado || ''
+                            gestor_asignado: incidencia?.gestor?.nombre || 'Desconocido'
                         })
                     }).catch(e => console.error('Resolved Webhook Error:', e));
                 } catch (e) {
