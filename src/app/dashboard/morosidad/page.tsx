@@ -269,19 +269,25 @@ export default function MorosidadPage() {
                 const gestorProfile = profiles.find(p => p.user_id === formData.gestor);
 
                 // Trigger Webhook (Fire and forget, don't block UI)
+                const webhookPayload = new FormData();
+                Object.entries(formData).forEach(([key, value]) => {
+                    webhookPayload.append(key, value || '');
+                });
+                webhookPayload.append('id', newDebt.id.toString());
+                webhookPayload.append('comunidad_nombre', comunidad?.nombre_cdad || '');
+                webhookPayload.append('comunidad_codigo', comunidad?.codigo || '');
+                webhookPayload.append('comunidad_direccion', comunidad?.direccion || '');
+                webhookPayload.append('gestor_nombre', gestorProfile?.nombre || 'Desconocido');
+                webhookPayload.append('documento_url', docUrl || '');
+                webhookPayload.append('notificacion', enviarNotificacion ? 'true' : 'false');
+
+                if (file) {
+                    webhookPayload.append('adjunto', file);
+                }
+
                 fetch('/api/webhooks/trigger-debt', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        ...formData,
-                        id: newDebt.id,
-                        comunidad_nombre: comunidad?.nombre_cdad,
-                        comunidad_codigo: comunidad?.codigo,
-                        comunidad_direccion: comunidad?.direccion,
-                        gestor_nombre: gestorProfile?.nombre || 'Desconocido',
-                        documento_url: docUrl,
-                        notificacion: enviarNotificacion ? 'true' : 'false'
-                    })
+                    body: webhookPayload
                 }).catch(err => console.error('Webhook trigger error:', err));
 
                 setShowForm(false);
