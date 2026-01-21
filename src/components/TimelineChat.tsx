@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Send, User, Clock, Loader2 } from 'lucide-react';
+import { Send, User, Clock, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 interface Message {
@@ -24,6 +24,7 @@ export default function TimelineChat({ entityType, entityId }: TimelineChatProps
     const [newMessage, setNewMessage] = useState('');
     const [loading, setLoading] = useState(true);
     const [sending, setSending] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const scrollToBottom = () => {
@@ -133,90 +134,104 @@ export default function TimelineChat({ entityType, entityId }: TimelineChatProps
     };
 
     return (
-        <div className="flex flex-col h-full bg-gray-50 rounded-xl border border-gray-100 overflow-hidden shadow-sm">
+        <div className="flex flex-col bg-gray-50 rounded-xl border border-gray-100 overflow-hidden shadow-sm transition-all duration-300">
             {/* Header */}
-            <div className="px-4 py-3 bg-white border-b border-gray-100 flex items-center justify-between">
-                <h4 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                    💬 Timeline de Gestión
-                </h4>
-                <span className="text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded-full border border-gray-100">
-                    {messages.length} mensajes
-                </span>
-            </div>
-
-            {/* Messages Area */}
-            <div className="flex-1 p-4 overflow-y-auto min-h-[300px] max-h-[400px] custom-scrollbar space-y-4">
-                {loading ? (
-                    <div className="flex items-center justify-center h-full">
-                        <Loader2 className="w-8 h-8 animate-spin text-yellow-500" />
-                    </div>
-                ) : messages.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full text-center space-y-2 py-8">
-                        <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
-                            <Clock className="w-6 h-6 text-gray-300" />
-                        </div>
-                        <p className="text-sm text-gray-400 font-medium italic">
-                            No hay notas de seguimiento aún.<br />Sé el primero en escribir.
-                        </p>
-                    </div>
-                ) : (
-                    messages.map((msg) => (
-                        <div key={msg.id} className="flex gap-3 animate-in fade-in slide-in-from-bottom-2">
-                            <div className="flex-shrink-0">
-                                {msg.profiles.avatar_url ? (
-                                    <img
-                                        src={msg.profiles.avatar_url}
-                                        alt={msg.profiles.nombre}
-                                        className="w-8 h-8 rounded-full object-cover border border-gray-200"
-                                    />
-                                ) : (
-                                    <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-700 font-bold text-xs ring-2 ring-white">
-                                        {msg.profiles.nombre.charAt(0).toUpperCase()}
-                                    </div>
-                                )}
-                            </div>
-                            <div className="flex-1 space-y-1">
-                                <div className="flex items-baseline gap-2">
-                                    <span className="text-xs font-bold text-gray-900">{msg.profiles.nombre}</span>
-                                    <span className="text-[10px] text-gray-400">
-                                        {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        {' - '}
-                                        {new Date(msg.created_at).toLocaleDateString()}
-                                    </span>
-                                </div>
-                                <div className="bg-white p-3 rounded-2xl rounded-tl-none border border-gray-100 shadow-sm text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-                                    {msg.content}
-                                </div>
-                            </div>
-                        </div>
-                    ))
-                )}
-                <div ref={messagesEndRef} />
-            </div>
-
-            {/* Input Area */}
-            <form onSubmit={handleSendMessage} className="p-4 bg-white border-t border-gray-100">
-                <div className="relative flex items-center gap-2">
-                    <input
-                        type="text"
-                        placeholder="Escribe una nota interna..."
-                        className="w-full pl-4 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-full text-sm focus:ring-2 focus:ring-yellow-400 focus:bg-white focus:outline-none transition group"
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        disabled={sending}
-                    />
-                    <button
-                        type="submit"
-                        disabled={sending || !newMessage.trim()}
-                        className="absolute right-1.5 p-2 bg-yellow-400 hover:bg-yellow-500 text-neutral-950 rounded-full transition shadow-sm disabled:opacity-50"
-                    >
-                        {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                    </button>
+            <button
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="w-full px-4 py-3 bg-white border-b border-gray-100 flex items-center justify-between hover:bg-gray-50 transition-colors group"
+            >
+                <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                        💬 Timeline de Gestión
+                    </h4>
+                    <span className="text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded-full border border-gray-100 group-hover:bg-white transition-colors">
+                        {messages.length} mensajes
+                    </span>
                 </div>
-                <p className="text-[10px] text-gray-400 mt-2 px-2">
-                    💡 Las notas son visibles para todos los gestores en tiempo real.
-                </p>
-            </form>
+                {isExpanded ? (
+                    <ChevronUp className="w-5 h-5 text-gray-400 group-hover:text-yellow-500 transition-colors" />
+                ) : (
+                    <ChevronDown className="w-5 h-5 text-gray-400 group-hover:text-yellow-500 transition-colors" />
+                )}
+            </button>
+
+            {isExpanded && (
+                <div className="animate-in slide-in-from-top-2 duration-200">
+                    {/* Messages Area */}
+                    <div className="p-4 overflow-y-auto min-h-[300px] max-h-[400px] custom-scrollbar space-y-4 border-b border-gray-100">
+                        {loading ? (
+                            <div className="flex items-center justify-center h-full">
+                                <Loader2 className="w-8 h-8 animate-spin text-yellow-500" />
+                            </div>
+                        ) : messages.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center h-full text-center space-y-2 py-8">
+                                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
+                                    <Clock className="w-6 h-6 text-gray-300" />
+                                </div>
+                                <p className="text-sm text-gray-400 font-medium italic">
+                                    No hay notas de seguimiento aún.<br />Sé el primero en escribir.
+                                </p>
+                            </div>
+                        ) : (
+                            messages.map((msg) => (
+                                <div key={msg.id} className="flex gap-3 animate-in fade-in slide-in-from-bottom-2">
+                                    <div className="flex-shrink-0">
+                                        {msg.profiles.avatar_url ? (
+                                            <img
+                                                src={msg.profiles.avatar_url}
+                                                alt={msg.profiles.nombre}
+                                                className="w-8 h-8 rounded-full object-cover border border-gray-200"
+                                            />
+                                        ) : (
+                                            <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-700 font-bold text-xs ring-2 ring-white">
+                                                {msg.profiles.nombre.charAt(0).toUpperCase()}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="flex-1 space-y-1">
+                                        <div className="flex items-baseline gap-2">
+                                            <span className="text-xs font-bold text-gray-900">{msg.profiles.nombre}</span>
+                                            <span className="text-[10px] text-gray-400">
+                                                {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                {' - '}
+                                                {new Date(msg.created_at).toLocaleDateString()}
+                                            </span>
+                                        </div>
+                                        <div className="bg-white p-3 rounded-2xl rounded-tl-none border border-gray-100 shadow-sm text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                                            {msg.content}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                        <div ref={messagesEndRef} />
+                    </div>
+
+                    {/* Input Area */}
+                    <form onSubmit={handleSendMessage} className="p-4 bg-white">
+                        <div className="relative flex items-center gap-2">
+                            <input
+                                type="text"
+                                placeholder="Escribe una nota interna..."
+                                className="w-full pl-4 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-full text-sm focus:ring-2 focus:ring-yellow-400 focus:bg-white focus:outline-none transition group"
+                                value={newMessage}
+                                onChange={(e) => setNewMessage(e.target.value)}
+                                disabled={sending}
+                            />
+                            <button
+                                type="submit"
+                                disabled={sending || !newMessage.trim()}
+                                className="absolute right-1.5 p-2 bg-yellow-400 hover:bg-yellow-500 text-neutral-950 rounded-full transition shadow-sm disabled:opacity-50"
+                            >
+                                {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                            </button>
+                        </div>
+                        <p className="text-[10px] text-gray-400 mt-2 px-2">
+                            💡 Las notas son visibles para todos los gestores en tiempo real.
+                        </p>
+                    </form>
+                </div>
+            )}
         </div>
     );
 }
