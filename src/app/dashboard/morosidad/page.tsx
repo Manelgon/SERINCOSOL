@@ -370,24 +370,26 @@ export default function MorosidadPage() {
             toast.success('Marcado como pagado');
 
             // Trigger Resolved Webhook
-            try {
-                // Destructure to exclude the nested comunidades object
-                const { comunidades: _cdad, ...morosoData } = moroso || {};
+            setTimeout(() => {
+                try {
+                    // Destructure to exclude the nested comunidades object
+                    const { comunidades: _cdad, ...morosoData } = moroso || {};
 
-                fetch('/api/webhooks/trigger-resolved-debt', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        ...morosoData,
-                        comunidad_nombre: moroso?.comunidades?.nombre_cdad,
-                        comunidad_codigo: moroso?.comunidades?.codigo,
-                        estado: 'Pagado',
-                        fecha_pago: new Date().toISOString(),
-                    })
-                }).catch(e => console.error('Resolved Debt Webhook Error:', e));
-            } catch (e) {
-                console.error('Resolved Debt Webhook Trigger Error:', e);
-            }
+                    fetch('/api/webhooks/trigger-resolved-debt', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            ...morosoData,
+                            comunidad_nombre: moroso?.comunidades?.nombre_cdad,
+                            comunidad_codigo: moroso?.comunidades?.codigo,
+                            estado: 'Pagado',
+                            fecha_pago: new Date().toISOString(),
+                        })
+                    }).catch(e => console.error('Resolved Debt Webhook Error:', e));
+                } catch (e) {
+                    console.error('Resolved Debt Webhook Trigger Error:', e);
+                }
+            }, 2000);
 
             // Log activity
             await logActivity({
