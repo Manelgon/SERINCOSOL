@@ -281,6 +281,9 @@ export default function MorosidadPage() {
                 webhookPayload.append('documento_url', docUrl || '');
                 webhookPayload.append('notificacion', enviarNotificacion ? 'true' : 'false');
 
+                const count = file ? 1 : 0;
+                webhookPayload.append('adjuntos_count', count.toString());
+
                 if (file) {
                     webhookPayload.append('adjunto', file);
                 }
