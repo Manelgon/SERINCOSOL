@@ -371,11 +371,14 @@ export default function MorosidadPage() {
 
             // Trigger Resolved Webhook
             try {
+                // Destructure to exclude the nested comunidades object
+                const { comunidades: _cdad, ...morosoData } = moroso || {};
+
                 fetch('/api/webhooks/trigger-resolved-debt', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        ...moroso,
+                        ...morosoData,
                         comunidad_nombre: moroso?.comunidades?.nombre_cdad,
                         comunidad_codigo: moroso?.comunidades?.codigo,
                         estado: 'Pagado',

@@ -411,22 +411,24 @@ export default function IncidenciasPage() {
 
             // Trigger Resolved Webhook
             if (!currentStatus) {
-                try {
-                    fetch('/api/webhooks/trigger-resolved-ticket', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            id: id,
-                            id_email_gestion: incidencia?.id_email_gestion || '',
-                            aviso: incidencia?.aviso || '',
-                            telefono: incidencia?.telefono || '',
-                            email: incidencia?.email || '',
-                            gestor_asignado: incidencia?.gestor?.nombre || 'Desconocido'
-                        })
-                    }).catch(e => console.error('Resolved Webhook Error:', e));
-                } catch (e) {
-                    console.error('Resolved Webhook Trigger Error:', e);
-                }
+                setTimeout(() => {
+                    try {
+                        fetch('/api/webhooks/trigger-resolved-ticket', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                id: id,
+                                id_email_gestion: incidencia?.id_email_gestion || '',
+                                aviso: incidencia?.aviso || '',
+                                telefono: incidencia?.telefono || '',
+                                email: incidencia?.email || '',
+                                gestor_asignado: incidencia?.gestor?.nombre || 'Desconocido'
+                            })
+                        }).catch(e => console.error('Resolved Webhook Error:', e));
+                    } catch (e) {
+                        console.error('Resolved Webhook Trigger Error:', e);
+                    }
+                }, 2000);
             }
         } catch (error) {
             toast.error('Error al actualizar estado');
