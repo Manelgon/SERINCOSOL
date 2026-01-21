@@ -94,7 +94,7 @@ export default function DashboardPage() {
 
             // Filter by date if needed
             let query = supabase.from('incidencias').select(`
-                id, created_at, resuelto, urgencia, sentimiento, gestor_asignado, comunidad_id,
+                id, created_at, resuelto, dia_resuelto, urgencia, sentimiento, gestor_asignado, comunidad_id,
                 comunidades (nombre_cdad),
                 profiles:gestor_asignado (nombre)
             `);
@@ -102,7 +102,8 @@ export default function DashboardPage() {
             if (period !== 'all') {
                 const date = new Date();
                 date.setDate(date.getDate() - parseInt(period));
-                query = query.gte('created_at', date.toISOString());
+                // Get all currently pending OR resolved in period OR created in period
+                query = query.or(`resuelto.eq.false,dia_resuelto.gte.${date.toISOString()},created_at.gte.${date.toISOString()}`);
             }
 
             if (selectedCommunity !== 'all') {
@@ -149,17 +150,37 @@ export default function DashboardPage() {
                 deudaRecuperada: deudaPagada
             });
 
-            // Charts: Evolution (Group by Day/Week)
-            // Simplified grouping by Date
-            const evolutionMap = new Map<string, number>();
+            // Charts: Evolution (Show cumulative pending balance over time)
+            const daysToShow = period === 'all' ? 30 : parseInt(period);
+            const createdMap = new Map<string, number>();
+            const resolvedMap = new Map<string, number>();
+
             incidencias?.forEach(inc => {
-                const date = new Date(inc.created_at).toLocaleDateString();
-                evolutionMap.set(date, (evolutionMap.get(date) || 0) + 1);
+                const cDate = new Date(inc.created_at).toLocaleDateString();
+                createdMap.set(cDate, (createdMap.get(cDate) || 0) + 1);
+
+                if (inc.dia_resuelto) {
+                    const rDate = new Date(inc.dia_resuelto).toLocaleDateString();
+                    resolvedMap.set(rDate, (resolvedMap.get(rDate) || 0) + 1);
+                }
             });
-            const evolutionData = Array.from(evolutionMap.entries())
-                .map(([date, count]) => ({ date, count }))
-                .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-                .slice(-14); // Last 14 points for cleanliness
+
+            let runningPending = pendientes;
+            const evolutionData = [];
+
+            for (let i = 0; i < daysToShow; i++) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const dateStr = d.toLocaleDateString();
+
+                evolutionData.push({ date: dateStr, count: runningPending });
+
+                const createdCount = createdMap.get(dateStr) || 0;
+                const resolvedCount = resolvedMap.get(dateStr) || 0;
+                runningPending -= (createdCount - resolvedCount);
+            }
+
+            evolutionData.reverse();
 
             // Charts: Urgency & Sentiment Distribution (Pending only)
             const urgencyMap = { 'Alta': 0, 'Media': 0, 'Baja': 0 };
