@@ -957,8 +957,17 @@ export default function IncidenciasPage() {
 
             {/* Export Notes Modal */}
             {showExportModal && (
-                <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 relative overflow-hidden">
+                <div
+                    className="fixed inset-0 bg-black/50 z-[110] flex items-center justify-center p-4 backdrop-blur-sm"
+                    onClick={() => {
+                        setShowExportModal(false);
+                        setPendingExportParams(null);
+                    }}
+                >
+                    <div
+                        className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 relative overflow-hidden"
+                        onClick={e => e.stopPropagation()}
+                    >
                         <div className="text-center">
                             <h3 className="text-lg font-semibold text-gray-900 mb-4">Exportar PDF</h3>
                             <p className="text-sm text-gray-600 mb-8 px-2">
@@ -975,9 +984,9 @@ export default function IncidenciasPage() {
                                             handleExport(params.type, params.ids, true);
                                         }
                                     }}
-                                    className="w-full py-3 bg-[#633e33] text-white rounded-full font-bold hover:bg-[#4d3027] transition shadow-md"
+                                    className="w-full py-3 bg-yellow-400 text-neutral-950 rounded-full font-bold hover:bg-yellow-500 transition shadow-md"
                                 >
-                                    Aceptar
+                                    SÍ
                                 </button>
                                 <button
                                     onClick={() => {
@@ -988,7 +997,16 @@ export default function IncidenciasPage() {
                                             handleExport(params.type, params.ids, false);
                                         }
                                     }}
-                                    className="w-full py-3 bg-[#ffe7e1] text-[#633e33] rounded-full font-bold hover:bg-[#ffd9d1] transition transition shadow-sm"
+                                    className="w-full py-3 bg-gray-200 text-red-600 rounded-full font-bold hover:bg-gray-300 transition"
+                                >
+                                    NO
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setPendingExportParams(null);
+                                        setShowExportModal(false);
+                                    }}
+                                    className="w-full py-3 bg-gray-200 text-gray-700 rounded-full font-bold hover:bg-gray-300 transition"
                                 >
                                     Cancelar
                                 </button>
