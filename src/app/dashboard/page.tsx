@@ -378,7 +378,11 @@ export default function DashboardPage() {
     }, [isInitialized, fetchDashboardData]); // Re-subscribe when fetchDashboardData changes (on period change)
 
     const COLORS = ['#FF8042', '#FFBB28', '#00C49F']; // Alta (Orange/Red), Media (Yellow), Baja (Green)
-    const SENTIMENT_COLORS = ['#94a3b8', '#10b981', '#ef4444', '#f59e0b', '#3b82f6']; // Gray, Green, Red, Orange, Blue
+    const SENTIMENT_COLORS: Record<string, string> = {
+        'Negativo': '#FF8042',
+        'Neutral': '#FFBB28',
+        'Positivo': '#00C49F'
+    };
 
     return (
         <div className="space-y-6 md:space-y-8 pb-10">
@@ -576,7 +580,7 @@ export default function DashboardPage() {
                                             dataKey="value"
                                         >
                                             {chartData.sentimentDistribution.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={SENTIMENT_COLORS[index % SENTIMENT_COLORS.length]} />
+                                                <Cell key={`cell-${index}`} fill={SENTIMENT_COLORS[entry.name] || '#94a3b8'} />
                                             ))}
                                         </Pie>
                                         <Tooltip />
@@ -750,7 +754,7 @@ export default function DashboardPage() {
                                             dataKey="value"
                                         >
                                             {chartData.sentimentDistribution.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={SENTIMENT_COLORS[index % SENTIMENT_COLORS.length]} />
+                                                <Cell key={`cell-${index}`} fill={SENTIMENT_COLORS[entry.name] || '#94a3b8'} />
                                             ))}
                                         </Pie>
                                         <Tooltip />
