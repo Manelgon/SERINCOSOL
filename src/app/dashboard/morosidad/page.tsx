@@ -167,6 +167,21 @@ export default function MorosidadPage() {
         e.preventDefault();
         if (!formData.comunidad_id) return toast.error('Selecciona una comunidad');
 
+        // Regex Validation
+        const phoneRegex = /^\d{9}$/;
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        if (formData.telefono_deudor && !phoneRegex.test(formData.telefono_deudor)) {
+            return toast.error('El teléfono debe tener exactamente 9 dígitos');
+        }
+        if (formData.email_deudor && !emailRegex.test(formData.email_deudor)) {
+            return toast.error('El formato del email no es válido');
+        }
+
+        if (enviarNotificacion === true && !formData.telefono_deudor && !formData.email_deudor) {
+            return toast.error('Para enviar aviso debe proporcionar Teléfono o Email');
+        }
+
         let docUrl = formData.documento;
         if (file) {
             const url = await handleFileUpload(file);
@@ -974,7 +989,9 @@ export default function MorosidadPage() {
                                     !formData.titulo_documento ||
                                     !formData.importe ||
                                     enviarNotificacion === null ||
-                                    (enviarNotificacion === true && !formData.email_deudor && !formData.telefono_deudor)
+                                    !!(enviarNotificacion === true && !formData.email_deudor && !formData.telefono_deudor) ||
+                                    !!(formData.telefono_deudor && !/^\d{9}$/.test(formData.telefono_deudor)) ||
+                                    !!(formData.email_deudor && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email_deudor))
                                 }
                                 className="w-full sm:w-auto h-12 px-8 bg-yellow-400 hover:bg-yellow-500 text-neutral-950 rounded-xl font-bold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm hover:shadow-md active:scale-[0.98]"
                             >

@@ -126,6 +126,19 @@ export default function PerfilesPage() {
             return;
         }
 
+        // Regex Validation
+        const phoneRegex = /^\d{9}$/;
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        if (createFormData.telefono && !phoneRegex.test(createFormData.telefono)) {
+            toast.error('El teléfono debe tener exactamente 9 dígitos');
+            return;
+        }
+        if (!emailRegex.test(createFormData.email)) {
+            toast.error('El formato del email no es válido');
+            return;
+        }
+
         setProcessing(true);
 
         try {
@@ -174,6 +187,19 @@ export default function PerfilesPage() {
     const handleUpdateProfile = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedProfile) return;
+
+        // Regex Validation
+        const phoneRegex = /^\d{9}$/;
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        if (editFormData.telefono && !phoneRegex.test(editFormData.telefono)) {
+            toast.error('El teléfono debe tener exactamente 9 dígitos');
+            return;
+        }
+        if (editFormData.email && !emailRegex.test(editFormData.email)) {
+            toast.error('El formato del email no es válido');
+            return;
+        }
 
         setProcessing(true);
 

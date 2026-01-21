@@ -183,6 +183,22 @@ export default function IncidenciasPage() {
         e.preventDefault();
         if (!formData.comunidad_id) return toast.error('Selecciona una comunidad');
 
+        // Validation for notification
+        if (enviarAviso === true && !formData.telefono && !formData.email) {
+            return toast.error('Para enviar aviso debe proporcionar Teléfono o Email');
+        }
+
+        // Regex Validation
+        const phoneRegex = /^\d{9}$/;
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        if (formData.telefono && !phoneRegex.test(formData.telefono)) {
+            return toast.error('El teléfono debe tener exactamente 9 dígitos');
+        }
+        if (formData.email && !emailRegex.test(formData.email)) {
+            return toast.error('El formato del email no es válido');
+        }
+
         try {
             const adjuntos = await handleFileUploads();
 
@@ -962,7 +978,10 @@ export default function IncidenciasPage() {
                                     !formData.nombre_cliente ||
                                     !formData.comunidad_id ||
                                     !formData.mensaje ||
-                                    !formData.gestor_asignado
+                                    !formData.gestor_asignado ||
+                                    !!(enviarAviso === true && !formData.telefono && !formData.email) ||
+                                    !!(formData.telefono && !/^\d{9}$/.test(formData.telefono)) ||
+                                    !!(formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))
                                 }
                                 className="w-full sm:w-auto h-12 px-8 bg-yellow-400 hover:bg-yellow-500 text-neutral-950 rounded-xl font-bold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm hover:shadow-md active:scale-[0.98]"
                             >

@@ -119,6 +119,12 @@ export default function CertificadoForm({ onSuccess }: { onSuccess?: () => void 
     };
 
     const generate = async () => {
+        // Validation for internal email field
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (values.Mail && !emailRegex.test(values.Mail)) {
+            return toast.error("El formato del email en el registro no es válido");
+        }
+
         setStatus("generating");
         setPdfUrl("");
         setSubmissionId(null);
@@ -149,8 +155,9 @@ export default function CertificadoForm({ onSuccess }: { onSuccess?: () => void 
 
     const sendEmail = async () => {
         if (!submissionId) return;
-        if (!toEmail) {
-            toast.error("Introduce un email destino");
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!toEmail || !emailRegex.test(toEmail)) {
+            toast.error("Introduce un email de destino válido");
             return;
         }
 

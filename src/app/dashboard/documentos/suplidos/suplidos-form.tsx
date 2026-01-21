@@ -314,8 +314,9 @@ export default function SuplidosForm({ onSuccess }: { onSuccess?: () => void }) 
 
     const sendEmail = async () => {
         if (!submissionId) return;
-        if (!toEmail) {
-            toast.error("Introduce un email destino");
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!toEmail || !emailRegex.test(toEmail)) {
+            toast.error("Introduce un email de destino válido");
             return;
         }
 
