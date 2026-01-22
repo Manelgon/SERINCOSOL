@@ -135,7 +135,7 @@ export default function DashboardPage() {
             const resueltas = incidencias?.filter(i => i.resuelto).length || 0;
             const pendientes = totalIncidencias - resueltas;
 
-            const totalDeuda = morosidad?.reduce((acc, curr) => acc + (curr.importe || 0), 0) || 0;
+            const totalDeuda = morosidad?.filter(m => m.estado === 'Pendiente').reduce((acc, curr) => acc + (curr.importe || 0), 0) || 0;
             const deudaPagada = morosidad?.filter(m => m.estado === 'Pagado').reduce((acc, curr) => acc + (curr.importe || 0), 0) || 0;
 
             setStats({

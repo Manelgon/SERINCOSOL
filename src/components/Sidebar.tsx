@@ -102,8 +102,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 </div>
 
                 {/* User Info */}
-                <div className="px-4 py-3 border-b border-white/10 mb-2 flex justify-between items-center group">
-                    <div className="min-w-0 pr-2">
+                <div className="px-4 py-3 border-b border-white/10 mb-2 flex flex-row-reverse md:flex-row justify-between items-center group">
+                    <div className="min-w-0 pr-2 text-right md:text-left">
                         {userName && (
                             <div className="text-sm font-medium text-white truncate">
                                 {userName}
