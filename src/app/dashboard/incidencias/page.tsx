@@ -612,10 +612,10 @@ export default function IncidenciasPage() {
                                 href={url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-gray-500 hover:text-yellow-600 transition-colors p-1"
+                                className="p-1.5 rounded-full bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-colors"
                                 title={`Ver adjunto ${i + 1}`}
                             >
-                                <Paperclip className="w-4 h-4" />
+                                <FileText className="w-4 h-4" />
                             </a>
                         ))
                     ) : '-'}
@@ -814,11 +814,11 @@ export default function IncidenciasPage() {
             {/* Form Modal */}
             {showForm && (
                 <div
-                    className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-3 sm:p-4 md:p-8 backdrop-blur-sm overflow-y-auto"
+                    className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-0 sm:p-4 md:p-8 backdrop-blur-sm overflow-y-auto"
                     onClick={() => setShowForm(false)}
                 >
                     <div
-                        className="w-[calc(100vw-24px)] sm:w-full sm:max-w-2xl max-h-[85vh] bg-white rounded-xl shadow-xl flex flex-col animate-in fade-in zoom-in duration-200"
+                        className="w-full sm:w-full sm:max-w-2xl h-full sm:h-auto sm:max-h-[85vh] bg-white rounded-none sm:rounded-xl shadow-xl flex flex-col animate-in fade-in zoom-in duration-200"
                         onClick={e => e.stopPropagation()}
                     >
                         {/* Modal Header */}
@@ -1177,11 +1177,11 @@ export default function IncidenciasPage() {
             {/* Detail Modal */}
             {showDetailModal && selectedDetailIncidencia && (
                 <div
-                    className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-3 sm:p-4 md:p-8 backdrop-blur-sm"
+                    className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-0 sm:p-4 md:p-8 backdrop-blur-sm"
                     onClick={() => setShowDetailModal(false)}
                 >
                     <div
-                        className="bg-white rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-gray-900/10 w-full max-w-2xl max-h-[90vh] overflow-y-auto custom-scrollbar flex flex-col animate-in fade-in zoom-in duration-200"
+                        className="bg-white rounded-none sm:rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-gray-900/10 w-full sm:max-w-2xl h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto custom-scrollbar flex flex-col animate-in fade-in zoom-in duration-200"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Header */}
