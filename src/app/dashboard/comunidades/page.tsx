@@ -386,7 +386,7 @@ export default function ComunidadesPage() {
             {showForm && (
                 <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-3 sm:p-4 md:p-8 backdrop-blur-sm overflow-y-auto">
                     <div
-                        className="w-[calc(100vw-24px)] sm:w-full sm:max-w-2xl max-h-[calc(100vh-24px)] bg-white rounded-xl shadow-xl flex flex-col animate-in fade-in zoom-in duration-200"
+                        className="w-[calc(100vw-24px)] sm:w-full sm:max-w-2xl max-h-[85vh] bg-white rounded-xl shadow-xl flex flex-col animate-in fade-in zoom-in duration-200"
                         onClick={e => e.stopPropagation()}
                     >
                         {/* Modal Header */}

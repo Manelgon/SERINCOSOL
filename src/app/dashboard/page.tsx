@@ -41,17 +41,14 @@ export default function DashboardPage() {
 
     const [loading, setLoading] = useState(true);
     const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
-    const [period, setPeriod] = useState('30'); // Default to '30'
+    const [period, setPeriod] = useState('all');
     const [communities, setCommunities] = useState<{ id: string, nombre_cdad: string, codigo: string }[]>([]);
     const [selectedCommunity, setSelectedCommunity] = useState<string>('all');
     const [isInitialized, setIsInitialized] = useState(false);
 
     // Load period and community from localStorage on mount
     useEffect(() => {
-        const savedPeriod = localStorage.getItem('dashboard_period');
-        if (savedPeriod && ['30', '90', 'all'].includes(savedPeriod)) {
-            setPeriod(savedPeriod);
-        }
+
 
         const savedCommunity = localStorage.getItem('dashboard_community');
         if (savedCommunity) {
@@ -73,7 +70,6 @@ export default function DashboardPage() {
     // Save period to localStorage when it changes
     const changePeriod = (newPeriod: string) => {
         setPeriod(newPeriod);
-        localStorage.setItem('dashboard_period', newPeriod);
     };
 
     const changeCommunity = (commId: string) => {
