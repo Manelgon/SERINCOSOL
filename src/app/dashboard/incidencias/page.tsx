@@ -418,11 +418,8 @@ export default function IncidenciasPage() {
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 id: id,
-                                id_email_gestion: incidencia?.id_email_gestion || '',
-                                aviso: incidencia?.aviso || '',
-                                telefono: incidencia?.telefono || '',
-                                email: incidencia?.email || '',
-                                gestor_asignado: incidencia?.gestor?.nombre || 'Desconocido'
+                                // Backend now fetches fresh data, but we can pass resolver info if needed immediately
+                                // though backend fetching handles joined profiles too.
                             })
                         }).catch(e => console.error('Resolved Webhook Error:', e));
                     } catch (e) {

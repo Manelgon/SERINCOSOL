@@ -25,6 +25,7 @@ interface Morosidad {
     fecha_pago: string;
     gestor: string;
     aviso?: string | null;
+    id_email_deuda?: string;
     documento: string;
     created_at: string;
     comunidades?: { nombre_cdad: string; codigo?: string };
@@ -82,6 +83,7 @@ export default function MorosidadPage() {
         gestor: '',
         documento: '',
         aviso: null as string | null,
+        id_email_deuda: '',
     });
 
     const [file, setFile] = useState<File | null>(null);
@@ -197,6 +199,7 @@ export default function MorosidadPage() {
                     comunidad_id: parseInt(formData.comunidad_id),
                     importe: parseFloat(formData.importe),
                     documento: docUrl,
+                    id_email_deuda: formData.id_email_deuda || null,
                 }).eq('id', editingId);
 
                 if (error) throw error;
@@ -232,6 +235,7 @@ export default function MorosidadPage() {
                     gestor: '',
                     documento: '',
                     aviso: null,
+                    id_email_deuda: '',
                 });
                 setFile(null);
                 fetchMorosidad();
@@ -246,6 +250,7 @@ export default function MorosidadPage() {
                     comunidad_id: parseInt(formData.comunidad_id),
                     importe: parseFloat(formData.importe),
                     documento: docUrl,
+                    id_email_deuda: formData.id_email_deuda || null,
                 }]).select().single();
 
                 if (error) throw error;
@@ -307,6 +312,7 @@ export default function MorosidadPage() {
                     gestor: '',
                     documento: '',
                     aviso: null,
+                    id_email_deuda: '',
                 });
                 setEnviarNotificacion(null);
                 setFile(null);
@@ -388,11 +394,8 @@ export default function MorosidadPage() {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            ...morosoData,
-                            comunidad_nombre: moroso?.comunidades?.nombre_cdad,
-                            comunidad_codigo: moroso?.comunidades?.codigo,
-                            estado: 'Pagado',
-                            fecha_pago: new Date().toISOString(),
+                            id: id,
+                            // Backend fetches full details to ensure freshness and security
                         })
                     }).catch(e => console.error('Resolved Debt Webhook Error:', e));
                 } catch (e) {
@@ -550,6 +553,7 @@ export default function MorosidadPage() {
             gestor: moroso.gestor || '',
             documento: moroso.documento || '',
             aviso: moroso.aviso || null,
+            id_email_deuda: moroso.id_email_deuda || '',
         });
         setShowForm(true);
     };
@@ -759,6 +763,7 @@ export default function MorosidadPage() {
                                 gestor: '',
                                 documento: '',
                                 aviso: null,
+                                id_email_deuda: '',
                             });
                         }
                     }}
@@ -905,6 +910,17 @@ export default function MorosidadPage() {
                                         className={`w-full rounded-lg border px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400 ${enviarNotificacion && !formData.email_deudor && !formData.telefono_deudor ? 'border-red-300' : 'border-slate-200'}`}
                                         value={formData.email_deudor}
                                         onChange={e => setFormData({ ...formData, email_deudor: e.target.value })}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">ID Email Deuda</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Identificador email..."
+                                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400"
+                                        value={formData.id_email_deuda}
+                                        onChange={e => setFormData({ ...formData, id_email_deuda: e.target.value })}
                                     />
                                 </div>
 
