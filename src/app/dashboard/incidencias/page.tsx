@@ -112,6 +112,18 @@ export default function IncidenciasPage() {
         };
     }, []);
 
+    // Prevent body scroll when any modal is open
+    useEffect(() => {
+        if (showForm || showDeleteModal || showExportModal || showDetailModal) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, [showForm, showDeleteModal, showExportModal, showDetailModal]);
+
     const fetchInitialData = async () => {
         setLoading(true);
         await Promise.all([fetchComunidades(), fetchIncidencias(), fetchProfiles()]);

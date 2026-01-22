@@ -58,6 +58,18 @@ export default function ComunidadesPage() {
         fetchComunidades();
     }, []);
 
+    // Prevent body scroll when any modal is open
+    useEffect(() => {
+        if (showForm || showDetailModal || showDeleteModal) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, [showForm, showDetailModal, showDeleteModal]);
+
     const fetchComunidades = async () => {
         try {
             const { data, error } = await supabase

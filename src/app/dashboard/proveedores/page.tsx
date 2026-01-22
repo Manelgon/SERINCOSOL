@@ -59,6 +59,18 @@ export default function ProveedoresPage() {
         fetchProveedores();
     }, []);
 
+    // Prevent body scroll when any modal is open
+    useEffect(() => {
+        if (showForm || showDetailModal || showDeleteModal) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, [showForm, showDetailModal, showDeleteModal]);
+
     const fetchProveedores = async () => {
         try {
             const { data, error } = await supabase
