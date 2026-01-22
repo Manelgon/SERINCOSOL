@@ -925,16 +925,7 @@ export default function MorosidadPage() {
                                     />
                                 </div>
 
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-700 mb-2">ID Email Deuda</label>
-                                    <input
-                                        type="text"
-                                        placeholder="Identificador email..."
-                                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400"
-                                        value={formData.id_email_deuda}
-                                        onChange={e => setFormData({ ...formData, id_email_deuda: e.target.value })}
-                                    />
-                                </div>
+
 
                                 <div>
                                     <label className="block text-sm font-semibold text-slate-700 mb-2">Título del Documento <span className="text-red-600">*</span></label>
@@ -942,10 +933,7 @@ export default function MorosidadPage() {
                                         value={formData.titulo_documento}
                                         onChange={(val) => setFormData({ ...formData, titulo_documento: String(val) })}
                                         options={[
-                                            { value: 'Recibo Comunidad', label: 'Recibo Comunidad' },
-                                            { value: 'Factura', label: 'Factura' },
-                                            { value: 'Liquidación', label: 'Liquidación' },
-                                            { value: 'Otros', label: 'Otros' }
+                                            { value: 'Recibo Comunidad', label: 'Recibo comunidad' }
                                         ]}
                                         placeholder="Selecciona un tipo..."
                                     />
