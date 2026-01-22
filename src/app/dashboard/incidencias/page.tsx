@@ -814,7 +814,7 @@ export default function IncidenciasPage() {
             {/* Form Modal */}
             {showForm && (
                 <div
-                    className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 md:p-8 backdrop-blur-sm overflow-y-auto"
+                    className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-3 sm:p-4 md:p-8 backdrop-blur-sm overflow-y-auto"
                     onClick={() => setShowForm(false)}
                 >
                     <div
@@ -822,7 +822,7 @@ export default function IncidenciasPage() {
                         onClick={e => e.stopPropagation()}
                     >
                         {/* Modal Header */}
-                        <div className="px-6 sm:px-8 pt-6 sm:pt-7 pb-4 border-b border-slate-100 flex justify-between items-center">
+                        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 flex justify-between items-center">
                             <h2 className="text-lg font-semibold text-slate-900">
                                 Registrar Nueva Incidencia
                             </h2>
@@ -835,7 +835,7 @@ export default function IncidenciasPage() {
                         </div>
 
                         {/* Modal Body */}
-                        <div className="p-6 sm:p-8 overflow-y-auto custom-scrollbar">
+                        <div className="p-4 sm:p-6 overflow-y-auto custom-scrollbar">
                             <form id="incidencia-form" onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                                 {/* Row 1: Quien lo recibe */}
                                 <div className="sm:col-span-2">
@@ -997,7 +997,7 @@ export default function IncidenciasPage() {
                         </div>
 
                         {/* Modal Footer */}
-                        <div className="px-6 sm:px-8 pb-6 sm:pb-7 pt-4 border-t border-slate-100">
+                        <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-slate-100">
                             <button
                                 form="incidencia-form"
                                 type="submit"
@@ -1177,7 +1177,7 @@ export default function IncidenciasPage() {
             {/* Detail Modal */}
             {showDetailModal && selectedDetailIncidencia && (
                 <div
-                    className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 md:p-8 backdrop-blur-sm"
+                    className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-3 sm:p-4 md:p-8 backdrop-blur-sm"
                     onClick={() => setShowDetailModal(false)}
                 >
                     <div
@@ -1185,7 +1185,7 @@ export default function IncidenciasPage() {
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Header */}
-                        <div className="px-6 sm:px-8 pt-6 sm:pt-7 pb-4 border-b border-slate-100 flex justify-between items-center bg-white flex-shrink-0 rounded-t-xl">
+                        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 flex justify-between items-center bg-white flex-shrink-0 rounded-t-xl">
                             <div>
                                 <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
                                     Ticket #{selectedDetailIncidencia.id}
@@ -1242,7 +1242,7 @@ export default function IncidenciasPage() {
                         </div>
 
                         {/* Body */}
-                        <div className="p-6 sm:p-8 space-y-8 flex-grow">
+                        <div className="p-4 sm:p-6 space-y-8 flex-grow">
                             {/* Top Status Bar */}
                             <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
                                 <div className="space-y-1">
@@ -1396,7 +1396,7 @@ export default function IncidenciasPage() {
                         </div>
 
                         {/* Footer Actions */}
-                        <div className="p-6 sm:p-8 border-t border-slate-100 bg-slate-50/30 rounded-b-xl flex justify-between items-center flex-shrink-0">
+                        <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-slate-100 bg-slate-50/30 rounded-b-xl flex justify-between items-center flex-shrink-0">
                             <button
                                 onClick={() => {
                                     handleDeleteClick(selectedDetailIncidencia.id);

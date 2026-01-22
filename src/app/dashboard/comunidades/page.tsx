@@ -384,13 +384,13 @@ export default function ComunidadesPage() {
 
             {/* Form Modal */}
             {showForm && (
-                <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
+                <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-3 sm:p-4 md:p-8 backdrop-blur-sm overflow-y-auto">
                     <div
                         className="w-[calc(100vw-24px)] sm:w-full sm:max-w-2xl max-h-[calc(100vh-24px)] bg-white rounded-xl shadow-xl flex flex-col animate-in fade-in zoom-in duration-200"
                         onClick={e => e.stopPropagation()}
                     >
                         {/* Modal Header */}
-                        <div className="px-6 sm:px-8 pt-6 sm:pt-7 pb-4 border-b border-slate-100 flex justify-between items-center">
+                        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 flex justify-between items-center">
                             <h2 className="text-lg font-semibold text-slate-900">
                                 {editingId ? 'Editar Comunidad' : 'Registrar Nueva Comunidad'}
                             </h2>
@@ -403,7 +403,7 @@ export default function ComunidadesPage() {
                         </div>
 
                         {/* Modal Body */}
-                        <div className="p-6 sm:p-8 overflow-y-auto custom-scrollbar">
+                        <div className="p-4 sm:p-6 overflow-y-auto custom-scrollbar">
                             <form id="comunidad-form" onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                                 <div>
                                     <label className="block text-sm font-semibold text-slate-700 mb-2">Código <span className="text-red-600">*</span></label>
@@ -481,7 +481,7 @@ export default function ComunidadesPage() {
                         </div>
 
                         {/* Modal Footer */}
-                        <div className="px-6 sm:px-8 pb-6 sm:pb-7 pt-4 border-t border-slate-100">
+                        <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-slate-100">
                             <button
                                 form="comunidad-form"
                                 type="submit"
@@ -512,7 +512,7 @@ export default function ComunidadesPage() {
             {/* Detail Modal */}
             {showDetailModal && selectedDetailComunidad && (
                 <div
-                    className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 md:p-8 backdrop-blur-sm"
+                    className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-3 sm:p-4 md:p-8 backdrop-blur-sm"
                     onClick={() => setShowDetailModal(false)}
                 >
                     <div
@@ -520,7 +520,7 @@ export default function ComunidadesPage() {
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Header */}
-                        <div className="px-6 sm:px-8 pt-6 sm:pt-7 pb-4 border-b border-slate-100 flex justify-between items-center bg-white flex-shrink-0 rounded-t-xl">
+                        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 flex justify-between items-center bg-white flex-shrink-0 rounded-t-xl">
                             <div>
                                 <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
                                     Comunidad #{selectedDetailComunidad.id}
@@ -556,7 +556,7 @@ export default function ComunidadesPage() {
                         </div>
 
                         {/* Body */}
-                        <div className="p-6 sm:p-8 space-y-8 flex-grow">
+                        <div className="p-4 sm:p-6 space-y-8 flex-grow">
                             {/* Information Grid */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 {/* Left: Basic Info */}
@@ -616,7 +616,7 @@ export default function ComunidadesPage() {
                         </div>
 
                         {/* Footer Actions */}
-                        <div className="p-6 sm:p-8 border-t border-slate-100 bg-slate-50/30 rounded-b-xl flex justify-between items-center flex-shrink-0">
+                        <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-slate-100 bg-slate-50/30 rounded-b-xl flex justify-between items-center flex-shrink-0">
                             <button
                                 onClick={() => {
                                     handleDeleteClick(selectedDetailComunidad.id);

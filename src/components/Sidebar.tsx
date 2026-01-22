@@ -77,11 +77,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             {/* Sidebar */}
             <aside
                 className={`
-                    fixed md:static inset-y-0 left-0 z-50
-                    w-64 shrink-0 border-r border-white/10 bg-neutral-900 
+                    fixed md:static inset-y-0 right-0 md:left-0 z-50
+                    w-64 shrink-0 border-l md:border-l-0 md:border-r border-white/10 bg-neutral-900 
                     min-h-screen flex flex-col
                     transform transition-transform duration-300 ease-in-out
-                    ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+                    ${isOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
                 `}
             >
                 {/* Header with close button for mobile */}

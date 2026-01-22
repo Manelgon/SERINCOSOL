@@ -514,9 +514,9 @@ export default function PerfilesPage() {
 
             {/* Create User Modal */}
             {showCreateModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] backdrop-blur-sm p-4">
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] backdrop-blur-sm p-3 sm:p-4">
                     <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden">
-                        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                             <h3 className="text-lg font-bold text-neutral-900">
                                 Crear Nuevo Usuario
                             </h3>
@@ -528,7 +528,7 @@ export default function PerfilesPage() {
                             </button>
                         </div>
 
-                        <form onSubmit={handleCreateUser} className="p-6 space-y-4" autoComplete="off">
+                        <form onSubmit={handleCreateUser} className="p-4 sm:p-6 space-y-4" autoComplete="off">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
@@ -658,9 +658,9 @@ export default function PerfilesPage() {
 
             {/* Edit User Modal */}
             {showEditModal && selectedProfile && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] backdrop-blur-sm p-4">
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] backdrop-blur-sm p-3 sm:p-4">
                     <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden">
-                        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                             <h3 className="text-lg font-bold text-neutral-900">
                                 Editar Usuario
                             </h3>
@@ -672,7 +672,7 @@ export default function PerfilesPage() {
                             </button>
                         </div>
 
-                        <form onSubmit={handleUpdateProfile} className="p-6 space-y-4" autoComplete="off">
+                        <form onSubmit={handleUpdateProfile} className="p-4 sm:p-6 space-y-4" autoComplete="off">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
@@ -750,9 +750,9 @@ export default function PerfilesPage() {
 
             {/* Password Reset Modal */}
             {showPasswordModal && selectedProfile && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] backdrop-blur-sm p-4">
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] backdrop-blur-sm p-3 sm:p-4">
                     <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full overflow-hidden">
-                        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                             <div>
                                 <h3 className="text-lg font-bold text-neutral-900">
                                     Restablecer Contraseña
@@ -767,7 +767,7 @@ export default function PerfilesPage() {
                             </button>
                         </div>
 
-                        <form onSubmit={handleSavePassword} className="p-6 space-y-4" autoComplete="off">
+                        <form onSubmit={handleSavePassword} className="p-4 sm:p-6 space-y-4" autoComplete="off">
                             <div className="grid grid-cols-1 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Nueva Contraseña</label>
