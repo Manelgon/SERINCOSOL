@@ -1,12 +1,24 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { FileText, History, ArrowLeft, Plus, X } from 'lucide-react';
 import SuplidosForm from './suplidos-form';
 
 export default function SuplidosPage() {
     const [showForm, setShowForm] = useState(false);
+
+    // Prevent body scroll when modal is open
+    useEffect(() => {
+        if (showForm) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, [showForm]);
 
     return (
         <div className="space-y-6">
@@ -67,15 +79,18 @@ export default function SuplidosPage() {
 
             {/* Form Modal */}
             {showForm && (
-                <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
+                <div
+                    className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-0 sm:p-4 md:p-8 backdrop-blur-sm overflow-y-auto"
+                    onClick={() => setShowForm(false)}
+                >
                     <div
-                        className="w-[calc(100vw-24px)] sm:w-full sm:max-w-4xl max-h-[calc(100vh-24px)] bg-white rounded-xl shadow-xl flex flex-col animate-in fade-in zoom-in duration-200"
+                        className="w-full sm:w-full sm:max-w-4xl h-full sm:h-auto sm:max-h-[85vh] bg-white rounded-none sm:rounded-xl shadow-xl flex flex-col animate-in fade-in zoom-in duration-200"
                         onClick={e => e.stopPropagation()}
                     >
                         {/* Modal Header */}
-                        <div className="px-6 sm:px-8 pt-6 sm:pt-7 pb-4 border-b border-slate-100 flex justify-between items-center">
+                        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 flex justify-between items-center bg-white flex-shrink-0 rounded-t-xl">
                             <h2 className="text-lg font-semibold text-slate-900">
-                                Nuevo Documento de Suplidos
+                                Registrar Nuevo Suplido
                             </h2>
                             <button
                                 onClick={() => setShowForm(false)}
@@ -86,7 +101,7 @@ export default function SuplidosPage() {
                         </div>
 
                         {/* Modal Body */}
-                        <div className="p-6 sm:p-8 overflow-y-auto custom-scrollbar">
+                        <div className="flex-grow overflow-hidden">
                             <SuplidosForm onSuccess={() => setShowForm(false)} />
                         </div>
                     </div>

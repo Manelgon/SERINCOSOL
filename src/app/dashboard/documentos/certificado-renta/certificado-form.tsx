@@ -183,61 +183,65 @@ export default function CertificadoForm({ onSuccess }: { onSuccess?: () => void 
     // SUCCESS VIEW
     if (status === "ready" || status === "sending") {
         return (
-            <div className="bg-white p-12 rounded-xl border border-neutral-200 shadow-sm text-center space-y-8 max-w-3xl mx-auto">
-                <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto">
-                    <Download className="w-8 h-8" />
-                </div>
+            <div className="flex flex-col h-full overflow-hidden">
+                <div className="flex-grow overflow-y-auto custom-scrollbar">
+                    <div className="flex flex-col items-center justify-center p-6 sm:p-12 text-center space-y-8 max-w-3xl mx-auto">
+                        <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shrink-0 animate-in zoom-in duration-300">
+                            <Download className="w-8 h-8" />
+                        </div>
 
-                <div className="space-y-2">
-                    <h2 className="text-2xl font-bold text-neutral-900">¡Certificado Generado!</h2>
-                    <p className="text-neutral-600">
-                        El documento se ha creado correctamente. <br />
-                        Puedes descargarlo o enviarlo por email ahora.
-                    </p>
-                </div>
+                        <div className="space-y-2">
+                            <h2 className="text-2xl font-bold text-slate-900">¡Certificado Generado!</h2>
+                            <p className="text-slate-600">
+                                El documento se ha creado correctamente. <br />
+                                Puedes descargarlo o enviarlo por email ahora.
+                            </p>
+                        </div>
 
-                <div className="flex flex-col gap-3 max-w-md mx-auto w-full">
-                    <button
-                        onClick={download}
-                        className="w-full bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold shadow-sm transition flex items-center justify-center gap-2"
-                    >
-                        <Download className="w-5 h-5" />
-                        Descargar PDF
-                    </button>
+                        <div className="flex flex-col gap-3 max-w-md mx-auto w-full">
+                            <button
+                                onClick={download}
+                                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-12 rounded-xl font-bold shadow-sm transition flex items-center justify-center gap-2 active:scale-[0.98]"
+                            >
+                                <Download className="w-5 h-5" />
+                                Descargar PDF
+                            </button>
 
-                    <button
-                        onClick={() => { setStatus("idle"); setSubmissionId(null); setPdfUrl(""); }}
-                        className="w-full bg-white border-2 border-neutral-200 hover:border-neutral-300 text-neutral-600 hover:text-neutral-900 px-6 py-3 rounded-lg font-semibold transition"
-                    >
-                        Volver al formulario
-                    </button>
-                    <a
-                        href="/dashboard/documentos"
-                        className="w-full text-neutral-500 hover:text-neutral-900 text-sm font-medium transition underline"
-                    >
-                        Ir al listado
-                    </a>
-                </div>
+                            <button
+                                onClick={() => { setStatus("idle"); setSubmissionId(null); setPdfUrl(""); }}
+                                className="w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 h-12 rounded-xl font-bold transition flex items-center justify-center gap-2 active:scale-[0.98]"
+                            >
+                                Volver al formulario
+                            </button>
+                            <a
+                                href="/dashboard/documentos"
+                                className="w-full text-slate-400 hover:text-slate-600 text-sm font-medium transition underline"
+                            >
+                                Ir al listado
+                            </a>
+                        </div>
 
-                {/* Email Section */}
-                <div className="max-w-md mx-auto pt-6 border-t border-neutral-100 w-full">
-                    <p className="text-sm font-medium text-neutral-700 mb-3 text-left">Enviar por email</p>
-                    <div className="flex gap-2">
-                        <input
-                            type="email"
-                            placeholder="cliente@ejemplo.com"
-                            value={toEmail}
-                            onChange={(e) => setToEmail(e.target.value)}
-                            className="flex-1 px-3 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                        />
-                        <button
-                            onClick={sendEmail}
-                            disabled={status === "sending"}
-                            className="bg-neutral-900 hover:bg-neutral-800 text-white px-4 py-2 rounded-lg text-sm font-semibold transition disabled:opacity-50 flex items-center gap-2"
-                        >
-                            {status === "sending" ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                            Enviar
-                        </button>
+                        {/* Email Section */}
+                        <div className="max-w-md mx-auto pt-8 border-t border-slate-100 w-full">
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 text-left">Enviar por email</p>
+                            <div className="flex gap-2">
+                                <input
+                                    type="email"
+                                    placeholder="cliente@ejemplo.com"
+                                    value={toEmail}
+                                    onChange={(e) => setToEmail(e.target.value)}
+                                    className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 transition-all"
+                                />
+                                <button
+                                    onClick={sendEmail}
+                                    disabled={status === "sending"}
+                                    className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-2 rounded-xl text-sm font-bold transition disabled:opacity-50 flex items-center gap-2 shadow-sm"
+                                >
+                                    {status === "sending" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                                    Enviar
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -245,60 +249,79 @@ export default function CertificadoForm({ onSuccess }: { onSuccess?: () => void 
     }
 
     return (
-        <div className="space-y-8">
-            <div className="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm space-y-6">
-                <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-100 pb-3">Datos del Declarante</h3>
+        <div className="flex flex-col h-full overflow-hidden">
+            {/* Body */}
+            <div className="flex-grow overflow-y-auto p-4 sm:p-6 custom-scrollbar">
+                <div className="space-y-8 max-w-4xl mx-auto">
+                    <div className="space-y-4">
+                        <h3 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
+                            <span className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-base">👤</span>
+                            Datos del Declarante
+                        </h3>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-2">Comunidad</label>
-                        <SearchableSelect
-                            value={selectedCode}
-                            onChange={(val) => handleCommunityChange(String(val))}
-                            options={communities.map(c => ({
-                                value: c.codigo,
-                                label: `${c.codigo} - ${c.nombre_cdad}`
-                            }))}
-                            placeholder="Selecciona comunidad..."
-                        />
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-2">Comunidad</label>
+                                <SearchableSelect
+                                    value={selectedCode}
+                                    onChange={(val) => handleCommunityChange(String(val))}
+                                    options={communities.map(c => ({
+                                        value: c.codigo,
+                                        label: `${c.codigo} - ${c.nombre_cdad}`
+                                    }))}
+                                    placeholder="Selecciona comunidad..."
+                                />
+                            </div>
+
+                            <Field label="Apellidos" value={values.Apellidos} onChange={(v) => handleChange("Apellidos", v)} />
+                            <Field label="Nombre" value={values.Nombre} onChange={(v) => handleChange("Nombre", v)} />
+                            <Field label="NIF" value={values.Nif} onChange={(v) => handleChange("Nif", v)} />
+
+                            <Field label="Dirección" value={values["Dirección 2"]} onChange={(v) => handleChange("Dirección 2", v)} />
+                            <Field label="Piso/Puerta" value={values.Piso} onChange={(v) => handleChange("Piso", v)} />
+                            <Field label="Código Postal" value={values.CP} onChange={(v) => handleChange("CP", v)} />
+
+                            <Field label="Población" value={values.Poblacion} onChange={(v) => handleChange("Poblacion", v)} />
+                            <Field label="Provincia" value={values.Provincia} onChange={(v) => handleChange("Provincia", v)} />
+                            <Field label="Mail" value={values.Mail} onChange={(v) => handleChange("Mail", v)} type="email" />
+                        </div>
                     </div>
 
-                    <Field label="Apellidos" value={values.Apellidos} onChange={(v) => handleChange("Apellidos", v)} />
-                    <Field label="Nombre" value={values.Nombre} onChange={(v) => handleChange("Nombre", v)} />
-                    <Field label="NIF" value={values.Nif} onChange={(v) => handleChange("Nif", v)} />
+                    <div className="space-y-4">
+                        <h3 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
+                            <span className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-base">💰</span>
+                            Datos Económicos
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6">
+                            <Field label="DIAS" value={values.DIAS} onChange={(v) => handleChange("DIAS", v)} type="number" />
+                            <Field label="%" value={values["%"]} onChange={(v) => handleChange("%", v)} type="number" />
+                            <Field label="Participación" value={values.Participación} onChange={(v) => handleChange("Participación", v)} />
+                            <Field label="Ganancia" value={values.Ganancia} onChange={(v) => handleChange("Ganancia", v)} type="number" />
+                            <Field label="Retenciones" value={values.Retenciones} onChange={(v) => handleChange("Retenciones", v)} type="number" />
+                        </div>
+                    </div>
 
-                    <Field label="Dirección" value={values["Dirección 2"]} onChange={(v) => handleChange("Dirección 2", v)} />
-                    <Field label="Piso/Puerta" value={values.Piso} onChange={(v) => handleChange("Piso", v)} />
-                    <Field label="Código Postal" value={values.CP} onChange={(v) => handleChange("CP", v)} />
-
-                    <Field label="Población" value={values.Poblacion} onChange={(v) => handleChange("Poblacion", v)} />
-                    <Field label="Provincia" value={values.Provincia} onChange={(v) => handleChange("Provincia", v)} />
-                    <Field label="Mail" value={values.Mail} onChange={(v) => handleChange("Mail", v)} type="email" />
-                </div>
-
-                <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-100 pb-3 pt-6">Datos Económicos</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6">
-                    <Field label="DIAS" value={values.DIAS} onChange={(v) => handleChange("DIAS", v)} type="number" />
-                    <Field label="%" value={values["%"]} onChange={(v) => handleChange("%", v)} type="number" />
-                    <Field label="Participación" value={values.Participación} onChange={(v) => handleChange("Participación", v)} />
-                    <Field label="Ganancia" value={values.Ganancia} onChange={(v) => handleChange("Ganancia", v)} type="number" />
-                    <Field label="Retenciones" value={values.Retenciones} onChange={(v) => handleChange("Retenciones", v)} type="number" />
-                </div>
-
-                <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-100 pb-3 pt-6">Claves Fiscales</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                    <Field label="Clave 1" value={values["Clave 1"]} onChange={(v) => handleChange("Clave 1", v)} />
-                    <Field label="Subclave" value={values.Subclave} onChange={(v) => handleChange("Subclave", v)} />
-                    <Field label="Clave 2" value={values["Clave 2"]} onChange={(v) => handleChange("Clave 2", v)} />
-                    <Field label="Naturaleza" value={values.Naturaleza} onChange={(v) => handleChange("Naturaleza", v)} />
-                    <Field label="Situación" value={values.Situación} onChange={(v) => handleChange("Situación", v)} />
-                    <Field label="Declarado" value={values.Declarado} onChange={(v) => handleChange("Declarado", v)} />
+                    <div className="space-y-4">
+                        <h3 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
+                            <span className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-base">📑</span>
+                            Claves Fiscales
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                            <Field label="Clave 1" value={values["Clave 1"]} onChange={(v) => handleChange("Clave 1", v)} />
+                            <Field label="Subclave" value={values.Subclave} onChange={(v) => handleChange("Subclave", v)} />
+                            <Field label="Clave 2" value={values["Clave 2"]} onChange={(v) => handleChange("Clave 2", v)} />
+                            <Field label="Naturaleza" value={values.Naturaleza} onChange={(v) => handleChange("Naturaleza", v)} />
+                            <Field label="Situación" value={values.Situación} onChange={(v) => handleChange("Situación", v)} />
+                            <Field label="Declarado" value={values.Declarado} onChange={(v) => handleChange("Declarado", v)} />
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            {/* Modal Footer (Actions) */}
-            <div className="mt-8 pt-6 border-t border-slate-100 flex justify-end">
+            {/* Fixed Footer */}
+            <div className="p-4 sm:px-6 py-3 sm:py-4 border-t border-slate-100 bg-white shrink-0 flex justify-end">
                 <button
+                    type="button"
                     onClick={generate}
                     disabled={status === "generating"}
                     className="w-full sm:w-auto h-12 px-8 bg-yellow-400 hover:bg-yellow-500 text-neutral-950 rounded-xl font-bold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm hover:shadow-md active:scale-[0.98]"
@@ -306,12 +329,12 @@ export default function CertificadoForm({ onSuccess }: { onSuccess?: () => void 
                     {status === "generating" ? (
                         <>
                             <Loader2 className="w-5 h-5 animate-spin" />
-                            Generando PDF...
+                            Generando...
                         </>
                     ) : (
                         <>
-                            <FileText className="w-5 h-5" />
-                            Generar PDF
+                            <Plus className="w-5 h-5" />
+                            Generar Certificado
                         </>
                     )}
                 </button>
@@ -320,7 +343,27 @@ export default function CertificadoForm({ onSuccess }: { onSuccess?: () => void 
     );
 }
 
-function Field({ label, value, onChange, type = "text" }: { label: string; value: string; onChange: (v: string) => void; type?: string }) {
+function Send({ className }: { className?: string }) {
+    return (
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={className}
+        >
+            <path d="m22 2-7 20-4-9-9-4Z" />
+            <path d="M22 2 11 13" />
+        </svg>
+    )
+}
+
+function Field({ label, value, onChange, type = "text", className = "" }: { label: string; value: any; onChange: (v: string) => void; type?: string; className?: string }) {
     return (
         <div className="flex flex-col">
             <label className="block text-sm font-semibold text-slate-700 mb-2">{label}</label>
@@ -328,7 +371,7 @@ function Field({ label, value, onChange, type = "text" }: { label: string; value
                 type={type}
                 value={value ?? ""}
                 onChange={(e) => onChange(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400"
+                className={`w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400 transition-all ${className}`}
             />
         </div>
     );

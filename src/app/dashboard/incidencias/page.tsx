@@ -836,7 +836,7 @@ export default function IncidenciasPage() {
                         {/* Modal Header */}
                         <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 flex justify-between items-center">
                             <h2 className="text-lg font-semibold text-slate-900">
-                                Registrar Nueva Incidencia
+                                Registrar Nuevo Ticket
                             </h2>
                             <button
                                 onClick={() => setShowForm(false)}

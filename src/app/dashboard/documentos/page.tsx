@@ -34,6 +34,18 @@ export default function DocumentosPage() {
         checkRole();
     }, []);
 
+    // Prevent body scroll when modal is open
+    useEffect(() => {
+        if (activeModal) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, [activeModal]);
+
     const documentTypes = [
         {
             key: "suplidos",
@@ -135,19 +147,19 @@ export default function DocumentosPage() {
             {/* Modal Overlay */}
             {activeModal && (
                 <div
-                    className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto"
+                    className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-0 sm:p-4 md:p-8 backdrop-blur-sm overflow-y-auto"
                     onClick={() => setActiveModal(null)}
                 >
                     <div
-                        className="w-[calc(100vw-24px)] sm:w-full sm:max-w-4xl max-h-[calc(100vh-24px)] bg-white rounded-xl shadow-xl flex flex-col animate-in fade-in zoom-in duration-200"
+                        className="w-full sm:w-full sm:max-w-4xl h-full sm:h-auto sm:max-h-[85vh] bg-white rounded-none sm:rounded-xl shadow-xl flex flex-col animate-in fade-in zoom-in duration-200"
                         onClick={e => e.stopPropagation()}
                     >
                         {/* Modal Header */}
-                        <div className="px-6 sm:px-8 pt-6 sm:pt-7 pb-4 border-b border-slate-100 flex justify-between items-center">
+                        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 flex justify-between items-center bg-white flex-shrink-0 rounded-t-xl">
                             <h2 className="text-lg font-semibold text-slate-900">
-                                {activeModal === "suplidos" && "Nuevo Documento de Suplidos"}
-                                {activeModal === "varios" && "Nuevas Facturas Varios"}
-                                {activeModal === "certificado_renta" && "Nuevo Certificado Renta"}
+                                {activeModal === "suplidos" && "Registrar Nuevo Suplido"}
+                                {activeModal === "varios" && "Registrar Facturas Varios"}
+                                {activeModal === "certificado_renta" && "Registrar Certificado Renta"}
                             </h2>
                             <button
                                 onClick={() => setActiveModal(null)}
@@ -158,7 +170,7 @@ export default function DocumentosPage() {
                         </div>
 
                         {/* Modal Body */}
-                        <div className="p-6 sm:p-8 overflow-y-auto custom-scrollbar">
+                        <div className="flex-grow flex flex-col min-h-0">
                             {activeModal === "suplidos" && <SuplidosForm onSuccess={() => setActiveModal(null)} />}
                             {activeModal === "varios" && <VariosForm onSuccess={() => setActiveModal(null)} />}
                             {activeModal === "certificado_renta" && <CertificadoForm onSuccess={() => setActiveModal(null)} />}
