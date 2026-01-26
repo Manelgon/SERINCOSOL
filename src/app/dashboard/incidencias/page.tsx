@@ -46,6 +46,7 @@ export default function IncidenciasPage() {
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
     const [filterEstado, setFilterEstado] = useState('pendiente');
+    const [filterGestor, setFilterGestor] = useState('all');
 
     // Selection & Export
     const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set());
@@ -555,9 +556,12 @@ export default function IncidenciasPage() {
     };
 
     const filteredIncidencias = incidencias.filter(inc => {
-        if (filterEstado === 'pendiente') return !inc.resuelto;
-        if (filterEstado === 'resuelto') return inc.resuelto;
-        return true;
+        const matchesEstado = filterEstado === 'pendiente' ? !inc.resuelto :
+            filterEstado === 'resuelto' ? inc.resuelto : true;
+
+        const matchesGestor = filterGestor === 'all' ? true : inc.gestor_asignado === filterGestor;
+
+        return matchesEstado && matchesGestor;
     });
 
     const columns: Column<Incidencia>[] = [
@@ -1184,6 +1188,18 @@ export default function IncidenciasPage() {
                 selectedKeys={selectedIds}
                 onSelectionChange={(keys) => setSelectedIds(keys)}
                 onRowClick={handleRowClick}
+                extraFilters={
+                    <SearchableSelect
+                        value={filterGestor === 'all' ? '' : filterGestor}
+                        onChange={(val) => setFilterGestor(val === '' ? 'all' : String(val))}
+                        options={profiles.map(p => ({
+                            value: p.user_id,
+                            label: p.nombre
+                        }))}
+                        placeholder="Todos los Gestores"
+                        className="min-w-[200px]"
+                    />
+                }
             />
 
             {/* Detail Modal */}

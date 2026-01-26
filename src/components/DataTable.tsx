@@ -29,6 +29,8 @@ interface DataTableProps<T> {
     onSelectionChange?: (keys: Set<string | number>) => void;
     // Row Interaction
     onRowClick?: (row: T) => void;
+    // Extra controls
+    extraFilters?: React.ReactNode;
 }
 
 export default function DataTable<T extends Record<string, any>>({
@@ -42,6 +44,7 @@ export default function DataTable<T extends Record<string, any>>({
     selectedKeys = new Set(),
     onSelectionChange,
     onRowClick,
+    extraFilters,
 }: DataTableProps<T>) {
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
@@ -217,26 +220,35 @@ export default function DataTable<T extends Record<string, any>>({
         <div className="space-y-4">
             {/* Controls */}
             <div className="flex items-center justify-between gap-4 flex-wrap">
-                {/* Search */}
-                <div className="relative flex-1 max-w-md">
-                    <input
-                        type="text"
-                        placeholder="Buscar en la tabla..."
-                        value={searchTerm}
-                        onChange={(e) => {
-                            setSearchTerm(e.target.value);
-                            setCurrentPage(1); // Reset to first page on search
-                        }}
-                        className="w-full px-4 py-2 pl-10 border border-neutral-300 rounded-md bg-white text-neutral-900 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 outline-none"
-                    />
-                    <svg
-                        className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                    >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
+                <div className="flex flex-1 items-center gap-2 max-w-2xl">
+                    {/* Search */}
+                    <div className="relative flex-1 max-w-md">
+                        <input
+                            type="text"
+                            placeholder="Buscar en la tabla..."
+                            value={searchTerm}
+                            onChange={(e) => {
+                                setSearchTerm(e.target.value);
+                                setCurrentPage(1); // Reset to first page on search
+                            }}
+                            className="w-full px-4 py-2 pl-10 border border-neutral-300 rounded-md bg-white text-neutral-900 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 outline-none"
+                        />
+                        <svg
+                            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+
+                    {/* Extra Filters */}
+                    {extraFilters && (
+                        <div className="flex items-center gap-2">
+                            {extraFilters}
+                        </div>
+                    )}
                 </div>
 
                 {/* Column selector */}
