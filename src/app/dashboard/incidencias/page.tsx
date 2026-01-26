@@ -1200,7 +1200,7 @@ export default function IncidenciasPage() {
                                 label: `${c.codigo || ''} - ${c.nombre_cdad}`
                             }))}
                             placeholder="Todas las Comunidades"
-                            className="min-w-[200px]"
+                            className="w-[240px]"
                         />
                         <SearchableSelect
                             value={filterGestor === 'all' ? '' : filterGestor}
@@ -1210,7 +1210,7 @@ export default function IncidenciasPage() {
                                 label: p.nombre
                             }))}
                             placeholder="Todos los Gestores"
-                            className="min-w-[180px]"
+                            className="w-[200px]"
                         />
                     </div>
                 }

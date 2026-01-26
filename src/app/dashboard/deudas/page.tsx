@@ -49,6 +49,8 @@ export default function MorosidadPage() {
     const [isDeleting, setIsDeleting] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
     const [filterEstado, setFilterEstado] = useState('pendiente');
+    const [filterGestor, setFilterGestor] = useState('all');
+    const [filterComunidad, setFilterComunidad] = useState('all');
 
     // Detail Modal State
     const [selectedDetailMorosidad, setSelectedDetailMorosidad] = useState<Morosidad | null>(null);
@@ -777,6 +779,16 @@ export default function MorosidadPage() {
         },
     ];
 
+    const filteredMorosidad = morosos.filter(m => {
+        const matchesEstado = filterEstado === 'pendiente' ? m.estado !== 'Pagado' :
+            filterEstado === 'resuelto' ? m.estado === 'Pagado' : true;
+
+        const matchesGestor = filterGestor === 'all' ? true : m.gestor === filterGestor;
+        const matchesComunidad = filterComunidad === 'all' ? true : m.comunidad_id === Number(filterComunidad);
+
+        return matchesEstado && matchesGestor && matchesComunidad;
+    });
+
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center gap-4">
@@ -1110,12 +1122,6 @@ export default function MorosidadPage() {
 
 
             {(() => {
-                const filteredMorosidad = morosos.filter(m => {
-                    if (filterEstado === 'pendiente') return m.estado !== 'Pagado';
-                    if (filterEstado === 'resuelto') return m.estado === 'Pagado';
-                    return true;
-                });
-
                 return (
                     <>
                         {/* Export Notes Modal */}
@@ -1190,6 +1196,30 @@ export default function MorosidadPage() {
                             selectable={true}
                             selectedKeys={selectedIds}
                             onSelectionChange={(keys) => setSelectedIds(keys)}
+                            extraFilters={
+                                <div className="flex items-center gap-2">
+                                    <SearchableSelect
+                                        value={filterComunidad === 'all' ? '' : Number(filterComunidad)}
+                                        onChange={(val) => setFilterComunidad(val === '' ? 'all' : String(val))}
+                                        options={comunidades.map(c => ({
+                                            value: c.id,
+                                            label: `${c.codigo || ''} - ${c.nombre_cdad}`
+                                        }))}
+                                        placeholder="Todas las Comunidades"
+                                        className="w-[240px]"
+                                    />
+                                    <SearchableSelect
+                                        value={filterGestor === 'all' ? '' : filterGestor}
+                                        onChange={(val) => setFilterGestor(val === '' ? 'all' : String(val))}
+                                        options={profiles.map(p => ({
+                                            value: p.user_id,
+                                            label: p.nombre
+                                        }))}
+                                        placeholder="Todos los Gestores"
+                                        className="w-[200px]"
+                                    />
+                                </div>
+                            }
                         />
                     </>
                 );
