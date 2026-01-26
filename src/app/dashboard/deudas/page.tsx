@@ -21,6 +21,7 @@ interface Morosidad {
     fecha_notificacion: string;
     importe: number;
     observaciones: string;
+    ref?: string;
     estado: 'Pendiente' | 'Pagado' | 'En disputa';
     fecha_pago: string;
     gestor: string;
@@ -84,6 +85,7 @@ export default function MorosidadPage() {
         documento: '',
         aviso: null as string | null,
         id_email_deuda: '',
+        ref: '',
     });
 
     const [file, setFile] = useState<File | null>(null);
@@ -263,6 +265,7 @@ export default function MorosidadPage() {
                     importe: parseFloat(formData.importe),
                     documento: docUrl,
                     id_email_deuda: formData.id_email_deuda || null,
+                    ref: formData.ref || null,
                 }]).select().single();
 
                 if (error) throw error;
@@ -566,6 +569,7 @@ export default function MorosidadPage() {
             documento: moroso.documento || '',
             aviso: moroso.aviso || null,
             id_email_deuda: moroso.id_email_deuda || '',
+            ref: moroso.ref || '',
         });
         setShowForm(true);
     };
@@ -574,6 +578,11 @@ export default function MorosidadPage() {
         {
             key: 'id',
             label: 'ID',
+        },
+        {
+            key: 'ref',
+            label: 'Ref',
+            render: (row) => <span className="font-medium text-slate-600">{row.ref || '-'}</span>,
         },
         {
             key: 'codigo',
@@ -776,6 +785,7 @@ export default function MorosidadPage() {
                                 documento: '',
                                 aviso: null,
                                 id_email_deuda: '',
+                                ref: '',
                             });
                         }
                     }}
@@ -946,6 +956,17 @@ export default function MorosidadPage() {
                                         className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400"
                                         value={formData.fecha_notificacion}
                                         onChange={e => setFormData({ ...formData, fecha_notificacion: e.target.value })}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2 font-bold text-indigo-600">Referencia (Ref)</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Ej: REF-123456"
+                                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400"
+                                        value={formData.ref}
+                                        onChange={e => setFormData({ ...formData, ref: e.target.value })}
                                     />
                                 </div>
 
@@ -1309,6 +1330,11 @@ export default function MorosidadPage() {
                                 <div className="space-y-1">
                                     <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Comunidad</span>
                                     <span className="text-sm font-semibold text-slate-700">{selectedDetailMorosidad.comunidades?.nombre_cdad || '-'}</span>
+                                </div>
+
+                                <div className="space-y-1">
+                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Referencia (Ref)</span>
+                                    <span className="text-sm font-bold text-indigo-600">{selectedDetailMorosidad.ref || '-'}</span>
                                 </div>
                             </div>
 
