@@ -250,6 +250,7 @@ export default function MorosidadPage() {
                     documento: '',
                     aviso: null,
                     id_email_deuda: '',
+                    ref: '',
                 });
                 setFile(null);
                 fetchMorosidad();
@@ -341,6 +342,7 @@ export default function MorosidadPage() {
                     documento: '',
                     aviso: null,
                     id_email_deuda: '',
+                    ref: '',
                 });
                 setEnviarNotificacion(null);
                 setFile(null);
