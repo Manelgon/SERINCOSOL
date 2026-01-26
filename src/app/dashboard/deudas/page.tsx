@@ -256,16 +256,29 @@ export default function MorosidadPage() {
             } catch (error: any) {
                 toast.error('Error al actualizar: ' + error.message);
             }
-        } else {
             // Create new
             try {
+                // Generate automatic Ref if empty
+                let autoRef = formData.ref;
+                if (!autoRef) {
+                    const now = new Date();
+                    const timestamp = now.getFullYear().toString() +
+                        (now.getMonth() + 1).toString().padStart(2, '0') +
+                        now.getDate().toString().padStart(2, '0') + '-' +
+                        now.getHours().toString().padStart(2, '0') +
+                        now.getMinutes().toString().padStart(2, '0') +
+                        now.getSeconds().toString().padStart(2, '0');
+                    const initials = (formData.nombre_deudor || '').substring(0, 3).toUpperCase();
+                    autoRef = `DEV-${timestamp}-${initials}`;
+                }
+
                 const { data: newDebt, error } = await supabase.from('morosidad').insert([{
                     ...formData,
                     comunidad_id: parseInt(formData.comunidad_id),
                     importe: parseFloat(formData.importe),
                     documento: docUrl,
                     id_email_deuda: formData.id_email_deuda || null,
-                    ref: formData.ref || null,
+                    ref: autoRef || null,
                 }]).select().single();
 
                 if (error) throw error;
