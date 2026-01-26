@@ -47,6 +47,7 @@ export default function IncidenciasPage() {
     const [showForm, setShowForm] = useState(false);
     const [filterEstado, setFilterEstado] = useState('pendiente');
     const [filterGestor, setFilterGestor] = useState('all');
+    const [filterComunidad, setFilterComunidad] = useState('all');
 
     // Selection & Export
     const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set());
@@ -560,8 +561,9 @@ export default function IncidenciasPage() {
             filterEstado === 'resuelto' ? inc.resuelto : true;
 
         const matchesGestor = filterGestor === 'all' ? true : inc.gestor_asignado === filterGestor;
+        const matchesComunidad = filterComunidad === 'all' ? true : inc.comunidad_id === Number(filterComunidad);
 
-        return matchesEstado && matchesGestor;
+        return matchesEstado && matchesGestor && matchesComunidad;
     });
 
     const columns: Column<Incidencia>[] = [
@@ -1189,16 +1191,28 @@ export default function IncidenciasPage() {
                 onSelectionChange={(keys) => setSelectedIds(keys)}
                 onRowClick={handleRowClick}
                 extraFilters={
-                    <SearchableSelect
-                        value={filterGestor === 'all' ? '' : filterGestor}
-                        onChange={(val) => setFilterGestor(val === '' ? 'all' : String(val))}
-                        options={profiles.map(p => ({
-                            value: p.user_id,
-                            label: p.nombre
-                        }))}
-                        placeholder="Todos los Gestores"
-                        className="min-w-[200px]"
-                    />
+                    <div className="flex items-center gap-2">
+                        <SearchableSelect
+                            value={filterComunidad === 'all' ? '' : Number(filterComunidad)}
+                            onChange={(val) => setFilterComunidad(val === '' ? 'all' : String(val))}
+                            options={comunidades.map(c => ({
+                                value: c.id,
+                                label: `${c.codigo || ''} - ${c.nombre_cdad}`
+                            }))}
+                            placeholder="Todas las Comunidades"
+                            className="min-w-[200px]"
+                        />
+                        <SearchableSelect
+                            value={filterGestor === 'all' ? '' : filterGestor}
+                            onChange={(val) => setFilterGestor(val === '' ? 'all' : String(val))}
+                            options={profiles.map(p => ({
+                                value: p.user_id,
+                                label: p.nombre
+                            }))}
+                            placeholder="Todos los Gestores"
+                            className="min-w-[180px]"
+                        />
+                    </div>
                 }
             />
 
