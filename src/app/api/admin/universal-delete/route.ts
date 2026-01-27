@@ -41,7 +41,35 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'No tienes permisos de administrador para realizar esta acción' }, { status: 403 });
         }
 
-        // 3. Perform Deletion based on type
+        // 3. Fetch details for logging before deletion
+        let entityName = "Desconocido";
+        let entityDetails = {};
+
+        if (type === 'incidencia') {
+            const { data } = await supabaseAdmin.from('incidencias').select('nombre_cliente').eq('id', id).single();
+            entityName = data?.nombre_cliente || `Ticket #${id}`;
+        } else if (type === 'morosidad') {
+            const { data } = await supabaseAdmin.from('morosidad').select('nombre_cliente, titulo').eq('id', id).single();
+            entityName = data?.titulo || data?.nombre_cliente || `Morosidad #${id}`;
+        } else if (type === 'comunidad') {
+            const { data } = await supabaseAdmin.from('comunidades').select('nombre_cdad').eq('id', id).single();
+            entityName = data?.nombre_cdad || `Comunidad #${id}`;
+        } else if (type === 'perfil') {
+            const { data } = await supabaseAdmin.from('profiles').select('nombre').eq('user_id', id).single();
+            entityName = data?.nombre || `Usuario #${id}`;
+        } else if (type === 'document') {
+            const { data } = await supabaseAdmin.from('doc_submissions').select('title, payload').eq('id', id).single();
+            entityName = data?.title || `Documento #${id}`;
+            entityDetails = {
+                titulo: data?.title,
+                cliente: data?.payload?.["Nombre Cliente"] || data?.payload?.["Nombre"]
+            };
+        } else if (type === 'proveedor') {
+            const { data } = await supabaseAdmin.from('proveedores').select('nombre_proveedor').eq('id', id).single();
+            entityName = data?.nombre_proveedor || `Proveedor #${id}`;
+        }
+
+        // 4. Perform Deletion based on type
         let deleteError = null;
 
         if (type === 'incidencia') {
@@ -76,6 +104,21 @@ export async function POST(request: Request) {
             console.error('Delete error:', deleteError);
             return NextResponse.json({ error: 'Error al eliminar: ' + deleteError.message }, { status: 500 });
         }
+
+        // 5. Log activity
+        await supabaseAdmin.from('activity_logs').insert({
+            user_id: authData.user.id,
+            user_name: authData.user.user_metadata?.nombre || authData.user.email || 'Admin',
+            action: 'delete',
+            entity_type: type === 'document' ? 'documento' : type,
+            entity_id: typeof id === 'number' ? id : null, // profile id is uuid string
+            entity_name: entityName,
+            details: JSON.stringify({
+                ...entityDetails,
+                deleted_by: email,
+                entity_id: id // Store original ID (numeric or uuid) in details
+            })
+        });
 
         return NextResponse.json({ success: true });
 

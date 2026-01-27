@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import DataTable, { Column } from '@/components/DataTable';
-import { FileDown, Download } from 'lucide-react';
+import SearchableSelect from '@/components/SearchableSelect';
+import { FileDown, Download, Calendar } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 interface ActivityLog {
@@ -23,22 +24,50 @@ export default function ActividadPage() {
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [isExporting, setIsExporting] = useState(false);
 
+    // Filters
+    const [filterUser, setFilterUser] = useState('all');
+    const [filterAction, setFilterAction] = useState('all');
+    const [filterType, setFilterType] = useState('all');
+    const [dateFrom, setDateFrom] = useState('');
+    const [dateTo, setDateTo] = useState('');
+
     useEffect(() => {
         fetchLogs();
     }, []);
 
     const fetchLogs = async () => {
         setLoading(true);
-        const { data, error } = await supabase
-            .from('activity_logs')
-            .select('*')
-            .order('created_at', { ascending: false });
+        let allLogs: ActivityLog[] = [];
+        let from = 0;
+        let to = 999;
+        let finished = false;
 
-        if (error) {
-            console.error('Error fetching logs:', error);
-        } else {
-            setLogs(data || []);
+        const BATCH_SIZE = 1000;
+
+        while (!finished) {
+            const { data, error } = await supabase
+                .from('activity_logs')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .range(from, to);
+
+            if (error) {
+                console.error('Error fetching logs:', error);
+                finished = true;
+            } else if (data && data.length > 0) {
+                allLogs = [...allLogs, ...data];
+                if (data.length < BATCH_SIZE) {
+                    finished = true;
+                } else {
+                    from += BATCH_SIZE;
+                    to += BATCH_SIZE;
+                }
+            } else {
+                finished = true;
+            }
         }
+
+        setLogs(allLogs);
         setLoading(false);
     };
 
@@ -80,11 +109,19 @@ export default function ActividadPage() {
     };
 
     // ... getActionLabel, getEntityLabel, getActionColor ...
-    const getActionLabel = (action: string) => {
+    const getActionLabel = (action: string, details?: any) => {
+        // Special case for resolved incidents
+        if (action === 'update' && details) {
+            try {
+                const parsed = typeof details === 'string' ? JSON.parse(details) : details;
+                if (parsed.resuelto === true || parsed.Resuelto === true) return 'Resuelto';
+            } catch (e) { }
+        }
+
         const labels: Record<string, string> = {
             create: 'Crear',
             update: 'Actualizar',
-            delete: 'Eliminar',
+            delete: 'Eliminado',
             mark_paid: 'Marcar Pagado',
             toggle_active: 'Cambiar Estado',
             clock_in: 'Fichaje Entrada',
@@ -108,7 +145,9 @@ export default function ActividadPage() {
         return labels[entityType] || entityType;
     };
 
-    const getActionColor = (action: string) => {
+    const getActionColor = (action: string, label?: string) => {
+        if (label === 'Resuelto') return 'bg-emerald-100 text-emerald-800';
+
         const colors: Record<string, string> = {
             create: 'bg-green-100 text-green-800',
             update: 'bg-blue-100 text-blue-800',
@@ -142,12 +181,15 @@ export default function ActividadPage() {
         {
             key: 'action',
             label: 'Acción',
-            render: (row) => (
-                <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${getActionColor(row.action)}`}>
-                    {getActionLabel(row.action)}
-                </span>
-            ),
-            getSearchValue: (row) => getActionLabel(row.action),
+            render: (row) => {
+                const label = getActionLabel(row.action, row.details);
+                return (
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${getActionColor(row.action, label)}`}>
+                        {label}
+                    </span>
+                );
+            },
+            getSearchValue: (row) => getActionLabel(row.action, row.details),
         },
         {
             key: 'entity_type',
@@ -194,6 +236,30 @@ export default function ActividadPage() {
         },
     ];
 
+    // Filter Logic
+    const filteredLogs = logs.filter(log => {
+        const matchesUser = filterUser === 'all' ? true : log.user_name === filterUser;
+        const matchesAction = filterAction === 'all' ? true : log.action === filterAction;
+        const matchesType = filterType === 'all' ? true : log.entity_type === filterType;
+
+        const lDate = new Date(log.created_at);
+        const logDateStr = `${lDate.getFullYear()}-${String(lDate.getMonth() + 1).padStart(2, '0')}-${String(lDate.getDate()).padStart(2, '0')}`;
+
+        let matchesDate = true;
+        if (dateFrom) {
+            matchesDate = matchesDate && logDateStr >= dateFrom;
+        }
+        if (dateTo) {
+            matchesDate = matchesDate && logDateStr <= dateTo;
+        }
+
+        return matchesUser && matchesAction && matchesType && matchesDate;
+    });
+
+    const uniqueUsers = Array.from(new Set(logs.map(l => l.user_name))).filter(Boolean).sort();
+    const uniqueActions = Array.from(new Set(logs.map(l => l.action))).filter(Boolean).sort();
+    const uniqueTypes = Array.from(new Set(logs.map(l => l.entity_type))).filter(Boolean).sort();
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -225,7 +291,7 @@ export default function ActividadPage() {
             </div>
 
             <DataTable
-                data={logs}
+                data={filteredLogs}
                 columns={columns}
                 keyExtractor={(row) => row.id}
                 storageKey="actividad"
@@ -234,6 +300,49 @@ export default function ActividadPage() {
                 selectable={true}
                 selectedKeys={selectedIds}
                 onSelectionChange={(keys) => setSelectedIds(keys as Set<number>)}
+                extraFilters={
+                    <div className="flex items-center gap-2">
+                        <SearchableSelect
+                            value={filterUser === 'all' ? '' : filterUser}
+                            onChange={(val) => setFilterUser(val === '' ? 'all' : String(val))}
+                            options={uniqueUsers.map(u => ({ value: u, label: u }))}
+                            placeholder="Todos los Usuarios"
+                            className="w-[160px]"
+                        />
+                        <SearchableSelect
+                            value={filterAction === 'all' ? '' : filterAction}
+                            onChange={(val) => setFilterAction(val === '' ? 'all' : String(val))}
+                            options={uniqueActions.map(a => ({ value: a, label: getActionLabel(a) }))}
+                            placeholder="Todas las Acciones"
+                            className="w-[160px]"
+                        />
+                        <SearchableSelect
+                            value={filterType === 'all' ? '' : filterType}
+                            onChange={(val) => setFilterType(val === '' ? 'all' : String(val))}
+                            options={uniqueTypes.map(t => ({ value: t, label: getEntityLabel(t) }))}
+                            placeholder="Todos los Tipos"
+                            className="w-[160px]"
+                        />
+                        <div className="flex items-center gap-1 bg-white border border-neutral-300 rounded-md px-2 h-[38px]">
+                            <Calendar className="w-4 h-4 text-neutral-400" />
+                            <input
+                                type="date"
+                                value={dateFrom}
+                                onChange={(e) => setDateFrom(e.target.value)}
+                                className="text-sm outline-none border-none bg-transparent"
+                                placeholder="Desde"
+                            />
+                            <span className="text-neutral-400">-</span>
+                            <input
+                                type="date"
+                                value={dateTo}
+                                onChange={(e) => setDateTo(e.target.value)}
+                                className="text-sm outline-none border-none bg-transparent"
+                                placeholder="Hasta"
+                            />
+                        </div>
+                    </div>
+                }
             />
         </div>
     );

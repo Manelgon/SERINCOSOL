@@ -220,7 +220,7 @@ export default function DataTable<T extends Record<string, any>>({
         <div className="space-y-4">
             {/* Controls */}
             <div className="flex items-center justify-between gap-4 flex-wrap">
-                <div className="flex flex-1 items-center gap-2 max-w-2xl">
+                <div className="flex flex-1 items-center gap-2">
                     {/* Search */}
                     <div className="relative flex-1 max-w-md">
                         <input
