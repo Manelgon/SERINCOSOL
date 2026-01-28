@@ -68,6 +68,7 @@ export default function MorosidadPage() {
     const [exporting, setExporting] = useState(false);
     const [enviarNotificacion, setEnviarNotificacion] = useState<boolean | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isUpdatingStatus, setIsUpdatingStatus] = useState<number | null>(null);
 
     const handleRowClick = (morosidad: Morosidad) => {
         setSelectedDetailMorosidad(morosidad);
@@ -407,6 +408,8 @@ export default function MorosidadPage() {
     };
 
     const markAsPaid = async (id: number) => {
+        if (isUpdatingStatus === id) return;
+        setIsUpdatingStatus(id);
         try {
             const moroso = morosos.find(m => m.id === id);
             const { data: { user } } = await supabase.auth.getUser();
@@ -457,7 +460,10 @@ export default function MorosidadPage() {
 
             fetchMorosidad();
         } catch (error) {
+            console.error(error);
             toast.error('Error al actualizar');
+        } finally {
+            setIsUpdatingStatus(null);
         }
     };
 
@@ -766,10 +772,18 @@ export default function MorosidadPage() {
                                 e.stopPropagation();
                                 markAsPaid(row.id);
                             }}
-                            className="p-1.5 rounded-full bg-green-100 text-green-600 hover:bg-green-200 transition-colors"
+                            disabled={isUpdatingStatus === row.id}
+                            className={`p-1.5 rounded-full transition-colors ${isUpdatingStatus === row.id
+                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                    : 'bg-green-100 text-green-600 hover:bg-green-200'
+                                }`}
                             title="Marcar como Pagado"
                         >
-                            <Check className="w-4 h-4" />
+                            {isUpdatingStatus === row.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                                <Check className="w-4 h-4" />
+                            )}
                         </button>
                     )}
                     <button

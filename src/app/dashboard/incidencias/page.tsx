@@ -58,6 +58,7 @@ export default function IncidenciasPage() {
     const [uploading, setUploading] = useState(false);
     const [enviarAviso, setEnviarAviso] = useState<boolean | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isUpdatingStatus, setIsUpdatingStatus] = useState<number | null>(null);
 
     const [formData, setFormData] = useState({
         comunidad_id: '',
@@ -388,6 +389,8 @@ export default function IncidenciasPage() {
     };
 
     const toggleResuelto = async (id: number, currentStatus: boolean) => {
+        if (isUpdatingStatus === id) return;
+        setIsUpdatingStatus(id);
         try {
             const { data: { user } } = await supabase.auth.getUser();
             const { error } = await supabase
@@ -450,7 +453,10 @@ export default function IncidenciasPage() {
                 }, 2000);
             }
         } catch (error) {
+            console.error(error);
             toast.error('Error al actualizar estado');
+        } finally {
+            setIsUpdatingStatus(null);
         }
     };
 
@@ -752,13 +758,20 @@ export default function IncidenciasPage() {
                             e.stopPropagation();
                             toggleResuelto(row.id, row.resuelto);
                         }}
+                        disabled={isUpdatingStatus === row.id}
                         title={row.resuelto ? 'Reabrir incidencia' : 'Resolver incidencia'}
                         className={`p-1.5 rounded-full transition-colors ${row.resuelto
                             ? 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                             : 'bg-green-100 text-green-600 hover:bg-green-200'
-                            }`}
+                            } ${isUpdatingStatus === row.id ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
-                        {row.resuelto ? <RotateCcw className="w-4 h-4" /> : <Check className="w-4 h-4" />}
+                        {isUpdatingStatus === row.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : row.resuelto ? (
+                            <RotateCcw className="w-4 h-4" />
+                        ) : (
+                            <Check className="w-4 h-4" />
+                        )}
                     </button>
                     <button
                         onClick={(e) => {
