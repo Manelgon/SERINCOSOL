@@ -57,6 +57,7 @@ export default function IncidenciasPage() {
     const [files, setFiles] = useState<File[]>([]);
     const [uploading, setUploading] = useState(false);
     const [enviarAviso, setEnviarAviso] = useState<boolean | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const [formData, setFormData] = useState({
         comunidad_id: '',
@@ -215,6 +216,10 @@ export default function IncidenciasPage() {
             return toast.error('El formato del email no es válido');
         }
 
+        if (isSubmitting) return;
+        setIsSubmitting(true);
+        const loadingToastId = toast.loading('Creando ticket... espere');
+
         try {
             const adjuntos = await handleFileUploads();
 
@@ -326,6 +331,9 @@ export default function IncidenciasPage() {
             fetchIncidencias();
         } catch (error: any) {
             toast.error('Error: ' + error.message);
+        } finally {
+            toast.dismiss(loadingToastId);
+            setIsSubmitting(false);
         }
     };
 
@@ -1020,6 +1028,7 @@ export default function IncidenciasPage() {
                                 form="incidencia-form"
                                 type="submit"
                                 disabled={
+                                    isSubmitting ||
                                     uploading ||
                                     enviarAviso === null ||
                                     !formData.recibido_por ||
@@ -1033,7 +1042,12 @@ export default function IncidenciasPage() {
                                 }
                                 className="w-full sm:w-auto h-12 px-8 bg-yellow-400 hover:bg-yellow-500 text-neutral-950 rounded-xl font-bold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm hover:shadow-md active:scale-[0.98]"
                             >
-                                {uploading ? (
+                                {isSubmitting ? (
+                                    <>
+                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                        Creando ticket...
+                                    </>
+                                ) : uploading ? (
                                     <>
                                         <Loader2 className="w-5 h-5 animate-spin" />
                                         Subiendo archivos...

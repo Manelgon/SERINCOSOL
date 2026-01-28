@@ -67,6 +67,7 @@ export default function MorosidadPage() {
     const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set());
     const [exporting, setExporting] = useState(false);
     const [enviarNotificacion, setEnviarNotificacion] = useState<boolean | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleRowClick = (morosidad: Morosidad) => {
         setSelectedDetailMorosidad(morosidad);
@@ -195,6 +196,10 @@ export default function MorosidadPage() {
         if (formData.email_deudor && !emailRegex.test(formData.email_deudor)) {
             return toast.error('El formato del email no es válido');
         }
+
+        if (isSubmitting) return;
+        setIsSubmitting(true);
+        const loadingToastId = toast.loading('Guardando deuda... espere');
 
         if (enviarNotificacion === true && !formData.telefono_deudor && !formData.email_deudor) {
             return toast.error('Para enviar aviso debe proporcionar Teléfono o Email');
@@ -351,6 +356,9 @@ export default function MorosidadPage() {
                 fetchMorosidad();
             } catch (error: any) {
                 toast.error('Error: ' + error.message);
+            } finally {
+                toast.dismiss(loadingToastId);
+                setIsSubmitting(false);
             }
         }
     };
@@ -1090,6 +1098,7 @@ export default function MorosidadPage() {
                                 form="morosidad-form"
                                 type="submit"
                                 disabled={
+                                    isSubmitting ||
                                     uploading ||
                                     !formData.comunidad_id ||
                                     !formData.nombre_deudor ||
@@ -1102,7 +1111,12 @@ export default function MorosidadPage() {
                                 }
                                 className="w-full sm:w-auto h-12 px-8 bg-yellow-400 hover:bg-yellow-500 text-neutral-950 rounded-xl font-bold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm hover:shadow-md active:scale-[0.98]"
                             >
-                                {uploading ? (
+                                {isSubmitting ? (
+                                    <>
+                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                        Guardando...
+                                    </>
+                                ) : uploading ? (
                                     <>
                                         <Loader2 className="w-5 h-5 animate-spin" />
                                         Registrando...
