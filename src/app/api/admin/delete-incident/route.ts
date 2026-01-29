@@ -52,6 +52,21 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: deleteError.message }, { status: 500 });
         }
 
+        // 4. Log activity
+        await supabaseAdmin.from('activity_logs').insert({
+            user_id: authData.user.id,
+            user_name: authData.user.user_metadata?.nombre || authData.user.email || 'Admin',
+            action: 'delete',
+            entity_type: 'incidencia',
+            entity_id: id,
+            entity_name: `Ticket #${id}`,
+            details: JSON.stringify({
+                id: id,
+                deleted_by: email,
+                method: 'delete-incident-api'
+            })
+        });
+
         return NextResponse.json({ success: true });
 
     } catch (error: any) {

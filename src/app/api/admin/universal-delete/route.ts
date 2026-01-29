@@ -115,6 +115,7 @@ export async function POST(request: Request) {
             entity_name: entityName,
             details: JSON.stringify({
                 ...entityDetails,
+                id: id, // Explicitly add ID for consistency as requested
                 deleted_by: email,
                 entity_id: id // Store original ID (numeric or uuid) in details
             })

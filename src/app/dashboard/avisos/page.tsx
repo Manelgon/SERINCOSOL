@@ -123,7 +123,11 @@ export default function AvisosPage() {
                 entityType: 'aviso',
                 entityId: n?.entity_id,
                 entityName: n?.title,
-                details: { notification_id: id }
+                details: {
+                    notification_id: id,
+                    id: n?.entity_id, // Add ID for consistency if it's related to an incident
+                    entity_type: n?.entity_type
+                }
             });
 
             toast.success('Marcado como leído');

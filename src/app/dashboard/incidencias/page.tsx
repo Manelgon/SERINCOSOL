@@ -252,15 +252,17 @@ export default function IncidenciasPage() {
 
             // Log activity
             const comunidad = comunidades.find(c => c.id === parseInt(formData.comunidad_id));
+            const gestorAsignadoNombre = profiles.find(p => p.user_id === formData.gestor_asignado)?.nombre || formData.gestor_asignado;
             await logActivity({
                 action: 'create',
                 entityType: 'incidencia',
+                entityId: incidenciaId,
                 entityName: `Incidencia - ${formData.nombre_cliente}`,
                 details: {
+                    id: incidenciaId,
                     comunidad: comunidad?.nombre_cdad,
-                    // urgencia removed
                     mensaje: formData.mensaje,
-                    asignado_a: formData.gestor_asignado
+                    asignado: gestorAsignadoNombre
                 }
             });
 
@@ -379,6 +381,20 @@ export default function IncidenciasPage() {
 
             setIncidencias(prev => prev.map(i => i.id === selectedDetailIncidencia.id ? { ...i, adjuntos: updatedAdjuntos } : i));
 
+            // Log activity
+            await logActivity({
+                action: 'update',
+                entityType: 'incidencia',
+                entityId: selectedDetailIncidencia.id,
+                entityName: `Incidencia - ${selectedDetailIncidencia.nombre_cliente}`,
+                details: {
+                    id: selectedDetailIncidencia.id,
+                    action: 'adjuntar_archivos',
+                    archivos_nuevos: newUrls.length,
+                    total_archivos: updatedAdjuntos.length
+                }
+            });
+
             toast.success('Archivos añadidos hoy', { id: loadingToast });
         } catch (error: any) {
             console.error(error);
@@ -429,6 +445,7 @@ export default function IncidenciasPage() {
                 entityId: id,
                 entityName: `Incidencia - ${incidencia?.nombre_cliente}`,
                 details: {
+                    id: id,
                     comunidad: incidencia?.comunidades?.nombre_cdad,
                     resuelto: !currentStatus
                 }
@@ -560,7 +577,10 @@ export default function IncidenciasPage() {
                 entityType: 'incidencia',
                 entityId: itemToDelete,
                 entityName: `Incidencia Deleted`,
-                details: { deleted_by_admin: deleteEmail }
+                details: {
+                    id: itemToDelete,
+                    deleted_by_admin: deleteEmail
+                }
             });
 
         } catch (error: any) {
