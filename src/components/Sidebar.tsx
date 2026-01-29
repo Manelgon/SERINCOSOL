@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Building, AlertCircle, FileText, LogOut, Activity, Users, Clock, X } from 'lucide-react';
+import { Home, Building, AlertCircle, FileText, LogOut, Activity, Users, Clock, X, Folder } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import NotificationsBell from '@/components/NotificationsBell';
@@ -52,6 +52,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         { name: 'Gestión de Deudas', href: '/dashboard/deudas', icon: FileText },
         { name: 'Fichaje', href: '/dashboard/fichaje', icon: Clock },
         { name: 'Documentos', href: '/dashboard/documentos', icon: FileText },
+        { name: 'Facturas Comunidades', href: '/dashboard/facturas-comunidades', icon: Folder },
         { name: 'Avisos', href: '/dashboard/avisos', icon: AlertCircle },
         ...(isAdmin ? [
             { name: 'Actividad', href: '/dashboard/actividad', icon: Activity },

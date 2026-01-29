@@ -4,7 +4,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { Plus, Check, RotateCcw, Paperclip, Trash2, X, FileText, Download, Loader2 } from 'lucide-react';
+import { Plus, Check, RotateCcw, Paperclip, Trash2, X, FileText, Download, Loader2, Building, Users, Clock } from 'lucide-react';
 import DataTable, { Column } from '@/components/DataTable';
 import SearchableSelect from '@/components/SearchableSelect';
 import { logActivity } from '@/lib/logActivity';
@@ -921,9 +921,10 @@ export default function IncidenciasPage() {
                                         value={formData.telefono}
                                         onChange={e => setFormData({ ...formData, telefono: e.target.value })}
                                     />
+                                    <p className="mt-1 text-xs text-slate-500">(Sin espacios y sin prefijo)</p>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Nombre Cliente <span className="text-red-600">*</span></label>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Nombre Propietario <span className="text-red-600">*</span></label>
                                     <input
                                         required
                                         type="text"
@@ -1264,35 +1265,35 @@ export default function IncidenciasPage() {
                 }
             />
 
-            {/* Detail Modal */}
+            {/* Detail Modal - Rediseño Administrativo */}
             {showDetailModal && selectedDetailIncidencia && (
                 <div
-                    className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-0 sm:p-4 md:p-8 backdrop-blur-sm"
+                    className="fixed inset-0 bg-neutral-900/60 z-[100] flex items-center justify-center p-0 sm:p-4 backdrop-blur-md"
                     onClick={() => setShowDetailModal(false)}
                 >
                     <div
-                        className="bg-white rounded-none sm:rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-gray-900/10 w-full sm:max-w-2xl h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto custom-scrollbar flex flex-col animate-in fade-in zoom-in duration-200"
+                        className="bg-white rounded-none sm:rounded-2xl shadow-2xl border border-neutral-200 w-full sm:max-w-4xl h-full sm:h-auto sm:max-h-[92vh] overflow-hidden flex flex-col animate-in fade-in zoom-in duration-300"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {/* Header */}
-                        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 flex justify-between items-center bg-white flex-shrink-0 rounded-t-xl">
-                            <div>
-                                <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-                                    Ticket #{selectedDetailIncidencia.id}
-                                </h3>
-                                <p className="text-xs text-slate-500 mt-0.5">
-                                    Creado el {new Date(selectedDetailIncidencia.created_at).toLocaleString()}
-                                </p>
-                                {selectedDetailIncidencia.resuelto && selectedDetailIncidencia.dia_resuelto && (
-                                    <p className="text-xs text-green-600 mt-0.5 font-medium flex items-center gap-1">
-                                        Resuelto el {new Date(selectedDetailIncidencia.dia_resuelto).toLocaleString()}
-                                        {selectedDetailIncidencia.resolver?.nombre && (
-                                            <span className="text-slate-400 font-normal">
-                                                ({selectedDetailIncidencia.resolver.nombre})
-                                            </span>
+                        {/* Administrative Header */}
+                        <div className="px-6 py-5 border-b border-neutral-100 flex justify-between items-center bg-neutral-50/50 flex-shrink-0">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 bg-amber-400 rounded-xl flex items-center justify-center text-neutral-900 shadow-lg shadow-amber-200/50">
+                                    <FileText className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="text-xl font-black text-neutral-900 tracking-tight uppercase">
+                                            Ticket #{selectedDetailIncidencia.id}
+                                        </h3>
+                                    </div>
+                                    <p className="text-xs text-neutral-500 font-medium mt-0.5 uppercase">
+                                        Registrado el {new Date(selectedDetailIncidencia.created_at).toLocaleString('es-ES', { dateStyle: 'long', timeStyle: 'short' }).toUpperCase()}
+                                        {selectedDetailIncidencia.resuelto && selectedDetailIncidencia.dia_resuelto && (
+                                            <> — RESUELTO EL {new Date(selectedDetailIncidencia.dia_resuelto as string).toLocaleString('es-ES', { dateStyle: 'long', timeStyle: 'short' }).toUpperCase()} ({selectedDetailIncidencia.resolver?.nombre?.trim().toUpperCase() || 'SISTEMA'})</>
                                         )}
                                     </p>
-                                )}
+                                </div>
                             </div>
                             <div className="flex items-center gap-2">
                                 <input
@@ -1306,228 +1307,281 @@ export default function IncidenciasPage() {
                                         }
                                     }}
                                 />
-                                <button
-                                    onClick={() => detailFileInputRef.current?.click()}
-                                    className="p-2 hover:bg-slate-50 rounded-full transition-colors text-slate-400 hover:text-slate-600"
-                                    title="Adjuntar archivos"
-                                    disabled={isUpdatingRecord}
-                                >
-                                    {isUpdatingRecord ? <Loader2 className="w-5 h-5 animate-spin text-slate-600" /> : <Paperclip className="w-5 h-5" />}
-                                </button>
-                                <button
-                                    onClick={() => handleExport('pdf', [selectedDetailIncidencia.id])}
-                                    className="p-2 hover:bg-slate-50 rounded-full transition-colors text-slate-400 hover:text-slate-600"
-                                    title="Descargar PDF"
-                                    disabled={exporting}
-                                >
-                                    {exporting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
-                                </button>
-                                <button
-                                    onClick={() => setShowDetailModal(false)}
-                                    className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500"
-                                >
-                                    <X className="w-5 h-5" />
-                                </button>
+                                <div className="flex bg-white rounded-lg border border-neutral-200 p-1 shadow-sm">
+                                    <button
+                                        onClick={() => detailFileInputRef.current?.click()}
+                                        className="p-2 hover:bg-neutral-50 rounded-md transition-colors text-neutral-400 hover:text-neutral-900 border-r border-neutral-100"
+                                        title="Adjuntar documentación"
+                                        disabled={isUpdatingRecord}
+                                    >
+                                        {isUpdatingRecord ? <Loader2 className="w-5 h-5 animate-spin" /> : <Paperclip className="w-5 h-5" />}
+                                    </button>
+                                    <button
+                                        onClick={() => handleExport('pdf', [selectedDetailIncidencia.id])}
+                                        className="p-2 hover:bg-neutral-50 rounded-md transition-colors text-neutral-400 hover:text-neutral-900 border-r border-neutral-100"
+                                        title="Generar Informe PDF"
+                                        disabled={exporting}
+                                    >
+                                        {exporting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
+                                    </button>
+                                    <button
+                                        onClick={() => setShowDetailModal(false)}
+                                        className="p-2 hover:bg-red-50 rounded-md transition-colors text-neutral-400 hover:text-red-600"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
-                        {/* Body */}
-                        <div className="p-4 sm:p-6 space-y-8 flex-grow">
-                            {/* Top Status Bar */}
-                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
-                                <div className="space-y-1">
-                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Estado</span>
-                                    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-semibold ${selectedDetailIncidencia.resuelto
-                                        ? 'bg-slate-100 text-slate-700'
-                                        : 'bg-yellow-100/50 text-yellow-700 border border-yellow-200/50'
-                                        }`}>
-                                        {selectedDetailIncidencia.resuelto ? <Check className="w-3 h-3" /> : <RotateCcw className="w-3 h-3" />}
-                                        {selectedDetailIncidencia.resuelto ? 'Resuelto' : 'Pendiente'}
-                                    </span>
-                                </div>
-
-                                <div className="space-y-1">
-                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Urgencia</span>
-                                    <span className={`inline-flex px-2 py-0.5 rounded text-xs font-semibold ${selectedDetailIncidencia.urgencia === 'Alta' ? 'bg-red-50 text-red-700 border border-red-100' :
-                                        selectedDetailIncidencia.urgencia === 'Media' ? 'bg-orange-50 text-orange-700 border border-orange-100' :
-                                            'bg-blue-50 text-blue-700 border border-blue-100'
-                                        }`}>
-                                        {selectedDetailIncidencia.urgencia || 'No definida'}
-                                    </span>
-                                </div>
-
-                                <div className="space-y-1">
-                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Categoría</span>
-                                    <span className="text-sm font-semibold text-slate-700">{selectedDetailIncidencia.categoria || '-'}</span>
-                                </div>
-
-                                <div className="space-y-1">
-                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Aviso Propietario</span>
-                                    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold ${selectedDetailIncidencia.aviso === true
-                                        ? 'bg-emerald-100 text-emerald-700'
-                                        : selectedDetailIncidencia.aviso === false
-                                            ? 'bg-slate-100 text-slate-500'
-                                            : 'bg-slate-50 text-slate-400'
-                                        }`}>
-                                        {selectedDetailIncidencia.aviso === true ? 'ENVIADO' : selectedDetailIncidencia.aviso === false ? 'NO ENVIADO' : 'N/A'}
-                                    </span>
-                                </div>
+                        {/* Navigation / Quick Stats Tab-style Header */}
+                        <div className="flex px-6 border-b border-neutral-100 bg-white justify-between items-center overflow-x-auto no-scrollbar min-h-[44px]">
+                            <div className="flex space-x-8">
+                                {(selectedDetailIncidencia.adjuntos && selectedDetailIncidencia.adjuntos.length > 0) && (
+                                    <div className="py-2.5 border-b-2 border-amber-400 text-sm font-bold text-neutral-900 cursor-pointer whitespace-nowrap uppercase tracking-wider">
+                                        Documentación ({selectedDetailIncidencia.adjuntos.length})
+                                    </div>
+                                )}
                             </div>
 
-                            {/* Tables Grid */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-10">
-                                {/* Left Column: Cliente & Comunidad */}
-                                <div className="space-y-6">
-                                    <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-                                        <span className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-base">👤</span>
-                                        Contacto y Ubicación
-                                    </h4>
-                                    <div className="space-y-4">
-                                        <div className="flex justify-between items-center text-sm border-b border-slate-50 pb-3">
-                                            <span className="text-slate-500">Cliente</span>
-                                            <span className="font-semibold text-slate-900">{selectedDetailIncidencia.nombre_cliente}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center text-sm border-b border-slate-50 pb-3">
-                                            <span className="text-slate-500">Teléfono</span>
-                                            <span className="font-semibold text-slate-900">{selectedDetailIncidencia.telefono}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center text-sm border-b border-slate-50 pb-3">
-                                            <span className="text-slate-500">Email</span>
-                                            <span className="text-slate-900">{selectedDetailIncidencia.email || '-'}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center text-sm">
-                                            <span className="text-slate-500">Comunidad</span>
-                                            <span className="font-semibold text-slate-900">
-                                                {selectedDetailIncidencia.comunidad || selectedDetailIncidencia.comunidades?.nombre_cdad || '-'}
-                                            </span>
-                                        </div>
-                                    </div>
+                            <div className="hidden lg:flex flex-1 items-center justify-between ml-12 pr-4">
+                                {/* Estado */}
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Estado</span>
+                                    <span className={`text-[10px] font-bold ${selectedDetailIncidencia.resuelto ? 'text-emerald-700' : 'text-amber-700'}`}>
+                                        {selectedDetailIncidencia.resuelto ? 'RESUELTO' : 'EN TRÁMITE'}
+                                    </span>
                                 </div>
-
-                                {/* Right Column: Gestión Interna */}
-                                <div className="space-y-6">
-                                    <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-                                        <span className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-base">📋</span>
-                                        Gestión Interna
-                                    </h4>
-                                    <div className="space-y-4">
-                                        <div className="flex justify-between items-center text-sm border-b border-slate-50 pb-3">
-                                            <span className="text-slate-500">Recibido por</span>
-                                            <span className="font-semibold text-slate-900">
-                                                {(selectedDetailIncidencia as any).receptor?.nombre || selectedDetailIncidencia.quien_lo_recibe || '-'}
-                                            </span>
-                                        </div>
-                                        <div className="flex justify-between items-center text-sm border-b border-slate-50 pb-3">
-                                            <span className="text-slate-500">Gestor Asignado</span>
-                                            <span className="font-semibold text-slate-900">
-                                                {(selectedDetailIncidencia as any).gestor?.nombre || selectedDetailIncidencia.gestor_asignado || '-'}
-                                            </span>
-                                        </div>
-                                        <div className="flex justify-between items-center text-sm border-b border-slate-50 pb-3">
-                                            <span className="text-slate-500">Sentimiento</span>
-                                            <span className="font-semibold text-slate-900">{selectedDetailIncidencia.sentimiento || '-'}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center text-sm">
-                                            <span className="text-slate-500">Fecha Creación</span>
-                                            <span className="text-slate-900">{new Date(selectedDetailIncidencia.created_at).toLocaleString()}</span>
-                                        </div>
-                                    </div>
+                                {/* Prioridad */}
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Prioridad</span>
+                                    <span className={`text-[10px] font-bold ${selectedDetailIncidencia.urgencia === 'Alta' ? 'text-red-700' :
+                                        selectedDetailIncidencia.urgencia === 'Media' ? 'text-orange-700' :
+                                            'text-blue-700'}`}>
+                                        {(selectedDetailIncidencia.urgencia || 'ORDINARIA').toUpperCase()}
+                                    </span>
                                 </div>
-                            </div>
-
-                            {/* Message */}
-                            <div className="space-y-3">
-                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                                    Mensaje del Cliente
-                                </h4>
-                                <div className="bg-slate-50/50 p-6 rounded-xl border border-slate-100 text-slate-700 text-sm leading-relaxed whitespace-pre-wrap italic">
-                                    "{selectedDetailIncidencia.mensaje}"
+                                {/* A. Sentimiento */}
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">A. Sentimiento</span>
+                                    <span className="text-[10px] font-bold text-neutral-900 uppercase">
+                                        {(selectedDetailIncidencia.sentimiento || 'Neutral').toUpperCase()}
+                                    </span>
                                 </div>
-                            </div>
-
-                            {/* Attachments */}
-                            {selectedDetailIncidencia.adjuntos && selectedDetailIncidencia.adjuntos.length > 0 && (
-                                <div className="space-y-3">
-                                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                                        📎 Archivos Adjuntos
-                                    </h4>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        {selectedDetailIncidencia.adjuntos.map((url, i) => (
-                                            <a
-                                                key={i}
-                                                href={url}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="flex items-center gap-3 bg-white border border-slate-200 p-3 rounded-xl text-sm font-medium text-slate-600 hover:text-slate-900 hover:border-slate-300 hover:shadow-sm transition group"
-                                            >
-                                                <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center group-hover:bg-slate-100 transition">
-                                                    <Paperclip className="w-5 h-5 text-slate-400 group-hover:text-slate-600" />
-                                                </div>
-                                                <div className="flex flex-col">
-                                                    <span className="font-semibold">Archivo {i + 1}</span>
-                                                    <span className="text-[10px] text-slate-400">Clic para ver</span>
-                                                </div>
-                                            </a>
-                                        ))}
-                                    </div>
+                                {/* Aviso */}
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Aviso</span>
+                                    <span className={`text-[10px] font-bold ${selectedDetailIncidencia.aviso ? 'text-indigo-700' : 'text-neutral-400'}`}>
+                                        {selectedDetailIncidencia.aviso && typeof selectedDetailIncidencia.aviso === 'string'
+                                            ? selectedDetailIncidencia.aviso.toUpperCase()
+                                            : selectedDetailIncidencia.aviso === true ? 'EJECUTADA' : 'PENDIENTE'}
+                                    </span>
                                 </div>
-                            )}
-
-                            {/* Timeline Chat */}
-                            <div className="space-y-4 pt-4">
-                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                                    Timeline de Gestión
-                                </h4>
-                                <TimelineChat
-                                    entityType="incidencia"
-                                    entityId={selectedDetailIncidencia.id}
-                                />
                             </div>
                         </div>
 
-                        {/* Footer Actions */}
-                        <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-slate-100 bg-slate-50/30 rounded-b-xl flex justify-between items-center flex-shrink-0">
+                        {/* Scrollable Content Area */}
+                        <div className="flex-1 overflow-y-auto custom-scrollbar bg-neutral-50/30">
+                            <div className="p-6 md:p-8 space-y-6">
+
+                                {/* Mobile Status Bar (Show on small screens where header grid is hidden) */}
+                                <div className="lg:hidden grid grid-cols-2 gap-4 bg-white p-4 rounded-xl border border-neutral-200 shadow-sm">
+                                    <div className="space-y-1">
+                                        <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest block">Estado</span>
+                                        <span className={`text-[10px] font-bold ${selectedDetailIncidencia.resuelto ? 'text-emerald-700' : 'text-amber-700'}`}>
+                                            {selectedDetailIncidencia.resuelto ? 'RESUELTO' : 'EN TRÁMITE'}
+                                        </span>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest block">Prioridad</span>
+                                        <span className={`text-[10px] font-bold ${selectedDetailIncidencia.urgencia === 'Alta' ? 'text-red-700' : 'text-blue-700'}`}>
+                                            {(selectedDetailIncidencia.urgencia || 'ORDINARIA').toUpperCase()}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Main Data Sections */}
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+
+                                    {/* Column 1: Identification & Location */}
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-2 border-b-2 border-neutral-900 pb-1.5">
+                                            <div className="w-7 h-7 rounded-md bg-neutral-100 flex items-center justify-center text-neutral-600">
+                                                <Building className="w-3.5 h-3.5" />
+                                            </div>
+                                            <h4 className="text-sm font-black text-neutral-900 uppercase tracking-widest">Identificación y Ubicación</h4>
+                                        </div>
+
+                                        <div className="divide-y divide-neutral-100">
+                                            <div className="py-1.5 flex items-center gap-4">
+                                                <span className="text-xs font-bold text-neutral-400 uppercase tracking-tighter w-32 shrink-0">Comunidad</span>
+                                                <span className="text-sm font-normal text-neutral-900 uppercase">
+                                                    {(selectedDetailIncidencia.comunidad || selectedDetailIncidencia.comunidades?.nombre_cdad || 'N/A').toUpperCase()}
+                                                </span>
+                                            </div>
+                                            <div className="py-1.5 flex items-center gap-4">
+                                                <span className="text-xs font-bold text-neutral-400 uppercase tracking-tighter w-32 shrink-0">Propietario</span>
+                                                <span className="text-sm font-normal text-neutral-900 uppercase">
+                                                    {selectedDetailIncidencia.nombre_cliente.toUpperCase()}
+                                                </span>
+                                            </div>
+                                            <div className="py-1.5 flex items-center gap-4">
+                                                <span className="text-xs font-bold text-neutral-400 uppercase tracking-tighter w-32 shrink-0">Teléfono</span>
+                                                <span className="text-sm font-normal text-neutral-900">
+                                                    {selectedDetailIncidencia.telefono}
+                                                </span>
+                                            </div>
+                                            <div className="py-1.5 flex items-center gap-4">
+                                                <span className="text-xs font-bold text-neutral-400 uppercase tracking-tighter w-32 shrink-0">Correo</span>
+                                                <span className="text-sm font-normal text-neutral-600 uppercase">
+                                                    {(selectedDetailIncidencia.email || 'SIN ESPECIFICAR').toUpperCase()}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Column 2: Management Info */}
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-2 border-b-2 border-neutral-900 pb-1.5">
+                                            <div className="w-7 h-7 rounded-md bg-neutral-100 flex items-center justify-center text-neutral-600">
+                                                <Users className="w-3.5 h-3.5" />
+                                            </div>
+                                            <h4 className="text-sm font-black text-neutral-900 uppercase tracking-widest">Gestión</h4>
+                                        </div>
+
+                                        <div className="divide-y divide-neutral-100">
+                                            <div className="py-1.5 flex items-center gap-4">
+                                                <span className="text-xs font-bold text-neutral-400 uppercase tracking-tighter w-32 shrink-0">Recepción Inicial</span>
+                                                <span className="text-sm font-normal text-neutral-900 uppercase">
+                                                    {((selectedDetailIncidencia as any).receptor?.nombre || selectedDetailIncidencia.quien_lo_recibe || 'AUTOMÁTICA').toUpperCase()}
+                                                </span>
+                                            </div>
+                                            <div className="py-1.5 flex items-center gap-4">
+                                                <span className="text-xs font-bold text-neutral-400 uppercase tracking-tighter w-32 shrink-0">Respon. Asignado</span>
+                                                <span className="text-sm font-normal text-neutral-900 uppercase">
+                                                    {((selectedDetailIncidencia as any).gestor?.nombre || selectedDetailIncidencia.gestor_asignado || 'PENDIENTE').toUpperCase()}
+                                                </span>
+                                            </div>
+                                            <div className="py-1.5 flex items-center gap-4">
+                                                <span className="text-xs font-bold text-neutral-400 uppercase tracking-tighter w-32 shrink-0">Urgencia</span>
+                                                <span className="text-sm font-normal text-neutral-900 uppercase">
+                                                    {(selectedDetailIncidencia.urgencia || 'Media').toUpperCase()}
+                                                </span>
+                                            </div>
+                                            <div className="py-1.5 flex items-center gap-4">
+                                                <span className="text-xs font-bold text-neutral-400 uppercase tracking-tighter w-32 shrink-0">Clasificación</span>
+                                                <span className="text-sm font-normal text-neutral-900 uppercase">
+                                                    {(selectedDetailIncidencia.categoria || 'INCIDENCIAS').toUpperCase()}
+                                                </span>
+                                            </div>
+                                            {/* Resolution rows removed from here as they are now in the header */}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Report Description Section */}
+                                <div className="space-y-4">
+                                    <div className="flex items-center border-b-2 border-neutral-900 pb-2">
+                                        <h4 className="text-sm font-black text-neutral-900 uppercase tracking-[0.2em]">Mensaje</h4>
+                                    </div>
+                                    <div className="py-2">
+                                        <p className="text-neutral-800 text-base leading-relaxed font-normal text-justify uppercase">
+                                            {selectedDetailIncidencia.mensaje.toUpperCase()}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Documentation Section */}
+                                {(selectedDetailIncidencia.adjuntos && selectedDetailIncidencia.adjuntos.length > 0) && (
+                                    <div className="space-y-4">
+                                        <h4 className="text-sm font-black text-neutral-900 uppercase tracking-widest border-l-4 border-neutral-900 pl-4">Anexos y Documentación Adjunta</h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {selectedDetailIncidencia.adjuntos.map((url: string, i: number) => (
+                                                <a
+                                                    key={i}
+                                                    href={url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="group flex items-center justify-between bg-white border border-neutral-200 p-4 rounded-xl hover:border-neutral-900 transition-all shadow-sm"
+                                                >
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-10 h-10 rounded-lg bg-neutral-50 flex items-center justify-center text-neutral-400 group-hover:bg-neutral-900 group-hover:text-white transition-colors">
+                                                            <FileText className="w-5 h-5" />
+                                                        </div>
+                                                        <div className="flex flex-col">
+                                                            <span className="text-sm font-normal text-neutral-900 truncate max-w-[150px] md:max-w-xs">
+                                                                Documento Adjunto {i + 1}
+                                                            </span>
+                                                            <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-tight">Ver archivo oficial</span>
+                                                        </div>
+                                                    </div>
+                                                    <Download className="w-4 h-4 text-neutral-300 group-hover:text-neutral-900" />
+                                                </a>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Audit Log / Timeline */}
+                                <div className="space-y-4 pt-10">
+                                    <div className="flex items-center border-b-2 border-neutral-900 pb-2 mb-6">
+                                        <h4 className="text-sm font-black text-neutral-900 uppercase tracking-[0.2em]">Chat de Gestores</h4>
+                                    </div>
+                                    <div className="overflow-hidden">
+                                        <TimelineChat
+                                            entityType="incidencia"
+                                            entityId={selectedDetailIncidencia.id}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Administrative Footer Actions */}
+                        <div className="px-6 py-4 border-t border-neutral-100 bg-white flex flex-col sm:flex-row justify-between items-center gap-4 flex-shrink-0">
                             <button
                                 onClick={() => {
                                     handleDeleteClick(selectedDetailIncidencia.id);
                                     setShowDetailModal(false);
                                 }}
-                                className="flex items-center gap-2 text-red-500 hover:text-red-600 hover:bg-red-50/50 px-4 py-2 rounded-xl transition font-semibold text-sm"
+                                className="flex items-center gap-2 text-neutral-400 hover:text-red-600 transition-all font-bold text-xs uppercase tracking-widest px-4 py-2 hover:bg-red-50 rounded-lg"
                             >
                                 <Trash2 className="w-4 h-4" />
-                                <span>Eliminar Ticket</span>
+                                <span>Eliminar Registro del Sistema</span>
                             </button>
 
-                            <button
-                                onClick={() => {
-                                    toggleResuelto(selectedDetailIncidencia.id, selectedDetailIncidencia.resuelto);
-                                    if (!selectedDetailIncidencia.resuelto) {
-                                        setShowDetailModal(false);
-                                    } else {
-                                        setSelectedDetailIncidencia({
-                                            ...selectedDetailIncidencia,
-                                            resuelto: !selectedDetailIncidencia.resuelto,
-                                            dia_resuelto: !selectedDetailIncidencia.resuelto ? new Date().toISOString() : undefined
-                                        });
-                                    }
-                                }}
-                                className={`h-11 px-6 rounded-xl font-bold shadow-sm transition flex items-center gap-2 ${selectedDetailIncidencia.resuelto
-                                    ? 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
-                                    : 'bg-yellow-400 text-neutral-950 hover:bg-yellow-500 shadow-yellow-200/50 hover:shadow-lg'
-                                    }`}
-                            >
-                                {selectedDetailIncidencia.resuelto ? (
-                                    <>
-                                        <RotateCcw className="w-4 h-4" />
-                                        Reabrir Ticket
-                                    </>
-                                ) : (
-                                    <>
-                                        <Check className="w-4 h-4" />
-                                        Marcar Resuelto
-                                    </>
-                                )}
-                            </button>
+                            <div className="flex items-center gap-3 w-full sm:w-auto">
+                                <button
+                                    onClick={() => {
+                                        toggleResuelto(selectedDetailIncidencia.id, selectedDetailIncidencia.resuelto);
+                                        if (!selectedDetailIncidencia.resuelto) {
+                                            setShowDetailModal(false);
+                                        } else {
+                                            setSelectedDetailIncidencia({
+                                                ...selectedDetailIncidencia,
+                                                resuelto: !selectedDetailIncidencia.resuelto,
+                                                dia_resuelto: !selectedDetailIncidencia.resuelto ? new Date().toISOString() : undefined
+                                            });
+                                        }
+                                    }}
+                                    className={`flex-1 sm:flex-none h-12 px-8 rounded-xl font-black text-xs uppercase tracking-[0.15em] transition-all shadow-lg flex items-center justify-center gap-3 ${selectedDetailIncidencia.resuelto
+                                        ? 'bg-white border-2 border-neutral-900 text-neutral-900 hover:bg-neutral-50'
+                                        : 'bg-amber-400 text-neutral-900 hover:bg-amber-500 shadow-amber-200/50'
+                                        }`}
+                                >
+                                    {selectedDetailIncidencia.resuelto ? (
+                                        <>
+                                            <RotateCcw className="w-4 h-4" />
+                                            Reabrir Ticket
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Check className="w-4 h-4" />
+                                            RESOLVER TICKET
+                                        </>
+                                    )}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

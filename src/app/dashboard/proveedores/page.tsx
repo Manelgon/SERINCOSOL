@@ -415,6 +415,7 @@ export default function ProveedoresPage() {
                                         value={formData.telefono}
                                         onChange={e => setFormData({ ...formData, telefono: e.target.value })}
                                     />
+                                    <p className="mt-1 text-xs text-slate-500">(Sin espacios y sin prefijo)</p>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-semibold text-slate-700 mb-2">Email</label>
@@ -431,10 +432,16 @@ export default function ProveedoresPage() {
                                     <input
                                         type="text"
                                         placeholder="e.g. B12345678"
-                                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300"
+                                        pattern="[A-Za-z0-9]{1,9}"
+                                        maxLength={9}
+                                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 uppercase"
                                         value={formData.cif}
-                                        onChange={e => setFormData({ ...formData, cif: e.target.value })}
+                                        onChange={e => {
+                                            const value = e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+                                            setFormData({ ...formData, cif: value });
+                                        }}
                                     />
+                                    <p className="mt-1 text-xs text-slate-500">Sin espacios, solo letras y números, máximo 9 caracteres</p>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-semibold text-slate-700 mb-2">CP</label>
@@ -510,42 +517,45 @@ export default function ProveedoresPage() {
             {/* Detail Modal */}
             {showDetailModal && selectedDetailProveedor && (
                 <div
-                    className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-0 sm:p-4 md:p-8 backdrop-blur-sm"
+                    className="fixed inset-0 bg-neutral-900/60 z-[100] flex items-center justify-center p-0 sm:p-4 md:p-8 backdrop-blur-md"
                     onClick={() => setShowDetailModal(false)}
                 >
                     <div
-                        className="bg-white rounded-none sm:rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-gray-900/10 w-full sm:max-w-2xl h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto custom-scrollbar flex flex-col animate-in fade-in zoom-in duration-200"
+                        className="bg-white rounded-none sm:rounded-2xl shadow-2xl border border-neutral-200 w-full sm:max-w-2xl h-full sm:h-auto sm:max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in duration-300"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Header */}
-                        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 flex justify-between items-center bg-white flex-shrink-0 rounded-t-xl">
-                            <div>
-                                <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-                                    Proveedor #{selectedDetailProveedor.id}
-                                </h3>
-                                <div className="flex items-center gap-2 mt-0.5">
-                                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${selectedDetailProveedor.activo
-                                        ? 'bg-yellow-400 text-neutral-950'
-                                        : 'bg-neutral-900 text-white'
-                                        }`}>
-                                        {selectedDetailProveedor.activo ? 'ACTIVO' : 'INACTIVO'}
-                                    </span>
+                        <div className="px-6 py-5 border-b border-neutral-100 bg-neutral-50/50 flex justify-between items-center sticky top-0 z-10">
+                            <div className="flex items-center gap-4">
+                                <div className="h-12 w-12 rounded-xl bg-amber-400 flex items-center justify-center shadow-lg shadow-amber-200 ring-4 ring-amber-50">
+                                    <Building2 className="w-6 h-6 text-neutral-900" />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-black text-neutral-900 tracking-tight uppercase">
+                                        Proveedor #{selectedDetailProveedor.id}
+                                    </h3>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                        <span className={`text-[10px] font-black ${selectedDetailProveedor.activo ? 'text-amber-600' : 'text-neutral-400'} uppercase tracking-widest`}>
+                                            {selectedDetailProveedor.activo ? 'ACTIVO' : 'INACTIVO'}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center bg-white rounded-lg border border-neutral-200 p-1 shadow-sm">
                                 <button
                                     onClick={() => {
                                         handleEdit(selectedDetailProveedor);
                                         setShowDetailModal(false);
                                     }}
-                                    className="p-2 hover:bg-slate-50 rounded-full transition-colors text-slate-400 hover:text-blue-600"
+                                    className="p-2 hover:bg-neutral-50 rounded-md transition-all text-neutral-400 hover:text-blue-600 active:scale-95"
                                     title="Editar Proveedor"
                                 >
                                     <Edit2 className="w-5 h-5" />
                                 </button>
+                                <div className="w-px h-6 bg-neutral-100 mx-1" />
                                 <button
                                     onClick={() => setShowDetailModal(false)}
-                                    className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500"
+                                    className="p-2 hover:bg-neutral-50 rounded-md transition-all text-neutral-400 hover:text-neutral-900 active:scale-95"
                                 >
                                     <X className="w-5 h-5" />
                                 </button>
@@ -553,63 +563,57 @@ export default function ProveedoresPage() {
                         </div>
 
                         {/* Body */}
-                        <div className="p-4 sm:p-6 space-y-8 flex-grow">
+                        <div className="p-4 sm:p-6 space-y-8 flex-grow overflow-y-auto custom-scrollbar">
                             {/* Information Grid */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 {/* Left: Contact Info */}
-                                <div className="space-y-6">
-                                    <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-                                        <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
-                                            <Phone className="w-4 h-4 text-indigo-600" />
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-2 border-b-2 border-neutral-900 pb-1.5">
+                                        <Phone className="w-4 h-4 text-neutral-900" />
+                                        <h4 className="text-sm font-black text-neutral-900 uppercase tracking-widest">Contacto</h4>
+                                    </div>
+                                    <div className="divide-y divide-neutral-100">
+                                        <div className="py-1.5 flex items-center gap-4">
+                                            <span className="text-xs font-bold text-neutral-400 uppercase tracking-tighter w-32 shrink-0">Nombre</span>
+                                            <span className="text-sm font-normal text-neutral-900 uppercase">{selectedDetailProveedor.nombre}</span>
                                         </div>
-                                        Contacto
-                                    </h4>
-                                    <div className="space-y-4">
-                                        <div className="space-y-1">
-                                            <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Nombre / Razón Social</span>
-                                            <span className="text-sm font-semibold text-slate-900">{selectedDetailProveedor.nombre}</span>
+                                        <div className="py-1.5 flex items-center gap-4">
+                                            <span className="text-xs font-bold text-neutral-400 uppercase tracking-tighter w-32 shrink-0">Teléfono</span>
+                                            <span className="text-sm font-normal text-neutral-900 uppercase">{selectedDetailProveedor.telefono || '-'}</span>
                                         </div>
-                                        <div className="space-y-1">
-                                            <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Teléfono</span>
-                                            <span className="text-sm font-semibold text-slate-900">{selectedDetailProveedor.telefono || '-'}</span>
+                                        <div className="py-1.5 flex items-center gap-4">
+                                            <span className="text-xs font-bold text-neutral-400 uppercase tracking-tighter w-32 shrink-0">Email</span>
+                                            <span className="text-sm font-normal text-neutral-900 uppercase">{selectedDetailProveedor.email || '-'}</span>
                                         </div>
-                                        <div className="space-y-1">
-                                            <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Email</span>
-                                            <span className="text-sm text-slate-900">{selectedDetailProveedor.email || '-'}</span>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">CIF</span>
-                                            <span className="text-sm font-mono text-slate-900">{selectedDetailProveedor.cif || '-'}</span>
+                                        <div className="py-1.5 flex items-center gap-4">
+                                            <span className="text-xs font-bold text-neutral-400 uppercase tracking-tighter w-32 shrink-0">CIF</span>
+                                            <span className="text-sm font-bold text-neutral-900 uppercase">{selectedDetailProveedor.cif || '-'}</span>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Right: Location Info */}
-                                <div className="space-y-6">
-                                    <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-                                        <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
-                                            <MapPin className="w-4 h-4 text-emerald-600" />
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-2 border-b-2 border-neutral-900 pb-1.5">
+                                        <MapPin className="w-4 h-4 text-neutral-900" />
+                                        <h4 className="text-sm font-black text-neutral-900 uppercase tracking-widest">Ubicación</h4>
+                                    </div>
+                                    <div className="divide-y divide-neutral-100">
+                                        <div className="py-1.5 flex items-center gap-4">
+                                            <span className="text-xs font-bold text-neutral-400 uppercase tracking-tighter w-32 shrink-0">Dirección</span>
+                                            <span className="text-sm font-normal text-neutral-900 uppercase">{selectedDetailProveedor.direccion || '-'}</span>
                                         </div>
-                                        Ubicación
-                                    </h4>
-                                    <div className="space-y-4">
-                                        <div className="space-y-1">
-                                            <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Dirección</span>
-                                            <span className="text-sm text-slate-900">{selectedDetailProveedor.direccion || '-'}</span>
+                                        <div className="py-1.5 flex items-center gap-4">
+                                            <span className="text-xs font-bold text-neutral-400 uppercase tracking-tighter w-32 shrink-0">CP</span>
+                                            <span className="text-sm font-normal text-neutral-900 uppercase">{selectedDetailProveedor.cp || '-'}</span>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="space-y-1">
-                                                <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">CP</span>
-                                                <span className="text-sm text-slate-900">{selectedDetailProveedor.cp || '-'}</span>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ciudad</span>
-                                                <span className="text-sm text-slate-900">{selectedDetailProveedor.ciudad || '-'}</span>
-                                            </div>
+                                        <div className="py-1.5 flex items-center gap-4">
+                                            <span className="text-xs font-bold text-neutral-400 uppercase tracking-tighter w-32 shrink-0">Ciudad</span>
+                                            <span className="text-sm font-normal text-neutral-900 uppercase">{selectedDetailProveedor.ciudad || '-'}</span>
                                         </div>
-                                        <div className="space-y-1">
-                                            <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Provincia</span>
-                                            <span className="text-sm text-slate-900">{selectedDetailProveedor.provincia || '-'}</span>
+                                        <div className="py-1.5 flex items-center gap-4">
+                                            <span className="text-xs font-bold text-neutral-400 uppercase tracking-tighter w-32 shrink-0">Provincia</span>
+                                            <span className="text-sm font-normal text-neutral-900 uppercase">{selectedDetailProveedor.provincia || '-'}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -617,13 +621,13 @@ export default function ProveedoresPage() {
                         </div>
 
                         {/* Footer Actions */}
-                        <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-slate-100 bg-slate-50/30 rounded-b-xl flex justify-between items-center flex-shrink-0">
+                        <div className="px-6 py-4 border-t border-neutral-100 bg-neutral-50/30 flex justify-between items-center bg-white flex-shrink-0">
                             <button
                                 onClick={() => {
                                     handleDeleteClick(selectedDetailProveedor.id);
                                     setShowDetailModal(false);
                                 }}
-                                className="flex items-center gap-2 text-red-500 hover:text-red-600 hover:bg-red-50/50 px-4 py-2 rounded-xl transition font-semibold text-sm"
+                                className="flex items-center gap-2 text-neutral-400 hover:text-red-600 transition-colors font-bold text-[10px] uppercase tracking-[0.2em]"
                             >
                                 <Trash2 className="w-4 h-4" />
                                 <span>Eliminar Proveedor</span>
@@ -637,21 +641,21 @@ export default function ProveedoresPage() {
                                         activo: !selectedDetailProveedor.activo
                                     });
                                 }}
-                                className={`h-11 px-6 rounded-xl font-bold shadow-sm transition flex items-center gap-2 ${selectedDetailProveedor.activo
-                                    ? 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
-                                    : 'bg-yellow-400 text-neutral-950 hover:bg-yellow-500 shadow-yellow-200/50 hover:shadow-lg'
+                                className={`h-12 px-8 rounded-xl font-black text-xs uppercase tracking-[0.15em] shadow-sm transition-all active:scale-95 ${selectedDetailProveedor.activo
+                                    ? 'bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-50'
+                                    : 'bg-yellow-400 text-neutral-900 hover:bg-yellow-500 shadow-yellow-100'
                                     }`}
                             >
                                 {selectedDetailProveedor.activo ? (
-                                    <>
-                                        <X className="w-4 h-4 text-red-500" />
-                                        Desactivar Proveedor
-                                    </>
+                                    <div className="flex items-center gap-2">
+                                        <X className="w-4 h-4" />
+                                        <span>Desactivar Proveedor</span>
+                                    </div>
                                 ) : (
-                                    <>
-                                        < Plus className="w-4 h-4" />
-                                        Activar Proveedor
-                                    </>
+                                    <div className="flex items-center gap-2">
+                                        <Plus className="w-4 h-4" />
+                                        <span>Activar Proveedor</span>
+                                    </div>
                                 )}
                             </button>
                         </div>
