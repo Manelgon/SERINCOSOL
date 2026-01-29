@@ -4,7 +4,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { Plus, FileText, Check, Trash2, X, RotateCcw, Paperclip, Download, Loader2 } from 'lucide-react';
+import { Plus, FileText, Check, Trash2, X, RotateCcw, Paperclip, Download, Loader2, Users } from 'lucide-react';
 import DataTable, { Column } from '@/components/DataTable';
 import SearchableSelect from '@/components/SearchableSelect';
 import { logActivity } from '@/lib/logActivity';
@@ -89,7 +89,6 @@ export default function MorosidadPage() {
         documento: '',
         aviso: null as string | null,
         id_email_deuda: '',
-        ref: '',
     });
 
     const [file, setFile] = useState<File | null>(null);
@@ -258,7 +257,6 @@ export default function MorosidadPage() {
                     documento: '',
                     aviso: null,
                     id_email_deuda: '',
-                    ref: '',
                 });
                 setFile(null);
                 fetchMorosidad();
@@ -267,19 +265,16 @@ export default function MorosidadPage() {
             }
             // Create new
             try {
-                // Generate automatic Ref if empty
-                let autoRef = formData.ref;
-                if (!autoRef) {
-                    const now = new Date();
-                    const timestamp = now.getFullYear().toString() +
-                        (now.getMonth() + 1).toString().padStart(2, '0') +
-                        now.getDate().toString().padStart(2, '0') + '-' +
-                        now.getHours().toString().padStart(2, '0') +
-                        now.getMinutes().toString().padStart(2, '0') +
-                        now.getSeconds().toString().padStart(2, '0');
-                    const initials = (formData.nombre_deudor || '').substring(0, 3).toUpperCase();
-                    autoRef = `DEV-${timestamp}-${initials}`;
-                }
+                // Generate automatic Ref
+                const now = new Date();
+                const timestamp = now.getFullYear().toString() +
+                    (now.getMonth() + 1).toString().padStart(2, '0') +
+                    now.getDate().toString().padStart(2, '0') + '-' +
+                    now.getHours().toString().padStart(2, '0') +
+                    now.getMinutes().toString().padStart(2, '0') +
+                    now.getSeconds().toString().padStart(2, '0');
+                const initials = (formData.nombre_deudor || '').substring(0, 3).toUpperCase();
+                const autoRef = `DEV-${timestamp}-${initials}`;
 
                 const { data: newDebt, error } = await supabase.from('morosidad').insert([{
                     ...formData,
@@ -350,7 +345,6 @@ export default function MorosidadPage() {
                     documento: '',
                     aviso: null,
                     id_email_deuda: '',
-                    ref: '',
                 });
                 setEnviarNotificacion(null);
                 setFile(null);
@@ -524,7 +518,7 @@ export default function MorosidadPage() {
     };
 
     const handleExport = async (type: 'csv' | 'pdf', idsOverride?: number[], includeNotesFromModal?: boolean) => {
-        const idsToExport = idsOverride || Array.from(selectedIds);
+        const idsToExport = (idsOverride || Array.from(selectedIds)).map(Number);
         if (idsToExport.length === 0) return;
 
         // If overriding IDs (from modal), imply detail view if single item
@@ -532,7 +526,7 @@ export default function MorosidadPage() {
 
         // Custom Modal Logic
         if (isDetailView && includeNotesFromModal === undefined) {
-            setPendingExportParams({ type, ids: idsOverride });
+            setPendingExportParams({ type, ids: idsToExport });
             setShowExportModal(true);
             return;
         }
@@ -600,7 +594,6 @@ export default function MorosidadPage() {
             documento: moroso.documento || '',
             aviso: moroso.aviso || null,
             id_email_deuda: moroso.id_email_deuda || '',
-            ref: moroso.ref || '',
         });
         setShowForm(true);
     };
@@ -774,8 +767,8 @@ export default function MorosidadPage() {
                             }}
                             disabled={isUpdatingStatus === row.id}
                             className={`p-1.5 rounded-full transition-colors ${isUpdatingStatus === row.id
-                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                    : 'bg-green-100 text-green-600 hover:bg-green-200'
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                : 'bg-green-100 text-green-600 hover:bg-green-200'
                                 }`}
                             title="Marcar como Pagado"
                         >
@@ -834,7 +827,6 @@ export default function MorosidadPage() {
                                 documento: '',
                                 aviso: null,
                                 id_email_deuda: '',
-                                ref: '',
                             });
                         }
                     }}
@@ -968,6 +960,7 @@ export default function MorosidadPage() {
                                         value={formData.telefono_deudor}
                                         onChange={e => setFormData({ ...formData, telefono_deudor: e.target.value })}
                                     />
+                                    <p className="mt-1 text-xs text-slate-500">(Sin espacios y sin prefijo)</p>
                                 </div>
 
                                 <div>
@@ -1008,16 +1001,6 @@ export default function MorosidadPage() {
                                     />
                                 </div>
 
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-700 mb-2 font-bold text-indigo-600">Referencia (Ref)</label>
-                                    <input
-                                        type="text"
-                                        placeholder="Ej: REF-123456"
-                                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400"
-                                        value={formData.ref}
-                                        onChange={e => setFormData({ ...formData, ref: e.target.value })}
-                                    />
-                                </div>
 
                                 <div>
                                     <label className="block text-sm font-semibold text-slate-700 mb-2">Importe (€) <span className="text-red-600">*</span></label>
@@ -1312,35 +1295,35 @@ export default function MorosidadPage() {
                 </div>
             )}
 
-            {/* Detail Modal */}
+            {/* Detail Modal - Rediseño Administrativo */}
             {showDetailModal && selectedDetailMorosidad && (
                 <div
-                    className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-0 sm:p-4 md:p-8 backdrop-blur-sm"
+                    className="fixed inset-0 bg-neutral-900/60 z-[100] flex items-center justify-center p-0 sm:p-4 backdrop-blur-md"
                     onClick={() => setShowDetailModal(false)}
                 >
                     <div
-                        className="bg-white rounded-none sm:rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-gray-900/10 w-full sm:max-w-2xl h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto custom-scrollbar flex flex-col animate-in fade-in zoom-in duration-200"
+                        className="bg-white rounded-none sm:rounded-2xl shadow-2xl border border-neutral-200 w-full sm:max-w-4xl h-full sm:h-auto sm:max-h-[92vh] overflow-hidden flex flex-col animate-in fade-in zoom-in duration-300"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {/* Header */}
-                        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 flex justify-between items-center bg-white flex-shrink-0 rounded-t-xl">
-                            <div>
-                                <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-                                    Deuda #{selectedDetailMorosidad.id}
-                                </h3>
-                                <p className="text-xs text-slate-500 mt-0.5">
-                                    Creado el {new Date(selectedDetailMorosidad.created_at).toLocaleString()}
-                                </p>
-                                {selectedDetailMorosidad.estado === 'Pagado' && selectedDetailMorosidad.fecha_resuelto && (
-                                    <p className="text-xs text-green-600 mt-0.5 font-medium flex items-center gap-1">
-                                        Pagado el {new Date(selectedDetailMorosidad.fecha_resuelto).toLocaleString()}
-                                        {selectedDetailMorosidad.resolver?.nombre && (
-                                            <span className="text-slate-400 font-normal">
-                                                ({selectedDetailMorosidad.resolver.nombre})
-                                            </span>
+                        {/* Administrative Header */}
+                        <div className="px-6 py-5 border-b border-neutral-100 flex justify-between items-center bg-neutral-50/50 flex-shrink-0">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 bg-amber-400 rounded-xl flex items-center justify-center text-neutral-900 shadow-lg shadow-amber-200/50">
+                                    <FileText className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="text-xl font-black text-neutral-900 tracking-tight uppercase">
+                                            Deuda #{selectedDetailMorosidad.id}
+                                        </h3>
+                                    </div>
+                                    <p className="text-xs text-neutral-500 font-medium mt-0.5 uppercase">
+                                        Registrado el {new Date(selectedDetailMorosidad.created_at).toLocaleString('es-ES', { dateStyle: 'long', timeStyle: 'short' }).toUpperCase()}
+                                        {selectedDetailMorosidad.estado === 'Pagado' && selectedDetailMorosidad.fecha_resuelto && (
+                                            <> — PAGADO EL {new Date(selectedDetailMorosidad.fecha_resuelto).toLocaleString('es-ES', { dateStyle: 'long', timeStyle: 'short' }).toUpperCase()} ({selectedDetailMorosidad.resolver?.nombre?.trim().toUpperCase() || 'SISTEMA'})</>
                                         )}
                                     </p>
-                                )}
+                                </div>
                             </div>
                             <div className="flex items-center gap-2">
                                 <input
@@ -1353,179 +1336,181 @@ export default function MorosidadPage() {
                                         }
                                     }}
                                 />
-                                <button
-                                    onClick={() => detailFileInputRef.current?.click()}
-                                    className="p-2 hover:bg-slate-50 rounded-full transition-colors text-slate-400 hover:text-slate-600"
-                                    title="Actualizar documento"
-                                    disabled={isUpdatingRecord}
-                                >
-                                    {isUpdatingRecord ? <Loader2 className="w-5 h-5 animate-spin text-slate-600" /> : <Paperclip className="w-5 h-5" />}
-                                </button>
-                                <button
-                                    onClick={() => handleExport('pdf', [selectedDetailMorosidad.id])}
-                                    className="p-2 hover:bg-slate-50 rounded-full transition-colors text-slate-400 hover:text-slate-600"
-                                    title="Descargar PDF"
-                                    disabled={exporting}
-                                >
-                                    {exporting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
-                                </button>
-                                <button
-                                    onClick={() => setShowDetailModal(false)}
-                                    className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500"
-                                >
-                                    <X className="w-5 h-5" />
-                                </button>
+                                <div className="flex bg-white rounded-lg border border-neutral-200 p-1 shadow-sm">
+                                    <button
+                                        onClick={() => detailFileInputRef.current?.click()}
+                                        className="p-2 hover:bg-neutral-50 rounded-md transition-colors text-neutral-400 hover:text-neutral-900 border-r border-neutral-100"
+                                        title="Actualizar documento"
+                                        disabled={isUpdatingRecord}
+                                    >
+                                        {isUpdatingRecord ? <Loader2 className="w-5 h-5 animate-spin text-neutral-600" /> : <Paperclip className="w-5 h-5" />}
+                                    </button>
+                                    <button
+                                        onClick={() => handleExport('pdf', [selectedDetailMorosidad.id])}
+                                        className="p-2 hover:bg-neutral-50 rounded-md transition-colors text-neutral-400 hover:text-neutral-900 border-r border-neutral-100"
+                                        title="Descargar PDF"
+                                        disabled={exporting}
+                                    >
+                                        {exporting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
+                                    </button>
+                                    <button
+                                        onClick={() => setShowDetailModal(false)}
+                                        className="p-2 hover:bg-neutral-50 rounded-md transition-colors text-neutral-400 hover:text-red-500"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
                         {/* Body */}
                         <div className="p-4 sm:p-6 space-y-8 flex-grow">
-                            {/* Top Status Bar */}
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50/50 p-4 rounded-xl border border-slate-100 font-sm">
-                                <div className="space-y-1">
-                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Estado</span>
-                                    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-semibold ${selectedDetailMorosidad.estado === 'Pagado'
-                                        ? 'bg-slate-100 text-slate-700'
-                                        : selectedDetailMorosidad.estado === 'En disputa'
-                                            ? 'bg-orange-100/50 text-orange-700 border border-orange-200/50'
-                                            : 'bg-yellow-100/50 text-yellow-800 border border-yellow-200/50'
-                                        }`}>
-                                        {selectedDetailMorosidad.estado === 'Pagado' ? <Check className="w-3 h-3" /> : <RotateCcw className="w-3 h-3" />}
-                                        {selectedDetailMorosidad.estado}
-                                    </span>
-                                </div>
-
-                                <div className="space-y-1">
-                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Importe</span>
-                                    <span className="text-sm font-bold text-slate-900">{selectedDetailMorosidad.importe}€</span>
-                                </div>
-
-                                <div className="space-y-1">
-                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Comunidad</span>
-                                    <span className="text-sm font-semibold text-slate-700">{selectedDetailMorosidad.comunidades?.nombre_cdad || '-'}</span>
-                                </div>
-
-                                <div className="space-y-1">
-                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Referencia (Ref)</span>
-                                    <span className="text-sm font-bold text-indigo-600">{selectedDetailMorosidad.ref || '-'}</span>
-                                </div>
-                            </div>
-
-                            {/* Tables Grid */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-10">
+                            {/* Main Data Sections */}
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                                 {/* Left Column: Deudor Info */}
-                                <div className="space-y-6">
-                                    <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-                                        <span className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-base">👤</span>
-                                        Información del Deudor
-                                    </h4>
-                                    <div className="space-y-4">
-                                        <div className="flex justify-between items-center text-sm border-b border-slate-50 pb-3">
-                                            <span className="text-slate-500">Nombre</span>
-                                            <span className="font-semibold text-slate-900">{selectedDetailMorosidad.nombre_deudor}</span>
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-2 border-b-2 border-neutral-900 pb-1.5">
+                                        <div className="w-7 h-7 rounded-md bg-neutral-100 flex items-center justify-center text-neutral-600">
+                                            <Users className="w-3.5 h-3.5" />
                                         </div>
-                                        <div className="flex justify-between items-center text-sm border-b border-slate-50 pb-3">
-                                            <span className="text-slate-500">Apellidos</span>
-                                            <span className="font-semibold text-slate-900">{selectedDetailMorosidad.apellidos || '-'}</span>
+                                        <h4 className="text-sm font-black text-neutral-900 uppercase tracking-widest">Información del Deudor</h4>
+                                    </div>
+
+                                    <div className="divide-y divide-neutral-100">
+                                        <div className="py-1.5 flex items-center gap-4">
+                                            <span className="text-xs font-bold text-neutral-400 uppercase tracking-tighter w-32 shrink-0">Nombre</span>
+                                            <span className="text-sm font-normal text-neutral-900 uppercase">{selectedDetailMorosidad.nombre_deudor.toUpperCase()}</span>
                                         </div>
-                                        <div className="flex justify-between items-center text-sm border-b border-slate-50 pb-3">
-                                            <span className="text-slate-500">Teléfono</span>
-                                            <span className="font-semibold text-slate-900">{selectedDetailMorosidad.telefono_deudor || '-'}</span>
+                                        <div className="py-1.5 flex items-center gap-4">
+                                            <span className="text-xs font-bold text-neutral-400 uppercase tracking-tighter w-32 shrink-0">Apellidos</span>
+                                            <span className="text-sm font-normal text-neutral-900 uppercase">{selectedDetailMorosidad.apellidos?.toUpperCase() || '-'}</span>
                                         </div>
-                                        <div className="flex justify-between items-center text-sm">
-                                            <span className="text-slate-500">Email</span>
-                                            <span className="text-slate-900">{selectedDetailMorosidad.email_deudor || '-'}</span>
+                                        <div className="py-1.5 flex items-center gap-4">
+                                            <span className="text-xs font-bold text-neutral-400 uppercase tracking-tighter w-32 shrink-0">Teléfono</span>
+                                            <span className="text-sm font-normal text-neutral-900">{selectedDetailMorosidad.telefono_deudor || '-'}</span>
+                                        </div>
+                                        <div className="py-1.5 flex items-center gap-4">
+                                            <span className="text-xs font-bold text-neutral-400 uppercase tracking-tighter w-32 shrink-0">Email</span>
+                                            <span className="text-sm font-normal text-neutral-600 uppercase">{(selectedDetailMorosidad.email_deudor || 'SIN ESPECIFICAR').toUpperCase()}</span>
+                                        </div>
+                                        <div className="py-1.5 flex items-center gap-4">
+                                            <span className="text-xs font-bold text-neutral-400 uppercase tracking-tighter w-32 shrink-0">Comunidad</span>
+                                            <span className="text-sm font-normal text-neutral-900 uppercase">{(selectedDetailMorosidad.comunidades?.nombre_cdad || '-').toUpperCase()}</span>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Right Column: Gestión */}
-                                <div className="space-y-6">
-                                    <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-                                        <span className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-base">📋</span>
-                                        Gestión
-                                    </h4>
-                                    <div className="space-y-4">
-                                        <div className="flex justify-between items-center text-sm border-b border-slate-50 pb-3">
-                                            <span className="text-slate-500">Gestor</span>
-                                            <span className="font-semibold text-slate-900">
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-2 border-b-2 border-neutral-900 pb-1.5">
+                                        <div className="w-7 h-7 rounded-md bg-neutral-100 flex items-center justify-center text-neutral-600">
+                                            <div className="w-3.5 h-3.5 bg-neutral-600 rounded-sm" />
+                                        </div>
+                                        <h4 className="text-sm font-black text-neutral-900 uppercase tracking-widest">Gestión</h4>
+                                    </div>
+
+                                    <div className="divide-y divide-neutral-100">
+                                        <div className="py-1.5 flex items-center gap-4">
+                                            <span className="text-xs font-bold text-neutral-400 uppercase tracking-tighter w-32 shrink-0">Estado</span>
+                                            <span className={`text-sm font-bold uppercase ${selectedDetailMorosidad.estado === 'Pagado' ? 'text-emerald-700' : 'text-amber-700'}`}>
+                                                {selectedDetailMorosidad.estado.toUpperCase()}
+                                            </span>
+                                        </div>
+                                        <div className="py-1.5 flex items-center gap-4">
+                                            <span className="text-xs font-bold text-neutral-400 uppercase tracking-tighter w-32 shrink-0">Referencia</span>
+                                            <span className="text-sm font-bold text-indigo-700 uppercase">
+                                                {(selectedDetailMorosidad.ref || '-').toUpperCase()}
+                                            </span>
+                                        </div>
+                                        <div className="py-1.5 flex items-center gap-4">
+                                            <span className="text-xs font-bold text-neutral-400 uppercase tracking-tighter w-32 shrink-0">Gestor</span>
+                                            <span className="text-sm font-normal text-neutral-900 uppercase">
                                                 {(() => {
                                                     if (!selectedDetailMorosidad.gestor) return '-';
                                                     const p = profiles.find(p => p.user_id === selectedDetailMorosidad.gestor);
-                                                    return p ? p.nombre : (selectedDetailMorosidad.gestor.length > 20 ? 'Usuario desconocido' : selectedDetailMorosidad.gestor);
+                                                    return (p ? p.nombre : (selectedDetailMorosidad.gestor.length > 20 ? 'Usuario desconocido' : selectedDetailMorosidad.gestor)).toUpperCase();
                                                 })()}
                                             </span>
                                         </div>
-                                        <div className="flex justify-between items-center text-sm border-b border-slate-50 pb-3">
-                                            <span className="text-slate-500">F. Notificación</span>
-                                            <span className="text-slate-900">
-                                                {selectedDetailMorosidad.fecha_notificacion ? new Date(selectedDetailMorosidad.fecha_notificacion).toLocaleDateString() : '-'}
+                                        <div className="py-1.5 flex items-center gap-4">
+                                            <span className="text-xs font-bold text-neutral-400 uppercase tracking-tighter w-32 shrink-0">F. Notificación</span>
+                                            <span className="text-sm font-normal text-neutral-900 uppercase">
+                                                {selectedDetailMorosidad.fecha_notificacion ? new Date(selectedDetailMorosidad.fecha_notificacion).toLocaleDateString().toUpperCase() : '-'}
                                             </span>
                                         </div>
-                                        <div className="flex justify-between items-center text-sm border-b border-slate-50 pb-3">
-                                            <span className="text-slate-500">F. Pago</span>
-                                            <span className="text-slate-900">
-                                                {selectedDetailMorosidad.fecha_pago ? new Date(selectedDetailMorosidad.fecha_pago).toLocaleDateString() : '-'}
+                                        <div className="py-1.5 flex items-center gap-4">
+                                            <span className="text-xs font-bold text-neutral-400 uppercase tracking-tighter w-32 shrink-0">F. Pago</span>
+                                            <span className="text-sm font-normal text-neutral-900 uppercase">
+                                                {selectedDetailMorosidad.fecha_pago ? new Date(selectedDetailMorosidad.fecha_pago).toLocaleDateString().toUpperCase() : '-'}
                                             </span>
                                         </div>
-                                        <div className="flex justify-between items-center text-sm">
-                                            <span className="text-slate-500">Aviso</span>
-                                            <span className="font-semibold text-slate-900">{selectedDetailMorosidad.aviso || '-'}</span>
+                                        <div className="py-1.5 flex items-center gap-4">
+                                            <span className="text-xs font-bold text-neutral-400 uppercase tracking-tighter w-32 shrink-0">Aviso</span>
+                                            <span className="text-sm font-normal text-neutral-900 uppercase">{selectedDetailMorosidad.aviso?.toUpperCase() || '-'}</span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Concepto */}
-                            <div className="space-y-3">
-                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                                    Concepto
-                                </h4>
-                                <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 text-slate-900 font-semibold text-sm">
-                                    {selectedDetailMorosidad.titulo_documento}
+                            {/* Concepto e Importe */}
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                                <div className="space-y-3">
+                                    <div className="flex items-center gap-2 border-b-2 border-neutral-900 pb-1.5">
+                                        <h4 className="text-sm font-black text-neutral-900 uppercase tracking-widest">Concepto</h4>
+                                    </div>
+                                    <div className="text-neutral-800 text-sm font-normal uppercase">
+                                        {selectedDetailMorosidad.titulo_documento.toUpperCase()}
+                                    </div>
+                                </div>
+                                <div className="space-y-3">
+                                    <div className="flex items-center gap-2 border-b-2 border-neutral-900 pb-1.5">
+                                        <h4 className="text-sm font-black text-neutral-900 uppercase tracking-widest">Importe</h4>
+                                    </div>
+                                    <div className="text-neutral-800 text-sm font-bold uppercase">
+                                        {selectedDetailMorosidad.importe}€
+                                    </div>
                                 </div>
                             </div>
-
                             {/* Observaciones */}
                             {selectedDetailMorosidad.observaciones && (
                                 <div className="space-y-3">
-                                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                                        Observaciones
-                                    </h4>
-                                    <div className="bg-slate-50/50 p-6 rounded-xl border border-slate-100 text-slate-700 text-sm leading-relaxed whitespace-pre-wrap italic">
-                                        "{selectedDetailMorosidad.observaciones}"
+                                    <div className="flex items-center gap-2 border-b-2 border-neutral-900 pb-1.5">
+                                        <h4 className="text-sm font-black text-neutral-900 uppercase tracking-widest">Observaciones</h4>
                                     </div>
+                                    <p className="text-neutral-800 text-sm leading-relaxed font-normal text-justify uppercase italic">
+                                        "{selectedDetailMorosidad.observaciones.toUpperCase()}"
+                                    </p>
                                 </div>
                             )}
-
                             {/* Document */}
                             {selectedDetailMorosidad.documento && (
-                                <div className="space-y-3">
-                                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                                        📎 Documento
-                                    </h4>
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-2 border-b-2 border-neutral-900 pb-1.5">
+                                        <h4 className="text-sm font-black text-neutral-900 uppercase tracking-widest">Documentación</h4>
+                                    </div>
                                     <a
                                         href={selectedDetailMorosidad.documento}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="flex items-center gap-3 bg-white border border-slate-200 p-3 rounded-xl text-sm font-medium text-slate-600 hover:text-slate-900 hover:border-slate-300 hover:shadow-sm transition group w-fit"
+                                        className="flex items-center gap-4 group p-1 w-fit"
                                     >
-                                        <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center group-hover:bg-slate-100 transition">
-                                            <FileText className="w-5 h-5 text-slate-400 group-hover:text-slate-600" />
+                                        <div className="w-10 h-10 rounded-lg bg-neutral-50 flex items-center justify-center text-neutral-400 group-hover:bg-neutral-900 group-hover:text-white transition-colors">
+                                            <FileText className="w-5 h-5" />
                                         </div>
-                                        <div className="flex flex-col pr-4">
-                                            <span className="font-semibold">Ver Documento</span>
-                                            <span className="text-[10px] text-slate-400">Clic para abrir</span>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-normal text-neutral-900 uppercase">
+                                                DOCUMENTO ADJUNTO
+                                            </span>
+                                            <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-tight">Ver archivo oficial</span>
                                         </div>
                                     </a>
                                 </div>
                             )}
-
                             {/* Timeline Chat */}
                             <div className="space-y-4 pt-4">
-                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                                    Timeline de Gestión
-                                </h4>
+                                <div className="flex items-center gap-2 border-b-2 border-neutral-900 pb-1.5">
+                                    <h4 className="text-sm font-black text-neutral-900 uppercase tracking-widest">Chat de Gestores</h4>
+                                </div>
                                 <TimelineChat
                                     entityType="morosidad"
                                     entityId={selectedDetailMorosidad.id}
@@ -1533,17 +1518,17 @@ export default function MorosidadPage() {
                             </div>
                         </div>
 
-                        {/* Footer Actions */}
-                        <div className="p-6 sm:p-8 border-t border-slate-100 bg-slate-50/30 rounded-b-xl flex justify-between items-center flex-shrink-0">
+                        {/* Administrative Footer Actions */}
+                        <div className="px-8 py-6 border-t border-neutral-100 bg-neutral-50/30 flex justify-between items-center flex-shrink-0">
                             <button
                                 onClick={() => {
                                     handleDeleteClick(selectedDetailMorosidad.id);
                                     setShowDetailModal(false);
                                 }}
-                                className="flex items-center gap-2 text-red-500 hover:text-red-600 hover:bg-red-50/50 px-4 py-2 rounded-xl transition font-semibold text-sm"
+                                className="flex items-center gap-2 text-neutral-400 hover:text-red-600 transition-colors font-bold text-[10px] uppercase tracking-[0.2em]"
                             >
-                                <Trash2 className="w-4 h-4" />
-                                <span>Eliminar Registro</span>
+                                <Trash2 className="w-3.5 h-3.5" />
+                                ELIMINAR REGISTRO DEL SISTEMA
                             </button>
 
                             {selectedDetailMorosidad.estado !== 'Pagado' && (
@@ -1552,10 +1537,10 @@ export default function MorosidadPage() {
                                         markAsPaid(selectedDetailMorosidad.id);
                                         setShowDetailModal(false);
                                     }}
-                                    className="h-11 px-6 bg-yellow-400 text-neutral-950 rounded-xl font-bold shadow-sm transition flex items-center gap-2 hover:bg-yellow-500 shadow-yellow-200/50 hover:shadow-lg"
+                                    className="h-12 px-8 bg-yellow-400 text-neutral-900 rounded-xl font-black text-xs uppercase tracking-[0.15em] transition-all shadow-lg hover:bg-yellow-500 shadow-amber-200/50 flex items-center justify-center gap-3"
                                 >
                                     <Check className="w-4 h-4" />
-                                    Marcar como Pagado
+                                    MARCAR COMO PAGADO
                                 </button>
                             )}
                         </div>
