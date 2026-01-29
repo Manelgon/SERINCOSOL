@@ -252,7 +252,8 @@ export default function IncidenciasPage() {
 
             // Log activity
             const comunidad = comunidades.find(c => c.id === parseInt(formData.comunidad_id));
-            const gestorAsignadoNombre = profiles.find(p => p.user_id === formData.gestor_asignado)?.nombre || formData.gestor_asignado;
+            const gestorAsignado = profiles.find(p => p.user_id === formData.gestor_asignado);
+            const gestorAsignadoNombre = gestorAsignado?.nombre || formData.gestor_asignado;
             await logActivity({
                 action: 'create',
                 entityType: 'incidencia',
@@ -262,7 +263,7 @@ export default function IncidenciasPage() {
                     id: incidenciaId,
                     comunidad: comunidad?.nombre_cdad,
                     mensaje: formData.mensaje,
-                    asignado: gestorAsignadoNombre
+                    asignado_a: gestorAsignadoNombre
                 }
             });
 
