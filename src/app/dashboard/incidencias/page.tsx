@@ -78,6 +78,8 @@ export default function IncidenciasPage() {
     const [deletePassword, setDeletePassword] = useState('');
     const [isReassigning, setIsReassigning] = useState(false);
     const [newGestorId, setNewGestorId] = useState('');
+    const [isUpdatingGestor, setIsUpdatingGestor] = useState(false);
+    const [showReassignSuccessModal, setShowReassignSuccessModal] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
     // Detail Modal State
@@ -595,6 +597,7 @@ export default function IncidenciasPage() {
     const handleUpdateGestor = async () => {
         if (!selectedDetailIncidencia || !newGestorId) return;
 
+        setIsUpdatingGestor(true);
         try {
             // Obtener info del usuario actual
             const { data: { user } } = await supabase.auth.getUser();
@@ -607,7 +610,7 @@ export default function IncidenciasPage() {
 
             if (error) throw error;
 
-            toast.success('Gestor reasignado correctamente');
+            // toast.success('Gestor reasignado correctamente'); // Replaced by modal
 
             // Actualizar estado local
             const newGestorProfile = profiles.find(p => p.user_id === newGestorId);
@@ -669,10 +672,13 @@ export default function IncidenciasPage() {
 
             setIsReassigning(false);
             setNewGestorId('');
+            setShowReassignSuccessModal(true);
 
         } catch (error: any) {
             console.error('Error updating gestor:', error);
             toast.error('Error al reasignar gestor');
+        } finally {
+            setIsUpdatingGestor(false);
         }
     };
 
@@ -1560,18 +1566,23 @@ export default function IncidenciasPage() {
                                                             </div>
                                                             <button
                                                                 onClick={handleUpdateGestor}
-                                                                disabled={!newGestorId}
+                                                                disabled={!newGestorId || isUpdatingGestor}
                                                                 className="p-1.5 bg-green-100 text-green-700 rounded-md hover:bg-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                                                 title="Guardar cambios"
                                                             >
-                                                                <Save className="w-3.5 h-3.5" />
+                                                                {isUpdatingGestor ? (
+                                                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                                ) : (
+                                                                    <Save className="w-3.5 h-3.5" />
+                                                                )}
                                                             </button>
                                                             <button
                                                                 onClick={() => {
                                                                     setIsReassigning(false);
                                                                     setNewGestorId('');
                                                                 }}
-                                                                className="p-1.5 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors"
+                                                                disabled={isUpdatingGestor}
+                                                                className="p-1.5 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                                                 title="Cancelar"
                                                             >
                                                                 <X className="w-3.5 h-3.5" />
@@ -1717,6 +1728,32 @@ export default function IncidenciasPage() {
                                 </button>
                             </div>
                         </div>
+                    </div>
+                </div>
+            )}
+            {/* Reassign Success Modal */}
+            {showReassignSuccessModal && (
+                <div
+                    className="fixed inset-0 bg-neutral-900/60 z-[110] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200"
+                >
+                    <div
+                        className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 relative flex flex-col items-center text-center animate-in zoom-in-95 duration-200"
+                    >
+                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                            <Check className="w-8 h-8 text-green-600" />
+                        </div>
+                        <h3 className="text-xl font-bold text-neutral-900 mb-2">
+                            Gestor Reasignado
+                        </h3>
+                        <p className="text-neutral-500 mb-6">
+                            La incidencia ha sido reasignada al nuevo gestor correctamente.
+                        </p>
+                        <button
+                            onClick={() => setShowReassignSuccessModal(false)}
+                            className="w-full py-3 bg-neutral-900 hover:bg-black text-white rounded-xl font-bold transition-transform active:scale-[0.98]"
+                        >
+                            Aceptar
+                        </button>
                     </div>
                 </div>
             )}
