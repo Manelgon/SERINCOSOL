@@ -596,6 +596,10 @@ export default function IncidenciasPage() {
         if (!selectedDetailIncidencia || !newGestorId) return;
 
         try {
+            // Obtener info del usuario actual
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('Usuario no autenticado');
+
             const { error } = await supabase
                 .from('incidencias')
                 .update({ gestor_asignado: newGestorId })
@@ -607,6 +611,8 @@ export default function IncidenciasPage() {
 
             // Actualizar estado local
             const newGestorProfile = profiles.find(p => p.user_id === newGestorId);
+            const oldGestorName = selectedDetailIncidencia.gestor?.nombre || 'Sin asignar';
+            const newGestorName = newGestorProfile?.nombre || 'Desconocido';
 
             setSelectedDetailIncidencia({
                 ...selectedDetailIncidencia,
@@ -620,6 +626,46 @@ export default function IncidenciasPage() {
                     ? { ...inc, gestor_asignado: newGestorId, gestor: newGestorProfile ? { nombre: newGestorProfile.nombre } : inc.gestor }
                     : inc
             ));
+
+            // 1. Insertar mensaje en el Timeline (Chat)
+            await supabase
+                .from('record_messages')
+                .insert({
+                    entity_type: 'incidencia',
+                    entity_id: selectedDetailIncidencia.id,
+                    user_id: user.id,
+                    content: `🔄 TICKET REASIGNADO\nDe: ${oldGestorName}\nA: ${newGestorName}`
+                });
+
+            // 2. Crear Notificación para el nuevo gestor
+            if (newGestorId !== user.id) { // No notificarse a sí mismo si se autoasigna
+                await supabase
+                    .from('notifications')
+                    .insert({
+                        user_id: newGestorId,
+                        type: 'assignment',
+                        title: 'Nueva Asignación de Ticket',
+                        content: `Se te ha asignado la incidencia #${selectedDetailIncidencia.id} (Reasignado por reasignación)`,
+                        entity_id: selectedDetailIncidencia.id,
+                        entity_type: 'incidencia',
+                        link: `/dashboard/incidencias?id=${selectedDetailIncidencia.id}`,
+                        is_read: false
+                    });
+            }
+
+            // 3. Log de Actividad del Sistema
+            await logActivity({
+                action: 'update',
+                entityType: 'incidencia',
+                entityId: selectedDetailIncidencia.id,
+                entityName: `Incidencia #${selectedDetailIncidencia.id}`,
+                details: {
+                    change: 'reasignacion',
+                    old_gestor: oldGestorName,
+                    new_gestor: newGestorName,
+                    by: user.id
+                }
+            });
 
             setIsReassigning(false);
             setNewGestorId('');
