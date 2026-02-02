@@ -37,11 +37,21 @@ async function downloadAssetPng(filePath: string) {
 // Text Wrapping & Drawing Helpers
 // -----------------------------------------------------------
 
+// Helper to remove unsupported characters (like emojis) for WinAnsi fonts
+function sanitizeText(text: string): string {
+    if (!text) return '';
+    // Replace characters that are not in basic Latin or Latin-1 Supplement.
+    // This removes emojis and other special symbols that break pdf-lib StandardFonts.
+    // Ranges: \x20-\x7E (Printable ASCII), \xA0-\xFF (Latin-1 Supplement)
+    // Also keep newlines \n
+    // Using a negation set to remove everything else.
+    return text.replace(/[^\x20-\x7E\xA0-\xFF\n]/g, '');
+}
+
 function wrapText(text: string, maxWidth: number, font: PDFFont, size: number): string[] {
     if (!text) return [];
-    // Replace newlines with spaces for single block, or split paragraphs if needed.
-    // For this UI, preserving paragraphs is better:
-    const paragraphs = text.split('\n');
+    const cleanText = sanitizeText(text);
+    const paragraphs = cleanText.split('\n');
     let lines: string[] = [];
 
     paragraphs.forEach(paragraph => {
@@ -116,7 +126,7 @@ export async function generateIncidentDetailPdf({ incident, notes = [] }: { inci
 
     // --- 2. HEADER: Ticket #ID ---
     const ticketTitle = `Ticket #${incident.id}`;
-    page.drawText(ticketTitle, {
+    page.drawText(sanitizeText(ticketTitle), {
         x: margin,
         y: y,
         size: 24,
@@ -152,13 +162,15 @@ export async function generateIncidentDetailPdf({ incident, notes = [] }: { inci
     // Simplified: Just draw text for now, simulating layout.
 
     const drawLabelValue = (label: string, value: string, xPos: number, yPos: number, valueColor: any = rgb(0, 0, 0), valueBg?: any) => {
-        page.drawText(label, { x: xPos, y: yPos, size: 10, font: fontRegular, color: rgb(0.5, 0.5, 0.5) });
-        const labelW = fontRegular.widthOfTextAtSize(label, 10);
+        const cleanLabel = sanitizeText(label);
+        const cleanValue = sanitizeText(value);
+        page.drawText(cleanLabel, { x: xPos, y: yPos, size: 10, font: fontRegular, color: rgb(0.5, 0.5, 0.5) });
+        const labelW = fontRegular.widthOfTextAtSize(cleanLabel, 10);
 
         const valX = xPos + labelW + 5;
 
         if (valueBg) {
-            const valW = fontBold.widthOfTextAtSize(value, 10);
+            const valW = fontBold.widthOfTextAtSize(cleanValue, 10);
             page.drawRectangle({
                 x: valX - 4,
                 y: yPos - 4,
@@ -169,8 +181,8 @@ export async function generateIncidentDetailPdf({ incident, notes = [] }: { inci
             });
         }
 
-        page.drawText(value, { x: valX, y: yPos, size: 10, font: fontBold, color: valueColor });
-        return valX + fontBold.widthOfTextAtSize(value, 10) + 20; // Return next X
+        page.drawText(cleanValue, { x: valX, y: yPos, size: 10, font: fontBold, color: valueColor });
+        return valX + fontBold.widthOfTextAtSize(cleanValue, 10) + 20; // Return next X
     };
 
     const statusY = y - (statusBarHeight / 2) - 4; // Vertically centered
@@ -210,7 +222,7 @@ export async function generateIncidentDetailPdf({ incident, notes = [] }: { inci
     // --- LEFT COLUMN: Contacto y Ubicación ---
     const drawSectionHeader = (title: string, x: number, y: number) => {
         // Icon placeholder (simple circle) + Text
-        page.drawText(title, { x: x, y: y, size: 12, font: fontBold, color: rgb(0.1, 0.1, 0.1) });
+        page.drawText(sanitizeText(title), { x: x, y: y, size: 12, font: fontBold, color: rgb(0.1, 0.1, 0.1) });
         // Underline
         page.drawLine({ start: { x: x, y: y - 5 }, end: { x: x + colWidth, y: y - 5 }, color: rgb(0, 0, 0), thickness: 1.5 });
         return y - 25;
@@ -219,7 +231,9 @@ export async function generateIncidentDetailPdf({ incident, notes = [] }: { inci
     let leftY = drawSectionHeader("CONTACTO Y UBICACIÓN", leftColX, currentSectionsY);
 
     const drawRow = (label: string, value: string, x: number, curY: number) => {
-        page.drawText(label, { x: x, y: curY, size: 10, font: fontRegular, color: rgb(0.5, 0.5, 0.5) });
+        const cleanLabel = sanitizeText(label);
+        const cleanValue = sanitizeText(value);
+        page.drawText(cleanLabel, { x: x, y: curY, size: 10, font: fontRegular, color: rgb(0.5, 0.5, 0.5) });
         // Value aligned to right of label? Or fixed tab?
         // UI shows 2 cols within the column: Label (left) | Value (right)
         // Let's us fixed offset for value.
@@ -313,7 +327,7 @@ export async function generateIncidentDetailPdf({ incident, notes = [] }: { inci
 
         incident.adjuntos.forEach((url: string, i: number) => {
             const label = `Adjunto ${i + 1}: ${url.split('/').pop()?.substring(0, 50)}...`;
-            page.drawText(label, {
+            page.drawText(sanitizeText(label), {
                 x: margin,
                 y: y,
                 size: 9,
@@ -356,7 +370,7 @@ export async function generateIncidentDetailPdf({ incident, notes = [] }: { inci
             }
 
             // Header line (Bold small)
-            page.drawText(header, { x: margin, y: y, size: 8, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
+            page.drawText(sanitizeText(header), { x: margin, y: y, size: 8, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
             y -= 12;
 
             contentLines.forEach((line) => {

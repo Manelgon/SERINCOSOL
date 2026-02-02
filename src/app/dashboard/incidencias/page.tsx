@@ -517,7 +517,10 @@ export default function IncidenciasPage() {
                 })
             });
 
-            if (!res.ok) throw new Error('Export failed');
+            if (!res.ok) {
+                const errData = await res.json();
+                throw new Error(errData.error || 'Export failed');
+            }
 
             const blob = await res.blob();
             const url = window.URL.createObjectURL(blob);
