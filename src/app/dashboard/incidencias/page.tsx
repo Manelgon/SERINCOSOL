@@ -1,10 +1,9 @@
-
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { Plus, Check, RotateCcw, Paperclip, Trash2, X, FileText, Download, Loader2, Building, Users, Clock } from 'lucide-react';
+import { Plus, Check, RotateCcw, Paperclip, Trash2, X, FileText, Download, Loader2, Building, Users, Clock, UserCog, Save } from 'lucide-react';
 import DataTable, { Column } from '@/components/DataTable';
 import SearchableSelect from '@/components/SearchableSelect';
 import { logActivity } from '@/lib/logActivity';
@@ -77,6 +76,8 @@ export default function IncidenciasPage() {
     const [itemToDelete, setItemToDelete] = useState<number | null>(null);
     const [deleteEmail, setDeleteEmail] = useState('');
     const [deletePassword, setDeletePassword] = useState('');
+    const [isReassigning, setIsReassigning] = useState(false);
+    const [newGestorId, setNewGestorId] = useState('');
     const [isDeleting, setIsDeleting] = useState(false);
 
     // Detail Modal State
@@ -588,6 +589,44 @@ export default function IncidenciasPage() {
             toast.error(error.message);
         } finally {
             setIsDeleting(false);
+        }
+    };
+
+    const handleUpdateGestor = async () => {
+        if (!selectedDetailIncidencia || !newGestorId) return;
+
+        try {
+            const { error } = await supabase
+                .from('incidencias')
+                .update({ gestor_asignado: newGestorId })
+                .eq('id', selectedDetailIncidencia.id);
+
+            if (error) throw error;
+
+            toast.success('Gestor reasignado correctamente');
+
+            // Actualizar estado local
+            const newGestorProfile = profiles.find(p => p.user_id === newGestorId);
+
+            setSelectedDetailIncidencia({
+                ...selectedDetailIncidencia,
+                gestor_asignado: newGestorId,
+                gestor: newGestorProfile ? { nombre: newGestorProfile.nombre } : selectedDetailIncidencia.gestor
+            });
+
+            // Actualizar lista principal
+            setIncidencias(prev => prev.map(inc =>
+                inc.id === selectedDetailIncidencia.id
+                    ? { ...inc, gestor_asignado: newGestorId, gestor: newGestorProfile ? { nombre: newGestorProfile.nombre } : inc.gestor }
+                    : inc
+            ));
+
+            setIsReassigning(false);
+            setNewGestorId('');
+
+        } catch (error: any) {
+            console.error('Error updating gestor:', error);
+            toast.error('Error al reasignar gestor');
         }
     };
 
@@ -1458,9 +1497,58 @@ export default function IncidenciasPage() {
                                             </div>
                                             <div className="py-1.5 flex items-center gap-4">
                                                 <span className="text-xs font-bold text-neutral-400 uppercase tracking-tighter w-32 shrink-0">Respon. Asignado</span>
-                                                <span className="text-sm font-normal text-neutral-900 uppercase">
-                                                    {((selectedDetailIncidencia as any).gestor?.nombre || selectedDetailIncidencia.gestor_asignado || 'PENDIENTE').toUpperCase()}
-                                                </span>
+                                                <div className="flex-1 flex items-center justify-between gap-2">
+                                                    {isReassigning ? (
+                                                        <div className="flex items-center gap-2 w-full animate-in fade-in slide-in-from-left-2">
+                                                            <div className="flex-1">
+                                                                <SearchableSelect
+                                                                    value={newGestorId}
+                                                                    onChange={(val) => setNewGestorId(String(val))}
+                                                                    options={profiles.map(p => ({
+                                                                        value: p.user_id,
+                                                                        label: `${p.nombre} (${p.rol})`
+                                                                    }))}
+                                                                    placeholder="Nuevo gestor..."
+                                                                    className="text-xs"
+                                                                />
+                                                            </div>
+                                                            <button
+                                                                onClick={handleUpdateGestor}
+                                                                disabled={!newGestorId}
+                                                                className="p-1.5 bg-green-100 text-green-700 rounded-md hover:bg-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                title="Guardar cambios"
+                                                            >
+                                                                <Save className="w-3.5 h-3.5" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => {
+                                                                    setIsReassigning(false);
+                                                                    setNewGestorId('');
+                                                                }}
+                                                                className="p-1.5 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors"
+                                                                title="Cancelar"
+                                                            >
+                                                                <X className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            <span className="text-sm font-normal text-neutral-900 uppercase">
+                                                                {((selectedDetailIncidencia as any).gestor?.nombre || selectedDetailIncidencia.gestor_asignado || 'PENDIENTE').toUpperCase()}
+                                                            </span>
+                                                            <button
+                                                                onClick={() => {
+                                                                    setNewGestorId(selectedDetailIncidencia.gestor_asignado || '');
+                                                                    setIsReassigning(true);
+                                                                }}
+                                                                className="ml-2 p-1.5 bg-yellow-400 hover:bg-yellow-500 text-neutral-950 rounded-md border border-yellow-500 shadow-sm transition-all"
+                                                                title="Reasignar gestor"
+                                                            >
+                                                                <UserCog className="w-4 h-4" />
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </div>
                                             </div>
                                             <div className="py-1.5 flex items-center gap-4">
                                                 <span className="text-xs font-bold text-neutral-400 uppercase tracking-tighter w-32 shrink-0">Urgencia</span>
