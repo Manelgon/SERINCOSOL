@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'react-hot-toast';
 import { Folder, FileText, ChevronRight, Home, RefreshCw, ExternalLink, Download, Search } from 'lucide-react';
 import DataTable, { Column } from '@/components/DataTable';
@@ -13,6 +13,7 @@ interface BucketItem {
     created_at: string | null;
     last_accessed_at: string | null;
     metadata: any;
+    comunidad?: string;
 }
 
 export default function FacturasComunidadesPage() {
@@ -22,6 +23,21 @@ export default function FacturasComunidadesPage() {
     const [comunidades, setComunidades] = useState<{ codigo: string; nombre_cdad: string }[]>([]);
 
     const currentPathString = path.join('/');
+
+    const tableData = useMemo(() => {
+        return items.map(item => {
+            const comunidadFolder = path.length === 0 ? item.name : path[0];
+            const codeMatch = comunidadFolder.match(/^(\d+)/);
+            const code = codeMatch ? codeMatch[1] : '';
+            const comunidadObj = comunidades.find(c => c.codigo === code);
+            const comunidadName = comunidadObj ? comunidadObj.nombre_cdad : comunidadFolder;
+
+            return {
+                ...item,
+                comunidad: comunidadName
+            };
+        });
+    }, [items, comunidades, path]);
 
     useEffect(() => {
         fetchComunidades();
@@ -134,27 +150,9 @@ export default function FacturasComunidadesPage() {
             key: 'comunidad',
             label: 'Comunidad',
             sortable: true,
-            render: (row) => {
-                const comunidadFolder = path.length === 0 ? row.name : path[0];
-                // Extract just the code from folder name (e.g., "055" from "055" or "055 - Name")
-                const codeMatch = comunidadFolder.match(/^(\d+)/);
-                const code = codeMatch ? codeMatch[1] : '';
-
-                // Find the community name from the database
-                const comunidad = comunidades.find(c => c.codigo === code);
-                const name = comunidad?.nombre_cdad || comunidadFolder;
-
-                return (
-                    <span className="font-semibold text-neutral-900">{name}</span>
-                );
-            },
-            getSearchValue: (row) => {
-                const comunidadFolder = path.length === 0 ? row.name : path[0];
-                const codeMatch = comunidadFolder.match(/^(\d+)/);
-                const code = codeMatch ? codeMatch[1] : '';
-                const comunidad = comunidades.find(c => c.codigo === code);
-                return comunidad?.nombre_cdad || comunidadFolder;
-            }
+            render: (row) => (
+                <span className="font-semibold text-neutral-900">{row.comunidad || '-'}</span>
+            ),
         },
         {
             key: 'kind',
@@ -262,7 +260,7 @@ export default function FacturasComunidadesPage() {
 
             {/* Content Table */}
             <DataTable
-                data={items}
+                data={tableData}
                 columns={columns}
                 keyExtractor={(row) => row.id || row.name}
                 storageKey="facturas-comunidades"

@@ -24,6 +24,7 @@ interface Incidencia {
     // New fields
     quien_lo_recibe?: string;
     comunidad?: string; // String representation if needed
+    codigo?: string; // Add codigo for sorting
     gestor_asignado?: string;
     gestor?: { nombre: string }; // Joined profile
     sentimiento?: string;
@@ -162,7 +163,13 @@ export default function IncidenciasPage() {
         if (error) {
             toast.error('Error cargando incidencias');
         } else {
-            setIncidencias(data || []);
+            // Map data to flatten nested objects for sorting
+            const formattedData = (data || []).map((item: any) => ({
+                ...item,
+                comunidad: item.comunidades?.nombre_cdad || '',
+                codigo: item.comunidades?.codigo || ''
+            }));
+            setIncidencias(formattedData);
         }
     };
 
