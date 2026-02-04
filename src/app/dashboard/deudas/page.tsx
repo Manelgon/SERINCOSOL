@@ -1004,8 +1004,9 @@ export default function MorosidadPage() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Fecha de Notificación</label>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Fecha de Notificación <span className="text-red-600">*</span></label>
                                     <input
+                                        required
                                         type="date"
                                         className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400"
                                         value={formData.fecha_notificacion}
@@ -1119,6 +1120,7 @@ export default function MorosidadPage() {
                                     !formData.comunidad_id ||
                                     !formData.nombre_deudor ||
                                     !formData.titulo_documento ||
+                                    !formData.fecha_notificacion ||
                                     !formData.importe ||
                                     enviarNotificacion === null ||
                                     !!(enviarNotificacion === true && !formData.email_deudor && !formData.telefono_deudor) ||
