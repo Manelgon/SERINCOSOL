@@ -1383,7 +1383,7 @@ export default function MorosidadPage() {
                         </div>
 
                         {/* Body */}
-                        <div className="p-4 sm:p-6 space-y-8 flex-grow">
+                        <div className="p-4 sm:p-6 space-y-8 flex-1 overflow-y-auto custom-scrollbar bg-neutral-50/30">
                             {/* Main Data Sections */}
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                                 {/* Left Column: Deudor Info */}
