@@ -188,22 +188,31 @@ export default function MorosidadPage() {
 
         // Regex Validation
         const phoneRegex = /^\d{9}$/;
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-        if (formData.telefono_deudor && !phoneRegex.test(formData.telefono_deudor)) {
-            return toast.error('El teléfono debe tener exactamente 9 dígitos');
-        }
-        if (formData.email_deudor && !emailRegex.test(formData.email_deudor)) {
-            return toast.error('El formato del email no es válido');
-        }
 
         if (isSubmitting) return;
-        setIsSubmitting(true);
-        const loadingToastId = toast.loading('Guardando deuda... espere');
+
+        // Manual Validation
+        if (!formData.comunidad_id) return toast.error('Debe seleccionar una Comunidad');
+        if (!formData.nombre_deudor) return toast.error('Debe indicar el Nombre del Deudor');
+        if (!formData.titulo_documento) return toast.error('Debe seleccionar un Título del Documento');
+        if (!formData.fecha_notificacion) return toast.error('Debe indicar la Fecha de Notificación');
+        if (!formData.importe) return toast.error('Debe indicar el Importe');
+        if (enviarNotificacion === null) return toast.error('Debe seleccionar si desea enviar notificación al propietario');
 
         if (enviarNotificacion === true && !formData.telefono_deudor && !formData.email_deudor) {
             return toast.error('Para enviar aviso debe proporcionar Teléfono o Email');
         }
+
+        if (formData.telefono_deudor && !/^\d{9}$/.test(formData.telefono_deudor)) {
+            return toast.error('El teléfono debe tener 9 dígitos numéricos');
+        }
+
+        if (formData.email_deudor && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email_deudor)) {
+            return toast.error('El formato del email no es válido');
+        }
+
+        setIsSubmitting(true);
+        const loadingToastId = toast.loading(editingId ? 'Actualizando deuda...' : 'Guardando deuda... espere');
 
         let docUrl = formData.documento;
         if (file) {
@@ -935,7 +944,6 @@ export default function MorosidadPage() {
                                 <div>
                                     <label className="block text-sm font-semibold text-slate-700 mb-2">Nombre Deudor <span className="text-red-600">*</span></label>
                                     <input
-                                        required
                                         type="text"
                                         placeholder="Ej: Juan"
                                         className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400"
@@ -962,7 +970,6 @@ export default function MorosidadPage() {
                                         Teléfono {enviarNotificacion && !formData.email_deudor && <span className="text-red-600">*</span>}
                                     </label>
                                     <input
-                                        required={enviarNotificacion === true && !formData.email_deudor}
                                         type="tel"
                                         placeholder="Ej: 600000000"
                                         className={`w-full rounded-lg border px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400 ${enviarNotificacion && !formData.telefono_deudor && !formData.email_deudor ? 'border-red-300' : 'border-slate-200'}`}
@@ -978,7 +985,6 @@ export default function MorosidadPage() {
                                         Email {enviarNotificacion && !formData.telefono_deudor && <span className="text-red-600">*</span>}
                                     </label>
                                     <input
-                                        required={enviarNotificacion === true && !formData.telefono_deudor}
                                         type="email"
                                         placeholder="ejemplo@correo.com"
                                         className={`w-full rounded-lg border px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400 ${enviarNotificacion && !formData.email_deudor && !formData.telefono_deudor ? 'border-red-300' : 'border-slate-200'}`}
@@ -1006,7 +1012,6 @@ export default function MorosidadPage() {
                                 <div>
                                     <label className="block text-sm font-semibold text-slate-700 mb-2">Fecha de Notificación <span className="text-red-600">*</span></label>
                                     <input
-                                        required
                                         type="date"
                                         className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400"
                                         value={formData.fecha_notificacion}
@@ -1019,7 +1024,6 @@ export default function MorosidadPage() {
                                 <div>
                                     <label className="block text-sm font-semibold text-slate-700 mb-2">Importe (€) <span className="text-red-600">*</span></label>
                                     <input
-                                        required
                                         type="text"
                                         inputMode="decimal"
                                         placeholder="0,00"
@@ -1120,19 +1124,7 @@ export default function MorosidadPage() {
                             <button
                                 form="morosidad-form"
                                 type="submit"
-                                disabled={
-                                    isSubmitting ||
-                                    uploading ||
-                                    !formData.comunidad_id ||
-                                    !formData.nombre_deudor ||
-                                    !formData.titulo_documento ||
-                                    !formData.fecha_notificacion ||
-                                    !formData.importe ||
-                                    enviarNotificacion === null ||
-                                    !!(enviarNotificacion === true && !formData.email_deudor && !formData.telefono_deudor) ||
-                                    !!(formData.telefono_deudor && !/^\d{9}$/.test(formData.telefono_deudor)) ||
-                                    !!(formData.email_deudor && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email_deudor))
-                                }
+                                disabled={isSubmitting || uploading}
                                 className="w-full sm:w-auto h-12 px-8 bg-yellow-400 hover:bg-yellow-500 text-neutral-950 rounded-xl font-bold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm hover:shadow-md active:scale-[0.98]"
                             >
                                 {isSubmitting ? (
