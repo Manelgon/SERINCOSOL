@@ -14,6 +14,7 @@ interface SearchableSelectProps {
     onChange: (value: string | number) => void;
     placeholder?: string;
     className?: string;
+    disabled?: boolean;
 }
 
 export default function SearchableSelect({
@@ -22,6 +23,7 @@ export default function SearchableSelect({
     onChange,
     placeholder = "Seleccionar...",
     className = "",
+    disabled = false,
 }: SearchableSelectProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState("");
@@ -47,10 +49,11 @@ export default function SearchableSelect({
     const selectedOption = options.find((opt) => opt.value === value);
 
     return (
-        <div className={`relative ${className}`} ref={wrapperRef}>
+        <div className={`relative ${className} ${disabled ? "opacity-60" : ""}`} ref={wrapperRef}>
             <div
-                className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-900 flex items-center justify-between cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400"
+                className={`w-full rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-900 flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 ${disabled ? "bg-slate-50 cursor-not-allowed pointer-events-none" : "cursor-pointer"}`}
                 onClick={() => {
+                    if (disabled) return;
                     setIsOpen(!isOpen);
                     // Reset search when opening to show all options, 
                     // or keep it? Let's reset to allow fresh search.

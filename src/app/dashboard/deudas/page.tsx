@@ -221,6 +221,7 @@ export default function MorosidadPage() {
                     importe: parseFloat(formData.importe),
                     documento: docUrl,
                     id_email_deuda: formData.id_email_deuda || null,
+                    gestor: formData.gestor || null,
                 }).eq('id', editingId);
 
                 if (error) throw error;
@@ -262,7 +263,11 @@ export default function MorosidadPage() {
                 fetchMorosidad();
             } catch (error: any) {
                 toast.error('Error al actualizar: ' + error.message);
+            } finally {
+                toast.dismiss(loadingToastId);
+                setIsSubmitting(false);
             }
+        } else {
             // Create new
             try {
                 // Generate automatic Ref
@@ -282,6 +287,7 @@ export default function MorosidadPage() {
                     importe: parseFloat(formData.importe),
                     documento: docUrl,
                     id_email_deuda: formData.id_email_deuda || null,
+                    gestor: formData.gestor || null,
                     ref: autoRef || null,
                 }]).select().single();
 
@@ -922,6 +928,7 @@ export default function MorosidadPage() {
                                             label: cd.codigo ? `${cd.codigo} - ${cd.nombre_cdad}` : cd.nombre_cdad
                                         }))}
                                         placeholder="Selecciona una comunidad..."
+                                        disabled={isSubmitting}
                                     />
                                 </div>
 
@@ -934,6 +941,7 @@ export default function MorosidadPage() {
                                         className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400"
                                         value={formData.nombre_deudor}
                                         onChange={e => setFormData({ ...formData, nombre_deudor: e.target.value })}
+                                        disabled={isSubmitting}
                                     />
                                 </div>
 
@@ -945,6 +953,7 @@ export default function MorosidadPage() {
                                         className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400"
                                         value={formData.apellidos}
                                         onChange={e => setFormData({ ...formData, apellidos: e.target.value })}
+                                        disabled={isSubmitting}
                                     />
                                 </div>
 
@@ -959,6 +968,7 @@ export default function MorosidadPage() {
                                         className={`w-full rounded-lg border px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400 ${enviarNotificacion && !formData.telefono_deudor && !formData.email_deudor ? 'border-red-300' : 'border-slate-200'}`}
                                         value={formData.telefono_deudor}
                                         onChange={e => setFormData({ ...formData, telefono_deudor: e.target.value })}
+                                        disabled={isSubmitting}
                                     />
                                     <p className="mt-1 text-xs text-slate-500">(Sin espacios y sin prefijo)</p>
                                 </div>
@@ -974,6 +984,7 @@ export default function MorosidadPage() {
                                         className={`w-full rounded-lg border px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400 ${enviarNotificacion && !formData.email_deudor && !formData.telefono_deudor ? 'border-red-300' : 'border-slate-200'}`}
                                         value={formData.email_deudor}
                                         onChange={e => setFormData({ ...formData, email_deudor: e.target.value })}
+                                        disabled={isSubmitting}
                                     />
                                 </div>
 
@@ -988,6 +999,7 @@ export default function MorosidadPage() {
                                             { value: 'Recibo Comunidad', label: 'Recibo comunidad' }
                                         ]}
                                         placeholder="Selecciona un tipo..."
+                                        disabled={isSubmitting}
                                     />
                                 </div>
 
@@ -998,6 +1010,7 @@ export default function MorosidadPage() {
                                         className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400"
                                         value={formData.fecha_notificacion}
                                         onChange={e => setFormData({ ...formData, fecha_notificacion: e.target.value })}
+                                        disabled={isSubmitting}
                                     />
                                 </div>
 
@@ -1012,6 +1025,7 @@ export default function MorosidadPage() {
                                         className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400"
                                         value={formData.importe}
                                         onChange={e => setFormData({ ...formData, importe: e.target.value })}
+                                        disabled={isSubmitting}
                                     />
                                 </div>
 
@@ -1025,6 +1039,7 @@ export default function MorosidadPage() {
                                             label: `${profile.nombre} (${profile.rol})`
                                         }))}
                                         placeholder="Selecciona un gestor..."
+                                        disabled={isSubmitting}
                                     />
                                 </div>
 
@@ -1040,6 +1055,7 @@ export default function MorosidadPage() {
                                                 checked={enviarNotificacion === true}
                                                 onChange={() => setEnviarNotificacion(true)}
                                                 className="w-4 h-4 text-slate-900 border-slate-300 focus:ring-slate-900/20"
+                                                disabled={isSubmitting}
                                             />
                                             <span className="text-sm text-slate-700 group-hover:text-slate-900 transition-colors">Sí</span>
                                         </label>
@@ -1050,6 +1066,7 @@ export default function MorosidadPage() {
                                                 checked={enviarNotificacion === false}
                                                 onChange={() => setEnviarNotificacion(false)}
                                                 className="w-4 h-4 text-slate-900 border-slate-300 focus:ring-slate-900/20"
+                                                disabled={isSubmitting}
                                             />
                                             <span className="text-sm text-slate-700 group-hover:text-slate-900 transition-colors">No</span>
                                         </label>
@@ -1067,6 +1084,7 @@ export default function MorosidadPage() {
                                         className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400 min-h-[120px] resize-y"
                                         value={formData.observaciones}
                                         onChange={e => setFormData({ ...formData, observaciones: e.target.value })}
+                                        disabled={isSubmitting}
                                     />
                                 </div>
 
@@ -1082,6 +1100,7 @@ export default function MorosidadPage() {
                                                 file:bg-slate-100 file:text-slate-700
                                                 hover:file:bg-slate-200 cursor-pointer"
                                             onChange={(e) => setFile(e.target.files ? e.target.files[0] : null)}
+                                            disabled={isSubmitting}
                                         />
                                         {uploading && <span className="text-sm text-slate-600 animate-pulse">Subiendo...</span>}
                                     </div>
