@@ -218,7 +218,7 @@ export default function MorosidadPage() {
                 const { error } = await supabase.from('morosidad').update({
                     ...formData,
                     comunidad_id: parseInt(formData.comunidad_id),
-                    importe: parseFloat(formData.importe),
+                    importe: parseFloat(formData.importe.toString().replace(',', '.')),
                     documento: docUrl,
                     id_email_deuda: formData.id_email_deuda || null,
                     gestor: formData.gestor || null,
@@ -284,7 +284,7 @@ export default function MorosidadPage() {
                 const { data: newDebt, error } = await supabase.from('morosidad').insert([{
                     ...formData,
                     comunidad_id: parseInt(formData.comunidad_id),
-                    importe: parseFloat(formData.importe),
+                    importe: parseFloat(formData.importe.replace(',', '.')),
                     documento: docUrl,
                     id_email_deuda: formData.id_email_deuda || null,
                     gestor: formData.gestor || null,
@@ -1020,12 +1020,18 @@ export default function MorosidadPage() {
                                     <label className="block text-sm font-semibold text-slate-700 mb-2">Importe (€) <span className="text-red-600">*</span></label>
                                     <input
                                         required
-                                        type="number"
-                                        step="0.01"
-                                        placeholder="0.00"
+                                        type="text"
+                                        inputMode="decimal"
+                                        placeholder="0,00"
                                         className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400"
                                         value={formData.importe}
-                                        onChange={e => setFormData({ ...formData, importe: e.target.value })}
+                                        onChange={e => {
+                                            // Permitimos números y comas/puntos
+                                            const val = e.target.value.replace(',', '.');
+                                            if (/^\d*\.?\d*$/.test(val) || val === '') {
+                                                setFormData({ ...formData, importe: e.target.value });
+                                            }
+                                        }}
                                         disabled={isSubmitting}
                                     />
                                 </div>
