@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'react-hot-toast';
-import { Folder, FileText, ChevronRight, Home, RefreshCw, ExternalLink, Download, Search } from 'lucide-react';
+import { Folder, FileText, ChevronRight, Home, RefreshCw, ExternalLink, Download, Search, Plus, Upload, MoveHorizontal } from 'lucide-react';
 import DataTable, { Column } from '@/components/DataTable';
 import { supabase } from '@/lib/supabaseClient';
+import { useRef } from 'react';
 
 interface BucketItem {
     name: string;
@@ -14,6 +15,7 @@ interface BucketItem {
     last_accessed_at: string | null;
     metadata: any;
     comunidad?: string;
+    file_count?: number;
 }
 
 export default function FacturasComunidadesPage() {
@@ -21,6 +23,18 @@ export default function FacturasComunidadesPage() {
     const [items, setItems] = useState<BucketItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [comunidades, setComunidades] = useState<{ codigo: string; nombre_cdad: string }[]>([]);
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [newFolderName, setNewFolderName] = useState('');
+    const [isCreating, setIsCreating] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Move state
+    const [showMoveModal, setShowMoveModal] = useState(false);
+    const [movingFile, setMovingFile] = useState<BucketItem | null>(null);
+    const [movePath, setMovePath] = useState<string[]>([]);
+    const [moveFolderItems, setMoveFolderItems] = useState<BucketItem[]>([]);
+    const [moveLoading, setMoveLoading] = useState(false);
+    const [isMoving, setIsMoving] = useState(false);
 
     const currentPathString = path.join('/');
 
@@ -108,6 +122,142 @@ export default function FacturasComunidadesPage() {
         }
     };
 
+    const handleCreateBudget = () => {
+        if (path.length === 0) {
+            toast.error('Debes estar dentro de una carpeta de comunidad');
+            return;
+        }
+        setNewFolderName('budget');
+        setShowCreateModal(true);
+    };
+
+    const handleCreateConfirm = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newFolderName.trim()) {
+            toast.error('El nombre de la carpeta no puede estar vacío');
+            return;
+        }
+
+        setIsCreating(true);
+        const loadingToast = toast.loading(`Creando carpeta ${newFolderName}...`);
+        try {
+            const res = await fetch('/api/facturas-comunidades/create-folder', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ path: currentPathString, folderName: newFolderName.trim() }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) throw new Error(data.error || 'Error al crear la carpeta');
+
+            toast.success('Carpeta creada correctamente', { id: loadingToast });
+            setShowCreateModal(false);
+            setNewFolderName('');
+            fetchItems();
+        } catch (error: any) {
+            toast.error(error.message, { id: loadingToast });
+        } finally {
+            setIsCreating(false);
+        }
+    };
+
+    const handleUploadClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const loadingToast = toast.loading(`Subiendo ${file.name}...`);
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('path', currentPathString);
+
+            const res = await fetch('/api/facturas-comunidades/upload', {
+                method: 'POST',
+                body: formData,
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) throw new Error(data.error || 'Error al subir el archivo');
+
+            toast.success('Archivo subido correctamente', { id: loadingToast });
+            fetchItems();
+        } catch (error: any) {
+            toast.error(error.message, { id: loadingToast });
+        } finally {
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
+    // Move logic
+    const handleMoveClick = (item: BucketItem) => {
+        setMovingFile(item);
+        setMovePath([]);
+        setShowMoveModal(true);
+        fetchMoveFolders([]);
+    };
+
+    const fetchMoveFolders = async (targetPath: string[]) => {
+        setMoveLoading(true);
+        try {
+            const pathStr = targetPath.join('/');
+            const res = await fetch(`/api/facturas-comunidades/list?path=${encodeURIComponent(pathStr)}`);
+            const data = await res.json();
+
+            if (!res.ok) throw new Error(data.error || 'Error al listar carpetas');
+
+            const folders = (data.items || []).filter((item: BucketItem) => !item.metadata);
+            setMoveFolderItems(folders);
+        } catch (error: any) {
+            toast.error(error.message);
+        } finally {
+            setMoveLoading(false);
+        }
+    };
+
+    const handleMoveFolderClick = (folderName: string) => {
+        const newPath = [...movePath, folderName];
+        setMovePath(newPath);
+        fetchMoveFolders(newPath);
+    };
+
+    const handleMoveConfirm = async () => {
+        if (!movingFile) return;
+
+        setIsMoving(true);
+        const loadingToast = toast.loading('Moviendo archivo...');
+        try {
+            const fromPath = currentPathString ? `${currentPathString}/${movingFile.name}` : movingFile.name;
+            const toPathStr = movePath.join('/');
+            const toPath = toPathStr ? `${toPathStr}/${movingFile.name}` : movingFile.name;
+
+            const res = await fetch('/api/facturas-comunidades/move', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ fromPath, toPath }),
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Error al mover el archivo');
+
+            toast.success('Archivo movido correctamente', { id: loadingToast });
+            setShowMoveModal(false);
+            setMovingFile(null);
+            fetchItems();
+        } catch (error: any) {
+            toast.error(error.message, { id: loadingToast });
+        } finally {
+            setIsMoving(false);
+        }
+    };
+
     const navigateTo = (index: number) => {
         setPath(path.slice(0, index + 1));
     };
@@ -169,6 +319,22 @@ export default function FacturasComunidadesPage() {
             getSearchValue: (row) => !row.metadata ? 'carpeta' : 'archivo pdf'
         },
         {
+            key: 'file_count',
+            label: 'Archivos PDF',
+            sortable: true,
+            align: 'center',
+            render: (row) => {
+                if (row.metadata) return null; // Don't show count for files
+                return (
+                    <div className="flex justify-center">
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${row.file_count && row.file_count > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-neutral-100 text-neutral-400'}`}>
+                            {row.file_count || 0}
+                        </span>
+                    </div>
+                );
+            },
+        },
+        {
             key: 'updated_at',
             label: 'Última Modificación',
             sortable: true,
@@ -199,6 +365,16 @@ export default function FacturasComunidadesPage() {
                     <div className="flex items-center justify-end gap-2">
                         <button
                             className="p-2 text-neutral-400 hover:text-yellow-600 hover:bg-yellow-50 rounded-lg transition-all"
+                            title="Mover"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleMoveClick(row);
+                            }}
+                        >
+                            <MoveHorizontal className="w-4 h-4" />
+                        </button>
+                        <button
+                            className="p-2 text-neutral-400 hover:text-yellow-600 hover:bg-yellow-50 rounded-lg transition-all"
                             title="Visualizar"
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -227,13 +403,40 @@ export default function FacturasComunidadesPage() {
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <h1 className="text-xl font-bold text-neutral-900">Facturas Comunidades</h1>
-                <button
-                    onClick={fetchItems}
-                    className="p-2 text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors"
-                    title="Actualizar"
-                >
-                    <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
-                </button>
+                <div className="flex items-center gap-2">
+                    {path.length > 0 && (
+                        <>
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                className="hidden"
+                                onChange={handleFileChange}
+                                accept="application/pdf"
+                            />
+                            <button
+                                onClick={handleUploadClick}
+                                className="flex items-center gap-2 px-3 py-2 bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg transition-colors text-sm font-medium shadow-sm"
+                            >
+                                <Upload className="w-4 h-4" />
+                                <span>Subir Archivo</span>
+                            </button>
+                            <button
+                                onClick={handleCreateBudget}
+                                className="flex items-center gap-2 px-3 py-2 bg-yellow-400 hover:bg-yellow-500 text-neutral-900 rounded-lg transition-colors text-sm font-medium shadow-sm"
+                            >
+                                <Plus className="w-4 h-4" />
+                                <span>Crear carpeta</span>
+                            </button>
+                        </>
+                    )}
+                    <button
+                        onClick={fetchItems}
+                        className="p-2 text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors"
+                        title="Actualizar"
+                    >
+                        <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+                    </button>
+                </div>
             </div>
 
             {/* Breadcrumbs */}
@@ -260,6 +463,7 @@ export default function FacturasComunidadesPage() {
 
             {/* Content Table */}
             <DataTable
+                key={currentPathString}
                 data={tableData}
                 columns={columns}
                 keyExtractor={(row) => row.id || row.name}
@@ -275,6 +479,156 @@ export default function FacturasComunidadesPage() {
                     }
                 }}
             />
+
+            {/* Create Folder Modal */}
+            {showCreateModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] backdrop-blur-sm">
+                    <div className="bg-white rounded-3xl p-8 max-w-md w-full mx-4 shadow-xl animate-in fade-in zoom-in duration-200">
+                        <form onSubmit={handleCreateConfirm} className="space-y-6">
+                            <div>
+                                <label className="block text-lg font-bold text-neutral-900 mb-4">
+                                    Nombre de la carpeta:
+                                </label>
+                                <input
+                                    type="text"
+                                    required
+                                    autoFocus
+                                    className="w-full px-4 py-3 border-2 border-yellow-400/30 rounded-2xl focus:ring-2 focus:ring-yellow-400/20 focus:border-yellow-400 outline-none transition-all text-neutral-800"
+                                    placeholder="Nombre de la carpeta"
+                                    value={newFolderName}
+                                    onChange={(e) => setNewFolderName(e.target.value)}
+                                    autoComplete="off"
+                                />
+                            </div>
+                            <div className="flex gap-4 justify-end pt-2">
+                                <button
+                                    type="submit"
+                                    disabled={isCreating}
+                                    className="px-8 py-3 bg-yellow-400 text-neutral-900 rounded-full hover:bg-yellow-500 transition-all font-bold shadow-sm disabled:opacity-50 active:scale-95"
+                                >
+                                    {isCreating ? 'Creando...' : 'Aceptar'}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowCreateModal(false);
+                                        setNewFolderName('');
+                                    }}
+                                    className="px-8 py-3 bg-neutral-100 text-neutral-600 rounded-full hover:bg-neutral-200 transition-all font-bold active:scale-95"
+                                >
+                                    Cancelar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Move File Modal */}
+            {showMoveModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] backdrop-blur-sm p-4">
+                    <div className="bg-white rounded-3xl shadow-xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
+                        {/* Modal Header */}
+                        <div className="px-8 py-6 border-b border-neutral-100">
+                            <h2 className="text-xl font-bold text-neutral-900">Mover archivo</h2>
+                            <p className="text-sm text-neutral-500 mt-1">
+                                Selecciona el destino para: <span className="font-semibold text-yellow-600">{movingFile?.name}</span>
+                            </p>
+                        </div>
+
+                        {/* Breadcrumbs for Move Modal */}
+                        <div className="px-8 py-4 bg-neutral-50 flex items-center gap-2 overflow-x-auto whitespace-nowrap scrollbar-hide">
+                            <button
+                                onClick={() => {
+                                    setMovePath([]);
+                                    fetchMoveFolders([]);
+                                }}
+                                className="text-xs font-bold text-neutral-400 hover:text-yellow-600 uppercase tracking-widest flex items-center gap-1"
+                            >
+                                <Home className="w-3 h-3" />
+                                FACTURAS
+                            </button>
+                            {movePath.map((folder, index) => (
+                                <div key={index} className="flex items-center gap-2">
+                                    <ChevronRight className="w-3 h-3 text-neutral-300 shrink-0" />
+                                    <button
+                                        onClick={() => {
+                                            const newPath = movePath.slice(0, index + 1);
+                                            setMovePath(newPath);
+                                            fetchMoveFolders(newPath);
+                                        }}
+                                        className={`text-xs font-bold uppercase tracking-widest ${index === movePath.length - 1 ? 'text-yellow-600' : 'text-neutral-400 hover:text-yellow-600'}`}
+                                    >
+                                        {folder}
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Cascading Folders List */}
+                        <div className="flex-grow p-4 overflow-y-auto">
+                            {moveLoading ? (
+                                <div className="flex flex-col items-center justify-center p-12">
+                                    <RefreshCw className="w-8 h-8 text-yellow-400 animate-spin" />
+                                    <span className="text-sm text-neutral-400 mt-4">Cargando carpetas...</span>
+                                </div>
+                            ) : moveFolderItems.length > 0 ? (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    {moveFolderItems.map((item) => (
+                                        <button
+                                            key={item.id || item.name}
+                                            onClick={() => handleMoveFolderClick(item.name)}
+                                            className="flex items-center gap-3 p-4 rounded-2xl border-2 border-transparent hover:border-yellow-400 hover:bg-yellow-50 transition-all text-left group"
+                                        >
+                                            <div className="p-2 rounded-lg bg-yellow-100 text-yellow-600 group-hover:bg-yellow-200 transition-colors">
+                                                <Folder className="w-5 h-5" />
+                                            </div>
+                                            <div className="flex flex-col min-w-0">
+                                                <span className="font-bold text-neutral-900 truncate">{item.name}</span>
+                                                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest">Carpeta</span>
+                                            </div>
+                                            <ChevronRight className="w-4 h-4 text-neutral-300 ml-auto group-hover:text-yellow-600 transition-colors" />
+                                        </button>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center p-12 text-center">
+                                    <div className="p-4 rounded-full bg-neutral-50 text-neutral-300">
+                                        <Folder className="w-12 h-12" />
+                                    </div>
+                                    <p className="text-neutral-500 font-medium mt-4">Esta carpeta está vacía</p>
+                                    <p className="text-sm text-neutral-400">Puedes mover el archivo aquí pulsando el botón de abajo.</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="px-8 py-6 border-t border-neutral-100 flex items-center justify-between gap-4">
+                            <div className="hidden sm:block">
+                                <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Destino seleccionado:</span>
+                                <div className="text-xs font-bold text-neutral-900 truncate max-w-[200px]">
+                                    /FACTURAS/{movePath.join('/') || '(Raíz)'}
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => setShowMoveModal(false)}
+                                    className="px-6 py-3 bg-neutral-100 text-neutral-600 rounded-full hover:bg-neutral-200 transition-all font-bold text-sm"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={handleMoveConfirm}
+                                    disabled={isMoving}
+                                    className="px-8 py-3 bg-yellow-400 text-neutral-900 rounded-full hover:bg-yellow-500 transition-all font-bold text-sm shadow-sm hover:shadow-md active:scale-95 disabled:opacity-50"
+                                >
+                                    {isMoving ? 'Moviendo...' : 'Mover aquí'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
