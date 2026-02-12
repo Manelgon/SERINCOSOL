@@ -357,12 +357,10 @@ export async function buildSuplidoPdf(
             x: pW / 2 - textW / 2,
             y: 20,
             size: footerSize,
-            font,
-            color: rgb(0.5, 0.5, 0.5),
         });
     }
 
-    return { pdfBytes: await pdfDoc.save(), payloadComputed: payload };
+    return { pdfBytes: await pdfDoc.save({ useObjectStreams: true }), payloadComputed: payload };
 }
 
 export async function POST(req: Request) {

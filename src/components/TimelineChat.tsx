@@ -15,7 +15,7 @@ interface Message {
 }
 
 interface TimelineChatProps {
-    entityType: 'incidencia' | 'morosidad' | 'gestion' | 'proveedor' | 'comunidad';
+    entityType: 'incidencia' | 'morosidad' | 'gestion' | 'proveedor' | 'comunidad' | 'sofia_incidencia';
     entityId: number | string;
 }
 

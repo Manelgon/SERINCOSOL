@@ -3,11 +3,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { Plus, Check, RotateCcw, Paperclip, Trash2, X, FileText, Download, Loader2, Building, Users, Clock, UserCog, Save } from 'lucide-react';
+import { Trash2, FileText, Check, Plus, Paperclip, Download, X, RotateCcw, Building, Users, Clock, Search, Filter, Loader2, AlertCircle, Eye, RefreshCw, Send, Save, Share2, MoreHorizontal, MessageSquare, ChevronDown, UserCog } from 'lucide-react';
+import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
 import DataTable, { Column } from '@/components/DataTable';
 import SearchableSelect from '@/components/SearchableSelect';
 import { logActivity } from '@/lib/logActivity';
 import TimelineChat from '@/components/TimelineChat';
+import { getSecureUrl } from '@/lib/storage';
 
 interface Incidencia {
     id: number;
@@ -179,24 +181,26 @@ export default function IncidenciasPage() {
         const urls: string[] = [];
         try {
             for (const file of files) {
-                const fileExt = file.name.split('.').pop();
-                const timestamp = Date.now();
-                const randomStr = Math.random().toString(36).substring(2, 15);
-                const fileName = `${timestamp}_${randomStr}.${fileExt}`;
-                const filePath = `${fileName}`;
-                const { error: uploadError } = await supabase.storage.from('documentos').upload(filePath, file, {
-                    cacheControl: '3600',
-                    upsert: false,
-                    contentType: file.type
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('path', `incidencias/${Date.now()}`); // Folder per timestamp
+                formData.append('bucket', 'documentos');
+
+                const res = await fetch('/api/storage/upload', {
+                    method: 'POST',
+                    body: formData
                 });
 
-                if (uploadError) {
-                    console.error('Error uploading file:', uploadError);
+                if (!res.ok) {
+                    const error = await res.json();
+                    console.error('Error uploading file via API:', error);
                     continue;
                 }
 
-                const { data } = supabase.storage.from('documentos').getPublicUrl(filePath);
-                urls.push(data.publicUrl);
+                const data = await res.json();
+                if (data.publicUrl) {
+                    urls.push(data.publicUrl);
+                }
             }
         } catch (error) {
             console.error('Upload error:', error);
@@ -361,18 +365,25 @@ export default function IncidenciasPage() {
             const newUrls: string[] = [];
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
-                const fileExt = file.name.split('.').pop();
-                const fileName = `${Math.random()}.${fileExt}`;
-                const filePath = `incidencias/${fileName}`;
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('path', `incidencias/${selectedDetailIncidencia.id}`);
+                formData.append('bucket', 'documentos');
 
-                const { error: uploadError } = await supabase.storage
-                    .from('documentos')
-                    .upload(filePath, file);
+                const res = await fetch('/api/storage/upload', {
+                    method: 'POST',
+                    body: formData
+                });
 
-                if (uploadError) throw uploadError;
+                if (!res.ok) {
+                    const error = await res.json();
+                    throw new Error(error.error || 'Error al subir archivo');
+                }
 
-                const { data } = supabase.storage.from('documentos').getPublicUrl(filePath);
-                newUrls.push(data.publicUrl);
+                const data = await res.json();
+                if (data.publicUrl) {
+                    newUrls.push(data.publicUrl);
+                }
             }
 
             const currentAdjuntos = selectedDetailIncidencia.adjuntos || [];
@@ -558,9 +569,8 @@ export default function IncidenciasPage() {
         setShowDeleteModal(true);
     };
 
-    const confirmDelete = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!itemToDelete || !deleteEmail || !deletePassword) return;
+    const handleConfirmDelete = async ({ email, password }: any) => {
+        if (!itemToDelete || !email || !password) return;
 
         setIsDeleting(true);
         try {
@@ -569,8 +579,8 @@ export default function IncidenciasPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     id: itemToDelete,
-                    email: deleteEmail,
-                    password: deletePassword,
+                    email,
+                    password,
                     type: 'incidencia'
                 })
             });
@@ -584,6 +594,7 @@ export default function IncidenciasPage() {
             toast.success('Incidencia eliminada correctamente');
             setIncidencias(prev => prev.filter(i => i.id !== itemToDelete));
             setShowDeleteModal(false);
+            setItemToDelete(null);
 
             // Log delete activity
             await logActivity({
@@ -593,7 +604,7 @@ export default function IncidenciasPage() {
                 entityName: `Incidencia Deleted`,
                 details: {
                     id: itemToDelete,
-                    deleted_by_admin: deleteEmail
+                    deleted_by_admin: email
                 }
             });
 
@@ -763,7 +774,7 @@ export default function IncidenciasPage() {
                         row.adjuntos.map((url, i) => (
                             <a
                                 key={i}
-                                href={url}
+                                href={getSecureUrl(url)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="p-1.5 rounded-full bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-colors"
@@ -1201,72 +1212,16 @@ export default function IncidenciasPage() {
             )}
 
             {/* Delete Confirmation Modal */}
-            {showDeleteModal && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 relative">
-                        <button
-                            onClick={() => setShowDeleteModal(false)}
-                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-                        >
-                            <X className="w-5 h-5" />
-                        </button>
-
-                        <div className="mb-6 text-center">
-                            <div className="mx-auto w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
-                                <Trash2 className="w-6 h-6 text-red-600" />
-                            </div>
-                            <h3 className="text-xl font-bold text-gray-900">Confirmar Eliminación</h3>
-                            <p className="text-sm text-gray-500 mt-2">
-                                Para eliminar esta incidencia, es necesaria la autorización de un administrador.
-                            </p>
-                        </div>
-
-                        <form onSubmit={confirmDelete} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Email Administrador</label>
-                                <input
-                                    type="email"
-                                    required
-                                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
-                                    value={deleteEmail}
-                                    onChange={e => setDeleteEmail(e.target.value)}
-                                    placeholder="admin@ejemplo.com"
-                                    autoComplete="off"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña Administrador</label>
-                                <input
-                                    type="password"
-                                    required
-                                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
-                                    value={deletePassword}
-                                    onChange={e => setDeletePassword(e.target.value)}
-                                    placeholder="••••••••"
-                                    autoComplete="new-password"
-                                />
-                            </div>
-
-                            <div className="flex gap-3 pt-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowDeleteModal(false)}
-                                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
-                                >
-                                    Cancelar
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={isDeleting}
-                                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium disabled:opacity-50"
-                                >
-                                    {isDeleting ? 'Verificando...' : 'Eliminar'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+            <DeleteConfirmationModal
+                isOpen={showDeleteModal}
+                onClose={() => {
+                    setShowDeleteModal(false);
+                    setItemToDelete(null);
+                }}
+                onConfirm={handleConfirmDelete}
+                itemType="incidencia"
+                isDeleting={isDeleting}
+            />
 
             {/* Export Notes Modal */}
             {showExportModal && (
@@ -1654,7 +1609,7 @@ export default function IncidenciasPage() {
                                             {selectedDetailIncidencia.adjuntos.map((url: string, i: number) => (
                                                 <a
                                                     key={i}
-                                                    href={url}
+                                                    href={getSecureUrl(url)}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="group flex items-center justify-between bg-white border border-neutral-200 p-4 rounded-xl hover:border-neutral-900 transition-all shadow-sm"

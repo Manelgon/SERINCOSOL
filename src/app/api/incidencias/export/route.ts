@@ -8,17 +8,24 @@ import { generateIncidentsPdf } from "@/lib/pdf/incidentsList";
  * Body: { ids: number[], type: 'csv' | 'pdf', layout?: 'list' | 'detail' }
  */
 export async function POST(req: Request) {
-    const { ids, type, layout, includeNotes } = await req.json();
+    const { ids, type, layout, includeNotes, isSecondary, table } = await req.json();
 
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
         return NextResponse.json({ error: "No Items Selected" }, { status: 400 });
     }
 
-    const supabase = await supabaseRouteClient();
+    let supabase;
+    if (isSecondary) {
+        supabase = (await import('@/lib/supabaseAdminSecondary')).supabaseAdminSecondary;
+    } else {
+        supabase = await supabaseRouteClient();
+    }
+
+    const tableName = table || 'incidencias';
 
     // Fetch Data
     const { data: incidents, error } = await supabase
-        .from('incidencias')
+        .from(tableName)
         .select(`
             *,
             comunidades (nombre_cdad),
@@ -43,7 +50,8 @@ export async function POST(req: Request) {
             if (layout === 'detail' && incidents.length === 1) {
                 let notes: any[] = [];
                 if (includeNotes) {
-                    const { data: messages } = await supabase
+                    const primarySupabase = await supabaseRouteClient();
+                    const { data: messages } = await primarySupabase
                         .from('record_messages')
                         .select(`
                             id,
@@ -51,7 +59,7 @@ export async function POST(req: Request) {
                             content,
                             profiles (nombre)
                         `)
-                        .eq('entity_type', 'incidencia')
+                        .eq('entity_type', isSecondary ? 'sofia_incidencia' : 'incidencia')
                         .eq('entity_id', incidents[0].id)
                         .order('created_at', { ascending: true });
                     notes = messages || [];

@@ -275,7 +275,7 @@ export async function buildRentaCertificatePdf(
         });
     }
 
-    return await pdfDoc.save();
+    return await pdfDoc.save({ useObjectStreams: true });
 }
 
 // POST Handler

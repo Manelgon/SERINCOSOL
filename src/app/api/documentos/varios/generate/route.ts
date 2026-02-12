@@ -427,7 +427,7 @@ export async function buildFacturaVariosPdf(
         });
     }
 
-    return await pdfDoc.save();
+    return await pdfDoc.save({ useObjectStreams: true });
 }
 
 // --- HELPER FUNCTIONS FOR CERTIFICATE ---
@@ -622,7 +622,7 @@ export async function buildPagosAlDiaPdf(payload: any, assets: { logoBytes: Uint
         });
     }
 
-    return await pdfDoc.save();
+    return await pdfDoc.save({ useObjectStreams: true });
 }
 // --- END HELPER ---
 

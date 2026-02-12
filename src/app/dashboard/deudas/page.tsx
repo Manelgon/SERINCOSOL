@@ -4,11 +4,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { Plus, FileText, Check, Trash2, X, RotateCcw, Paperclip, Download, Loader2, Users } from 'lucide-react';
+import { Plus, FileText, Check, Trash2, X, RotateCcw, Paperclip, Download, Loader2, Users, RotateCcw as RotateCcwIcon } from 'lucide-react';
+import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
 import DataTable, { Column } from '@/components/DataTable';
 import SearchableSelect from '@/components/SearchableSelect';
 import { logActivity } from '@/lib/logActivity';
 import TimelineChat from '@/components/TimelineChat';
+import { getSecureUrl } from '@/lib/storage';
 
 interface Morosidad {
     id: number;
@@ -161,20 +163,25 @@ export default function MorosidadPage() {
     const handleFileUpload = async (file: File) => {
         try {
             setUploading(true);
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${Math.random()}.${fileExt}`;
-            const filePath = `${fileName}`;
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('path', 'morosidad');
+            formData.append('bucket', 'documentos');
 
-            const { error: uploadError } = await supabase.storage
-                .from('documentos')
-                .upload(filePath, file);
+            const res = await fetch('/api/storage/upload', {
+                method: 'POST',
+                body: formData
+            });
 
-            if (uploadError) throw uploadError;
+            if (!res.ok) {
+                const error = await res.json();
+                throw new Error(error.error || 'Error al subir archivo');
+            }
 
-            const { data } = supabase.storage.from('documentos').getPublicUrl(filePath);
+            const data = await res.json();
             return data.publicUrl;
         } catch (error: any) {
-            toast.error('Error subiendo archivo. Asegúrate de que el bucket "documentos" exista y sea público.');
+            toast.error('Error subiendo archivo: ' + error.message);
             console.error(error);
             return null;
         } finally {
@@ -380,17 +387,22 @@ export default function MorosidadPage() {
         const loadingToast = toast.loading('Subiendo archivo...');
 
         try {
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${Math.random()}.${fileExt}`;
-            const filePath = `morosidad/${fileName}`;
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('path', 'morosidad');
+            formData.append('bucket', 'documentos');
 
-            const { error: uploadError } = await supabase.storage
-                .from('documentos')
-                .upload(filePath, file);
+            const res = await fetch('/api/storage/upload', {
+                method: 'POST',
+                body: formData
+            });
 
-            if (uploadError) throw uploadError;
+            if (!res.ok) {
+                const error = await res.json();
+                throw new Error(error.error || 'Error al subir archivo');
+            }
 
-            const { data } = supabase.storage.from('documentos').getPublicUrl(filePath);
+            const data = await res.json();
             const docUrl = data.publicUrl;
 
             const { error: updateError } = await supabase
@@ -482,9 +494,8 @@ export default function MorosidadPage() {
         setDeletePassword('');
     };
 
-    const handleDeleteConfirm = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (deleteId === null || !deleteEmail || !deletePassword) return;
+    const handleConfirmDelete = async ({ email, password }: any) => {
+        if (deleteId === null || !email || !password) return;
 
         setIsDeleting(true);
 
@@ -494,8 +505,8 @@ export default function MorosidadPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     id: deleteId,
-                    email: deleteEmail,
-                    password: deletePassword,
+                    email,
+                    password,
                     type: 'morosidad'
                 })
             });
@@ -517,14 +528,12 @@ export default function MorosidadPage() {
                 details: {
                     comunidad: deleted?.comunidades?.nombre_cdad,
                     importe: deleted?.importe,
-                    deleted_by_admin: deleteEmail
+                    deleted_by_admin: email
                 }
             });
 
             setShowDeleteModal(false);
             setDeleteId(null);
-            setDeleteEmail('');
-            setDeletePassword('');
         } catch (error: any) {
             toast.error(error.message);
         } finally {
@@ -668,7 +677,7 @@ export default function MorosidadPage() {
                 <div className="flex justify-center">
                     {row.documento ? (
                         <a
-                            href={row.documento}
+                            href={getSecureUrl(row.documento)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-1.5 rounded-full bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-colors"
@@ -1256,63 +1265,16 @@ export default function MorosidadPage() {
             })()}
 
             {/* Delete Confirmation Modal */}
-            {showDeleteModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] backdrop-blur-sm">
-                    <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
-                        <h3 className="text-lg font-bold text-neutral-900 mb-4">Confirmar Eliminación</h3>
-                        <p className="text-neutral-600 mb-4">
-                            Esta acción no se puede deshacer. Para confirmar, ingresa credenciales de administrador:
-                        </p>
-                        <form onSubmit={handleDeleteConfirm} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Email Administrador</label>
-                                <input
-                                    type="email"
-                                    required
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
-                                    placeholder="admin@ejemplo.com"
-                                    value={deleteEmail}
-                                    onChange={(e) => setDeleteEmail(e.target.value)}
-                                    autoComplete="off"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña Administrador</label>
-                                <input
-                                    type="password"
-                                    required
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
-                                    placeholder="••••••••"
-                                    value={deletePassword}
-                                    onChange={(e) => setDeletePassword(e.target.value)}
-                                    autoComplete="new-password"
-                                />
-                            </div>
-                            <div className="flex gap-3 justify-end pt-2">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setShowDeleteModal(false);
-                                        setDeletePassword('');
-                                        setDeleteEmail('');
-                                        setDeleteId(null);
-                                    }}
-                                    className="px-4 py-2 border border-neutral-300 text-neutral-700 rounded-lg hover:bg-neutral-50 transition font-medium"
-                                >
-                                    Cancelar
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={isDeleting}
-                                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium shadow-sm disabled:opacity-50"
-                                >
-                                    {isDeleting ? 'Eliminando...' : 'Eliminar Registro'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+            <DeleteConfirmationModal
+                isOpen={showDeleteModal}
+                onClose={() => {
+                    setShowDeleteModal(false);
+                    setDeleteId(null);
+                }}
+                onConfirm={handleConfirmDelete}
+                itemType="registro de deuda"
+                isDeleting={isDeleting}
+            />
 
             {/* Detail Modal - Rediseño Administrativo */}
             {showDetailModal && selectedDetailMorosidad && (
@@ -1508,7 +1470,7 @@ export default function MorosidadPage() {
                                         <h4 className="text-sm font-black text-neutral-900 uppercase tracking-widest">Documentación</h4>
                                     </div>
                                     <a
-                                        href={selectedDetailMorosidad.documento}
+                                        href={getSecureUrl(selectedDetailMorosidad.documento)}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="flex items-center gap-4 group p-1 w-fit"

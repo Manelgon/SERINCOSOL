@@ -11,14 +11,27 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Archivo y ruta requeridos" }, { status: 400 });
         }
 
-        const buffer = await file.arrayBuffer();
+        let processedBuffer: Buffer | Uint8Array = Buffer.from(await file.arrayBuffer());
+
+        // 1. Optimize PDF if applicable
+        if (file.type === "application/pdf") {
+            try {
+                const { PDFDocument } = require("pdf-lib");
+                const pdfDoc = await PDFDocument.load(processedBuffer);
+                processedBuffer = await pdfDoc.save({ useObjectStreams: true });
+                console.log("[Facturas] PDF optimized successfully");
+            } catch (pdfError) {
+                console.error("[Facturas] Error optimizing PDF, uploading original:", pdfError);
+            }
+        }
+
         const filePath = `${path}/${file.name}`;
 
         console.log("Uploading file to path:", filePath);
 
         const { error } = await supabaseAdmin.storage
             .from("FACTURAS")
-            .upload(filePath, buffer, {
+            .upload(filePath, processedBuffer, {
                 contentType: file.type,
                 upsert: true
             });
@@ -28,7 +41,14 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: error.message }, { status: 500 });
         }
 
-        return NextResponse.json({ success: true, message: "Archivo subido correctamente" });
+        // Return internal proxy URL for secure viewing
+        const viewUrl = `/api/storage/view?bucket=FACTURAS&path=${encodeURIComponent(filePath)}`;
+
+        return NextResponse.json({
+            success: true,
+            message: "Archivo subido correctamente",
+            url: viewUrl
+        });
     } catch (error: any) {
         console.error("Error uploading file:", error);
         return NextResponse.json({ error: error.message }, { status: 500 });
