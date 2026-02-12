@@ -65,7 +65,7 @@ export default function InformesEmailPage() {
                     .select('rol')
                     .eq('user_id', session.user.id)
                     .single();
-                if (data?.rol === 'admin') setIsAdmin(true);
+                if (data?.rol === 'admin' || data?.rol === 'gestor') setIsAdmin(true);
             }
         };
         checkRole();
