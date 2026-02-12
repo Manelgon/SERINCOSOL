@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Trash2, X, Loader2 } from 'lucide-react';
 
 interface DeleteConfirmationModalProps {
@@ -24,6 +24,14 @@ export default function DeleteConfirmationModal({
 }: DeleteConfirmationModalProps) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+
+    // Reset fields on modal open/close
+    useEffect(() => {
+        if (!isOpen) {
+            setEmail('');
+            setPassword('');
+        }
+    }, [isOpen]);
 
     if (!isOpen) return null;
 
