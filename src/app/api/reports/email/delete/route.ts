@@ -21,8 +21,8 @@ export async function POST(req: Request) {
             .eq('user_id', user.id)
             .single();
 
-        if (profile?.rol !== 'admin') {
-            return NextResponse.json({ error: "No tienes permisos de administrador" }, { status: 403 });
+        if (profile?.rol !== 'admin' && profile?.rol !== 'gestor') {
+            return NextResponse.json({ error: "No tienes permisos suficientes" }, { status: 403 });
         }
 
         const { id, email, password } = await req.json();
