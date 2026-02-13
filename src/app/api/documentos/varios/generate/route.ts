@@ -184,7 +184,8 @@ function drawYellowBlock(params: {
 
 export async function buildFacturaVariosPdf(
     payload: any,
-    assets: { logoBytes?: Uint8Array; iban?: string }
+    assets: { logoBytes?: Uint8Array; iban?: string },
+    invoiceNumber?: string
 ) {
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage([A4.w, A4.h]);
@@ -223,6 +224,12 @@ export async function buildFacturaVariosPdf(
     page.drawText("Fecha de emisión", { x: marginX, y: fechaLabelY, size: 10, font: bold, color: BLACK });
     page.drawRectangle({ x: marginX + 120, y: fechaLabelY - 8, width: 240, height: 18, color: YELLOW });
     page.drawText(fecha || " ", { x: marginX + 128, y: fechaLabelY - 4, size: 10, font, color: BLACK });
+
+    if (invoiceNumber) {
+        const invLabel = `Factura Nº: ${invoiceNumber}`;
+        const invW = bold.widthOfTextAtSize(invLabel, 10);
+        page.drawText(invLabel, { x: A4.w - marginX - invW, y: fechaLabelY, size: 10, font: bold, color: BLACK });
+    }
 
     // 3) Bloques Emisor y Cliente (DOS BLOQUES AMARILLOS, Estilo Suplidos)
     const blocksTop = fechaLabelY - 35;
@@ -315,21 +322,21 @@ export async function buildFacturaVariosPdf(
             und: txt(payload["und1"] ?? payload["Unidad 1"] ?? ""),
             desc: txt(payload["descripcion1"] ?? payload["Descripción 1"] ?? payload["Concepto 1"] ?? ""),
             base: n(payload["importe1"] ?? payload["Importe 1"] ?? 0),
-            iva: n(payload["iva1"] ?? payload["IVA 1"] ?? 0),
+            ivaPercent: n(payload["iva1"] ?? payload["IVA 1"] ?? 0),
         },
         {
             und: txt(payload["und2"] ?? payload["Unidad 2"] ?? ""),
             desc: txt(payload["Concepto2"] ?? payload["Descripción 2"] ?? payload["Concepto 2"] ?? ""),
             base: n(payload["importe2"] ?? payload["Importe 2"] ?? 0),
-            iva: n(payload["iva2"] ?? payload["IVA 2"] ?? 0),
+            ivaPercent: n(payload["iva2"] ?? payload["IVA 2"] ?? 0),
         },
         {
             und: txt(payload["und3"] ?? payload["Unidad 3"] ?? ""),
             desc: txt(payload["Concepto3"] ?? payload["Descripción 3"] ?? payload["Concepto 3"] ?? ""),
             base: n(payload["importe3"] ?? payload["Importe 3"] ?? 0),
-            iva: n(payload["iva3"] ?? payload["IVA 3"] ?? 0),
+            ivaPercent: n(payload["iva3"] ?? payload["IVA 3"] ?? 0),
         },
-    ].filter(l => l.und || l.desc || l.base || l.iva);
+    ].filter(l => l.und || l.desc || l.base || l.ivaPercent);
 
     let baseTotal = 0;
     let ivaTotal = 0;
@@ -337,15 +344,16 @@ export async function buildFacturaVariosPdf(
     let ry = tableTopY - rowH;
 
     for (const l of lines) {
-        const total = l.base + l.iva;
+        const ivaAmt = l.base * (l.ivaPercent / 100);
+        const total = l.base + ivaAmt;
         baseTotal += l.base;
-        ivaTotal += l.iva;
+        ivaTotal += ivaAmt;
 
         let xx = marginX;
         drawCell(page, font, bold, xx, ry, c.qty, rowH, l.und || "", {}); xx += c.qty;
         drawCell(page, font, bold, xx, ry, c.concept, rowH, l.desc || "", {}); xx += c.concept;
         drawCell(page, font, bold, xx, ry, c.base, rowH, moneyES(l.base), { align: "right" }); xx += c.base;
-        drawCell(page, font, bold, xx, ry, c.iva, rowH, moneyES(l.iva), { align: "right" }); xx += c.iva;
+        drawCell(page, font, bold, xx, ry, c.iva, rowH, moneyES(ivaAmt), { align: "right" }); xx += c.iva;
         drawCell(page, font, bold, xx, ry, c.total, rowH, moneyES(total), { align: "right" });
 
         ry -= rowH;
@@ -641,12 +649,14 @@ export async function POST(req: Request) {
 
     try {
         // 1. Load Assets
+        const assets: { logo?: Uint8Array; sello?: Uint8Array; iban?: string } = {};
+
         // Reuse existing assets from certificate
-        const logoBytes = await downloadAssetPng("certificados/logo-retenciones.png");
-        const selloBytes = await downloadAssetPng("certificados/sello-retenciones.png");
+        assets.logo = await downloadAssetPng("certificados/logo-retenciones.png");
+        assets.sello = await downloadAssetPng("certificados/sello-retenciones.png");
 
         // 2) Fetch Settings (IBAN)
-        let iban = "ES37 0081 7442 0600 0119 3630"; // Default hardcoded just in case
+        assets.iban = "ES37 0081 7442 0600 0119 3630"; // Default hardcoded just in case
         const { data: settingsData } = await supabase
             .from("document_settings")
             .select("setting_key, setting_value")
@@ -654,36 +664,51 @@ export async function POST(req: Request) {
 
         if (settingsData) {
             const row = settingsData.find(r => r.setting_key === "iban");
-            if (row) iban = row.setting_value;
+            if (row) assets.iban = row.setting_value;
         }
 
-        // --- DOC 1: FACTURA (Yellow Style using Builder) ---
-        const pdfBytesFactura = await buildFacturaVariosPdf(payload, { logoBytes, iban });
+        let pdfBytesFactura: Uint8Array | null = null;
+        let invoiceNumber: string | null = null;
+        const generateFactura = true; // Assuming factura is always generated for this route
+
+        if (generateFactura) {
+            // Get next invoice number
+            const { data: nextInv, error: invErr } = await supabaseAdmin.rpc("get_next_invoice_number", {
+                sequence_id: "factura_varios"
+            });
+
+            if (!invErr && nextInv) {
+                invoiceNumber = String(nextInv).padStart(4, '0');
+            }
+
+            pdfBytesFactura = await buildFacturaVariosPdf(payload, {
+                logoBytes: assets.logo,
+                iban: assets.iban
+            }, invoiceNumber || undefined);
+        }
 
         // --- DOC 2: CERTIFICADO (Official Style using Builder) ---
-        const pdfBytesCertificado = await buildPagosAlDiaPdf(payload, { logoBytes, selloBytes });
+        const pdfBytesCertificado = await buildPagosAlDiaPdf(payload, { logoBytes: assets.logo!, selloBytes: assets.sello! });
 
         // (Proceed to upload...)
 
         // Calculate total amount for filename
         // Replicating frontend logic to be safe or use what frontend sent?
-        // Frontend sends "suma_final" which is pre-calculated string "1050.50". 
+        // Frontend sends "suma_final" which is pre-calculated string "1050.50".
         // We can trust it or fallback to recompute. Let's try payload.suma_final first.
         let importeTotal = payload["suma_final"];
         if (!importeTotal) {
             // Fallback Compute
             const calc = (v: any) => Number(String(v || "0").replace(",", ".")) || 0;
-            let sum = 0;
+            let sumBase = 0;
             let vatTotal = 0;
             for (let i = 1; i <= 3; i++) {
-                const qty = calc(payload[`und${i}`]);
-                const price = calc(payload[`importe${i}`]);
+                const base = calc(payload[`importe${i}`]);
                 const ivap = calc(payload[`iva${i}`]);
-                const sub = qty * price;
-                sum += sub;
-                vatTotal += sub * (ivap / 100);
+                sumBase += base;
+                vatTotal += base * (ivap / 100);
             }
-            importeTotal = (sum + vatTotal).toFixed(2);
+            importeTotal = (sumBase + vatTotal).toFixed(2);
         }
 
         // Clean String
@@ -701,11 +726,14 @@ export async function POST(req: Request) {
         const fileCertificado = `varios/CERT_${nombrePerson}_${dateStr}.pdf`;
 
         // Upload Factura
-        const { error: uploadErr1 } = await supabaseAdmin.storage
-            .from("documentos_administrativos")
-            .upload(fileFactura, Buffer.from(pdfBytesFactura), { contentType: "application/pdf", upsert: true });
+        if (pdfBytesFactura) {
+            const { error: uploadErr1 } = await supabaseAdmin.storage
+                .from("documentos_administrativos")
+                .upload(fileFactura, Buffer.from(pdfBytesFactura), { contentType: "application/pdf", upsert: true });
 
-        if (uploadErr1) throw new Error("Error uploading Factura: " + uploadErr1.message);
+            if (uploadErr1) throw new Error("Error uploading Factura: " + uploadErr1.message);
+        }
+
 
         // Upload Certificado
         const { error: uploadErr2 } = await supabaseAdmin.storage
@@ -719,15 +747,26 @@ export async function POST(req: Request) {
         const commonPayload = { ...payload };
 
         // Record 1: Factura
-        const { data: recFactura, error: dbErr1 } = await supabase.from("doc_submissions").insert({
-            user_id: user.id,
-            title: `Factura Varios - ${payload.cliente || "Sin Nombre"}`,
-            doc_key: "facturas_varias",
-            pdf_path: fileFactura,
-            payload: commonPayload,
-        }).select().single();
+        let recFactura = null;
+        let signed1 = null;
+        if (pdfBytesFactura) {
+            const { data: newRecFactura, error: dbErr1 } = await supabase.from("doc_submissions").insert({
+                user_id: user.id,
+                title: `Factura ${payload.cliente || payload.nombre_comunidad || "Varios"}`,
+                doc_key: "facturas_varias",
+                pdf_path: fileFactura,
+                payload: commonPayload,
+                invoice_number: invoiceNumber
+            }).select().single();
 
-        if (dbErr1) throw new Error("DB Error Factura: " + dbErr1.message);
+            if (dbErr1) throw new Error("DB Error Factura: " + dbErr1.message);
+            recFactura = newRecFactura;
+
+            signed1 = await supabaseAdmin.storage
+                .from("documentos_administrativos")
+                .createSignedUrl(fileFactura, 60 * 60);
+        }
+
 
         // Record 2: Certificado
         const { data: recCert, error: dbErr2 } = await supabase.from("doc_submissions").insert({
@@ -742,19 +781,15 @@ export async function POST(req: Request) {
 
 
         // 6. Return Signed URLs for both
-        const signed1 = await supabaseAdmin.storage
-            .from("documentos_administrativos")
-            .createSignedUrl(fileFactura, 60 * 60);
-
         const signed2 = await supabaseAdmin.storage
             .from("documentos_administrativos")
             .createSignedUrl(fileCertificado, 60 * 60);
 
         return NextResponse.json({
             success: true,
-            submissionIdFactura: recFactura.id,
+            submissionIdFactura: recFactura?.id || null,
             submissionIdCertificado: recCert.id,
-            pdfUrlFactura: signed1.data?.signedUrl,
+            pdfUrlFactura: signed1?.data?.signedUrl || null,
             pdfUrlCertificado: signed2.data?.signedUrl
         });
 
