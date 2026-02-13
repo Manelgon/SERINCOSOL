@@ -226,7 +226,7 @@ export async function buildFacturaVariosPdf(
     page.drawText(fecha || " ", { x: marginX + 128, y: fechaLabelY - 4, size: 10, font, color: BLACK });
 
     if (invoiceNumber) {
-        const invLabel = `Factura Nº: ${invoiceNumber}`;
+        const invLabel = invoiceNumber;
         const invW = bold.widthOfTextAtSize(invLabel, 10);
         page.drawText(invLabel, { x: A4.w - marginX - invW, y: fechaLabelY, size: 10, font: bold, color: BLACK });
     }
@@ -678,7 +678,8 @@ export async function POST(req: Request) {
             });
 
             if (!invErr && nextInv) {
-                invoiceNumber = String(nextInv).padStart(4, '0');
+                const currentYear = new Date().getFullYear();
+                invoiceNumber = `CERT${currentYear}${String(nextInv).padStart(6, '0')}`;
             }
 
             pdfBytesFactura = await buildFacturaVariosPdf(payload, {
