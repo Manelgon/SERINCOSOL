@@ -4,21 +4,41 @@ import { useState, useEffect } from "react";
 import { X, Calendar, AlertCircle } from "lucide-react";
 import { toast } from "react-hot-toast";
 
+interface BalanceInfo {
+    total: number;
+    used: number;
+    pending: number;
+}
+
 interface RequestModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
     userId: string;
     policy: { count_holidays: boolean; count_weekends: boolean };
+    balance: {
+        vacaciones: BalanceInfo;
+        retribuidos: BalanceInfo;
+        noRetribuidos: BalanceInfo;
+    };
 }
 
-export default function RequestVacationModal({ isOpen, onClose, onSuccess, userId, policy }: RequestModalProps) {
+export default function RequestVacationModal({ isOpen, onClose, onSuccess, userId, policy, balance }: RequestModalProps) {
     const [type, setType] = useState("VACACIONES");
     const [dateFrom, setDateFrom] = useState("");
     const [dateTo, setDateTo] = useState("");
     const [daysCount, setDaysCount] = useState(0);
     const [comment, setComment] = useState("");
     const [loading, setLoading] = useState(false);
+
+    const getAvailable = () => {
+        if (type === "VACACIONES") return balance.vacaciones.total - balance.vacaciones.used - balance.vacaciones.pending;
+        if (type === "RETRIBUIDO") return balance.retribuidos.total - balance.retribuidos.used - balance.retribuidos.pending;
+        return 99; // No limit for non-paid
+    };
+
+    const available = getAvailable();
+    const isOverLimit = type !== "NO_RETRIBUIDO" && daysCount > available;
 
     useEffect(() => {
         if (dateFrom && dateTo) {
@@ -51,6 +71,7 @@ export default function RequestVacationModal({ isOpen, onClose, onSuccess, userI
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (daysCount <= 0) return toast.error("El rango de fechas no es válido");
+        if (isOverLimit) return toast.error("No tienes suficientes días disponibles");
 
         setLoading(true);
         try {
@@ -98,17 +119,25 @@ export default function RequestVacationModal({ isOpen, onClose, onSuccess, userI
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                    <div className="space-y-1">
-                        <label className="text-xs font-bold text-neutral-500 uppercase">Tipo de Solicitud</label>
-                        <select
-                            value={type}
-                            onChange={(e) => setType(e.target.value)}
-                            className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-yellow-400 outline-none transition"
-                        >
-                            <option value="VACACIONES">Vacaciones Anuales</option>
-                            <option value="RETRIBUIDO">Días Retribuidos (Propios)</option>
-                            <option value="NO_RETRIBUIDO">Días No Retribuidos</option>
-                        </select>
+                    <div className="flex justify-between items-end gap-4">
+                        <div className="flex-grow space-y-1">
+                            <label className="text-xs font-bold text-neutral-500 uppercase">Tipo de Solicitud</label>
+                            <select
+                                value={type}
+                                onChange={(e) => setType(e.target.value)}
+                                className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-yellow-400 outline-none transition"
+                            >
+                                <option value="VACACIONES">Vacaciones Anuales</option>
+                                <option value="RETRIBUIDO">Días Retribuidos (Propios)</option>
+                                <option value="NO_RETRIBUIDO">Días No Retribuidos</option>
+                            </select>
+                        </div>
+                        <div className="shrink-0 text-right pb-1">
+                            <p className="text-[10px] font-bold text-neutral-400 uppercase">Disponible</p>
+                            <p className={`text-lg font-bold ${available <= 0 ? 'text-red-500' : 'text-green-600'}`}>
+                                {available} {available === 1 ? 'día' : 'días'}
+                            </p>
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -135,16 +164,20 @@ export default function RequestVacationModal({ isOpen, onClose, onSuccess, userI
                     </div>
 
                     {daysCount > 0 && (
-                        <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 flex items-center justify-between">
+                        <div className={`p-4 rounded-xl border flex items-center justify-between transition-colors ${isOverLimit ? 'bg-red-50 border-red-100' : 'bg-blue-50 border-blue-100'}`}>
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${isOverLimit ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}`}>
                                     {daysCount}
                                 </div>
-                                <p className="text-sm font-semibold text-blue-900">Total de días a descontar</p>
+                                <div>
+                                    <p className={`text-sm font-semibold ${isOverLimit ? 'text-red-900' : 'text-blue-900'}`}>
+                                        {isOverLimit ? 'Superas los días disponibles' : 'Total de días a solicitar'}
+                                    </p>
+                                    <p className="text-[10px] text-neutral-500 uppercase">
+                                        {policy.count_weekends ? "Incluye fines de semana" : "Solo días laborables"}
+                                    </p>
+                                </div>
                             </div>
-                            <p className="text-xs text-blue-600">
-                                {policy.count_weekends ? "Incluye fines de semana" : "Solo laborables"}
-                            </p>
                         </div>
                     )}
 
@@ -168,8 +201,8 @@ export default function RequestVacationModal({ isOpen, onClose, onSuccess, userI
                         </button>
                         <button
                             type="submit"
-                            disabled={loading || daysCount <= 0}
-                            className="flex-[2] py-3 px-4 bg-yellow-400 text-neutral-950 rounded-xl font-bold hover:bg-yellow-500 transition shadow-lg shadow-yellow-200 disabled:opacity-50"
+                            disabled={loading || daysCount <= 0 || isOverLimit}
+                            className="flex-[2] py-3 px-4 bg-yellow-400 text-neutral-950 rounded-xl font-bold hover:bg-yellow-500 transition shadow-lg shadow-yellow-200 disabled:opacity-50 disabled:bg-neutral-200 disabled:shadow-none"
                         >
                             {loading ? "Enviando..." : "Enviar Solicitud"}
                         </button>

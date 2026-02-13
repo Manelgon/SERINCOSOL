@@ -263,13 +263,14 @@ export default function VacationDashboard() {
                 </div>
             </div>
 
-            {status && userId && (
+            {status && userId && isModalOpen && (
                 <RequestVacationModal
                     isOpen={isModalOpen}
                     onClose={() => setIsModalOpen(false)}
                     onSuccess={fetchData}
                     userId={userId}
                     policy={status.policy}
+                    balance={status.balance}
                 />
             )}
         </div>
