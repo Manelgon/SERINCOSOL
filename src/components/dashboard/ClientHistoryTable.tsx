@@ -166,9 +166,23 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
             label: "tipo",
             sortable: true,
             width: "120px",
-            render: () => {
-                const label = type === "suplidos" ? "Suplido" : type === "certificado-renta" ? "Certificado Renta" : "Varios";
-                const bgColor = type === "suplidos" ? "bg-amber-50 text-amber-700 border-amber-100" : type === "certificado-renta" ? "bg-indigo-50 text-indigo-700 border-indigo-100" : "bg-blue-50 text-blue-700 border-blue-100";
+            render: (r) => {
+                let label = type === "suplidos" ? "Suplido" : type === "certificado-renta" ? "Certificado Renta" : "Varios";
+                let bgColor = type === "suplidos" ? "bg-amber-50 text-amber-700 border-amber-100" : type === "certificado-renta" ? "bg-indigo-50 text-indigo-700 border-indigo-100" : "bg-blue-50 text-blue-700 border-blue-100";
+
+                if (type === "varios") {
+                    const isFactura = r.title?.toLowerCase().includes("factura");
+                    const isCertif = r.title?.toLowerCase().includes("certificado");
+
+                    if (isFactura) {
+                        label = "Factura";
+                        bgColor = "bg-emerald-50 text-emerald-700 border-emerald-100";
+                    } else if (isCertif) {
+                        label = "Certificado";
+                        bgColor = "bg-blue-50 text-blue-700 border-blue-100";
+                    }
+                }
+
                 return <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${bgColor}`}>{label}</span>;
             }
         };
