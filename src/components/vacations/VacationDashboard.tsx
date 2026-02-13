@@ -79,7 +79,11 @@ export default function VacationDashboard() {
     };
 
     const fetchCalendar = async () => {
-        const monthStr = activeMonth.toISOString().slice(0, 7);
+        // Use local month/year instead of UTC to avoid offset issues
+        const year = activeMonth.getFullYear();
+        const month = activeMonth.getMonth() + 1;
+        const monthStr = `${year}-${month.toString().padStart(2, '0')}`;
+
         try {
             const res = await fetch(`/api/vacations/calendar?month=${monthStr}`);
             const data = await res.json();
@@ -87,6 +91,11 @@ export default function VacationDashboard() {
         } catch (error) {
             console.error("Calendar fetch error", error);
         }
+    };
+
+    const handleMonthChange = (offset: number) => {
+        const newDate = new Date(activeMonth.getFullYear(), activeMonth.getMonth() + offset, 1);
+        setActiveMonth(newDate);
     };
 
     const renderCalendar = () => {
@@ -147,7 +156,7 @@ export default function VacationDashboard() {
                             </div>
                             <div className="flex items-center gap-1">
                                 <button
-                                    onClick={() => setActiveMonth(new Date(activeMonth.getFullYear(), activeMonth.getMonth() - 1))}
+                                    onClick={() => handleMonthChange(-1)}
                                     className="p-1 hover:bg-neutral-100 rounded"
                                 >
                                     <ChevronLeft className="w-4 h-4 md:w-5 h-5" />
@@ -156,7 +165,7 @@ export default function VacationDashboard() {
                                     {activeMonth.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}
                                 </span>
                                 <button
-                                    onClick={() => setActiveMonth(new Date(activeMonth.getFullYear(), activeMonth.getMonth() + 1))}
+                                    onClick={() => handleMonthChange(1)}
                                     className="p-1 hover:bg-neutral-100 rounded"
                                 >
                                     <ChevronRight className="w-4 h-4 md:w-5 h-5" />

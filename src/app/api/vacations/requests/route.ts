@@ -38,13 +38,15 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Faltan campos obligatorios' }, { status: 400 });
         }
 
-        // 1) Overlap Check (Simplified: Check if any part of the range overlaps for SAME user)
+        // 1) Overlap Check
+        // Use inclusive range logic: LTE dateTo AND GTE dateFrom
         const { data: overlap, error: overlapError } = await supabaseAdmin
             .from('vacation_requests')
             .select('id')
             .eq('user_id', userId)
             .in('status', ['PENDIENTE', 'APROBADA'])
-            .or(`date_from.lte.${dateTo},date_to.gte.${dateFrom}`)
+            .lte('date_from', dateTo)
+            .gte('date_to', dateFrom)
             .limit(1);
 
         if (overlapError) throw overlapError;
