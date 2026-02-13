@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { User, Send, Download, Trash2, X } from "lucide-react";
 import { toast } from "react-hot-toast";
@@ -14,6 +14,31 @@ interface ClientHistoryTableProps {
 }
 
 export default function ClientHistoryTable({ entries, type }: ClientHistoryTableProps) {
+    // Admin Session State
+    const [userRole, setUserRole] = useState<string | null>(null);
+
+    useEffect(() => {
+        const checkRole = async () => {
+            const { createBrowserClient } = await import("@supabase/ssr");
+            const supabase = createBrowserClient(
+                process.env.NEXT_PUBLIC_SUPABASE_URL!,
+                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+            );
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('rol')
+                    .eq('user_id', user.id)
+                    .single();
+                setUserRole(profile?.rol || null);
+            }
+        };
+        checkRole();
+    }, []);
+
+    const isAdminSession = userRole === 'admin';
+
     // Delete State
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [docToDelete, setDocToDelete] = useState<any>(null);
@@ -45,8 +70,8 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     id: docToDelete.id,
-                    email: adminEmail,
-                    password: adminPass,
+                    email: isAdminSession ? undefined : adminEmail,
+                    password: isAdminSession ? undefined : adminPass,
                     type: "document"
                 })
             });
@@ -124,7 +149,6 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
                 throw new Error(data.error || "Error obteniendo URL de descarga");
             }
 
-            // The API redirects directly to the PDF, so 'res' contains the PDF content
             const contentType = res.headers.get("content-type");
             if (contentType && contentType.includes("application/json")) {
                 const data = await res.json();
@@ -136,7 +160,6 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
             const a = document.createElement("a");
             a.href = url;
 
-            // Generate a nice filename
             const date = new Date(doc.created_at).toISOString().split('T')[0];
             const title = (doc.payload?.["Nombre Cliente"] || doc.payload?.["Nombre Comunidad"] || doc.payload?.nombre_comunidad || doc.title || "documento").replace(/[^a-z0-9]/gi, '_');
             a.download = `${date}_${type}_${title}.pdf`;
@@ -343,7 +366,8 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
                     align: 'right',
                     width: "110px",
                     render: (r) => `${r.payload?.suma_final || "-"} €`,
-                }
+                },
+                creadoPorCol
             ];
         }
 
@@ -383,7 +407,7 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
         };
 
         return [...baseResult, actionCol];
-    }, [type]);
+    }, [type, isAdminSession]);
 
     const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set());
 
@@ -406,7 +430,7 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
                     href="/dashboard/documentos/varios/historial"
                     className={`px-4 py-1.5 rounded-full text-sm font-semibold transition ${type === 'varios' ? 'bg-yellow-400 text-neutral-950 shadow-sm' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
                 >
-                    Varios Facturas
+                    Certificados de estar al dia y Factura
                 </Link>
             </div>
 
@@ -432,47 +456,51 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
                         onClick={(e) => e.stopPropagation()}
                     >
                         <h3 className="text-lg font-bold text-neutral-900 mb-4">Confirmar Eliminación</h3>
-                        <p className="text-neutral-600 mb-4">
+                        <p className="text-neutral-600 mb-4 text-sm">
                             Estás a punto de eliminar el documento: <span className="font-semibold">{docToDelete?.title}</span>. <br />
-                            Esta acción no se puede deshacer. Para confirmar, ingresa credenciales de administrador:
+                            Esta acción no se puede deshacer. {isAdminSession ? "¿Estás seguro de que deseas eliminar este registro?" : "Para confirmar, ingresa credenciales de administrador:"}
                         </p>
                         <form onSubmit={confirmDelete} className="space-y-4" autoComplete="off">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Email Administrador</label>
-                                <input
-                                    type="email"
-                                    required
-                                    placeholder=""
-                                    autoComplete="off"
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
-                                    value={adminEmail}
-                                    onChange={e => setAdminEmail(e.target.value)}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña Administrador</label>
-                                <input
-                                    type="password"
-                                    required
-                                    placeholder=""
-                                    autoComplete="new-password"
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
-                                    value={adminPass}
-                                    onChange={e => setAdminPass(e.target.value)}
-                                />
-                            </div>
+                            {!isAdminSession && (
+                                <>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 mb-1">Email Administrador</label>
+                                        <input
+                                            type="email"
+                                            required
+                                            placeholder=""
+                                            autoComplete="off"
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none text-sm"
+                                            value={adminEmail}
+                                            onChange={e => setAdminEmail(e.target.value)}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 mb-1">Contraseña Administrador</label>
+                                        <input
+                                            type="password"
+                                            required
+                                            placeholder=""
+                                            autoComplete="new-password"
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none text-sm"
+                                            value={adminPass}
+                                            onChange={e => setAdminPass(e.target.value)}
+                                        />
+                                    </div>
+                                </>
+                            )}
                             <div className="flex gap-3 justify-end pt-2">
                                 <button
                                     type="button"
                                     onClick={() => setDeleteModalOpen(false)}
-                                    className="px-4 py-2 border border-neutral-300 text-neutral-700 rounded-lg hover:bg-neutral-50 transition font-medium"
+                                    className="px-4 py-2 border border-neutral-300 text-neutral-700 rounded-lg hover:bg-neutral-50 transition font-medium text-sm"
                                 >
                                     Cancelar
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={isDeleting}
-                                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium shadow-sm disabled:opacity-50"
+                                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium shadow-sm disabled:opacity-50 text-sm"
                                 >
                                     {isDeleting ? 'Eliminando...' : 'Eliminar Registro'}
                                 </button>
@@ -485,7 +513,7 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
             {/* SEND MODAL */}
             {sendModalOpen && (
                 <div
-                    className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+                    className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm"
                     onClick={() => setSendModalOpen(false)}
                 >
                     <div
@@ -494,7 +522,9 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
                     >
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="text-lg font-bold text-neutral-900">Enviar Documento</h3>
-                            <button onClick={() => setSendModalOpen(false)} className="text-neutral-400 hover:text-neutral-600"><X className="w-5 h-5" /></button>
+                            <button onClick={() => setSendModalOpen(false)} className="text-neutral-400 hover:text-neutral-600 text-sm">
+                                <X className="w-5 h-5" />
+                            </button>
                         </div>
 
                         <form onSubmit={confirmSend} className="space-y-4" autoComplete="off">
@@ -505,7 +535,7 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
                                     required
                                     placeholder=""
                                     autoComplete="off"
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-yellow-400 outline-none"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:yellow-400 outline-none"
                                     value={targetEmail}
                                     onChange={e => setTargetEmail(e.target.value)}
                                 />
@@ -533,4 +563,3 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
         </div>
     );
 }
-

@@ -689,7 +689,7 @@ export async function POST(req: Request) {
         // Clean String
         const clean = (s: string) => String(s || "").replace(/[^a-zA-Z0-9À-ÿ \-_.]/g, "").trim();
         const now = new Date();
-        const dateStr = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
+        const dateStr = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
 
         const clienteInfo = clean(payload["cliente"] || "Cliente");
         const nombrePerson = clean(payload["nombre_apellidos"] || "Usuario");
@@ -703,14 +703,14 @@ export async function POST(req: Request) {
         // Upload Factura
         const { error: uploadErr1 } = await supabaseAdmin.storage
             .from("documentos_administrativos")
-            .upload(fileFactura, Buffer.from(pdfBytesFactura), { contentType: "application/pdf", upsert: false });
+            .upload(fileFactura, Buffer.from(pdfBytesFactura), { contentType: "application/pdf", upsert: true });
 
         if (uploadErr1) throw new Error("Error uploading Factura: " + uploadErr1.message);
 
         // Upload Certificado
         const { error: uploadErr2 } = await supabaseAdmin.storage
             .from("documentos_administrativos")
-            .upload(fileCertificado, Buffer.from(pdfBytesCertificado), { contentType: "application/pdf", upsert: false });
+            .upload(fileCertificado, Buffer.from(pdfBytesCertificado), { contentType: "application/pdf", upsert: true });
 
         if (uploadErr2) throw new Error("Error uploading Certificado: " + uploadErr2.message);
 

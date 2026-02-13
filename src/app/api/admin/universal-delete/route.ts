@@ -11,34 +11,67 @@ export async function POST(request: Request) {
     try {
         const { id, email, password, type } = await request.json();
 
-        if (!id || !email || !password || !type) {
+        if (!id || !type) {
             return NextResponse.json({ error: 'Faltan datos' }, { status: 400 });
         }
 
-        // 1. Verify credentials by attempting to sign in (stateless)
-        const tempClient = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        );
+        // 0. Attempt session-based authentication first
+        const { supabaseRouteClient } = await import('@/lib/supabase/route');
+        const supabase = await supabaseRouteClient();
+        const { data: { user: sessionUser } } = await supabase.auth.getUser();
 
-        const { data: authData, error: authError } = await tempClient.auth.signInWithPassword({
-            email,
-            password,
-        });
+        let isAdmin = false;
 
-        if (authError || !authData.user) {
-            return NextResponse.json({ error: 'Credenciales de administrador inválidas' }, { status: 401 });
+        if (sessionUser) {
+            const { data: profile } = await supabaseAdmin
+                .from('profiles')
+                .select('rol')
+                .eq('user_id', sessionUser.id)
+                .single();
+            isAdmin = profile?.rol === 'admin';
         }
 
-        // 2. Verify authorization (must be admin)
-        const { data: profile } = await supabaseAdmin
-            .from('profiles')
-            .select('rol')
-            .eq('user_id', authData.user.id)
-            .single();
+        let verifiedUser = sessionUser;
 
-        if (profile?.rol !== 'admin') {
-            return NextResponse.json({ error: 'No tienes permisos de administrador para realizar esta acción' }, { status: 403 });
+        // 1. Verify credentials if NOT already authenticated as admin via session
+        if (!isAdmin) {
+            if (!email || !password) {
+                return NextResponse.json({ error: 'Se requieren credenciales de administrador' }, { status: 401 });
+            }
+
+            const tempClient = createClient(
+                process.env.NEXT_PUBLIC_SUPABASE_URL!,
+                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+            );
+
+            const { data: authData, error: authError } = await tempClient.auth.signInWithPassword({
+                email,
+                password,
+            });
+
+            if (authError || !authData.user) {
+                return NextResponse.json({ error: 'Credenciales de administrador inválidas' }, { status: 401 });
+            }
+
+            verifiedUser = authData.user;
+
+            // Verify role for the newly signed-in user
+            const { data: profile } = await supabaseAdmin
+                .from('profiles')
+                .select('rol')
+                .eq('user_id', verifiedUser.id)
+                .single();
+
+            if (profile?.rol !== 'admin') {
+                return NextResponse.json({ error: 'No tienes permisos de administrador para realizar esta acción' }, { status: 403 });
+            }
+            isAdmin = true;
+        }
+
+        // Action logging will use 'verifiedUser'
+
+        if (!verifiedUser) {
+            return NextResponse.json({ error: 'No se pudo verificar el usuario' }, { status: 500 });
         }
 
         // 3. Fetch details for logging before deletion
@@ -89,7 +122,7 @@ export async function POST(request: Request) {
             deleteError = error;
         } else if (type === 'perfil') {
             // Check if trying to delete self
-            if (id === authData.user.id) {
+            if (id === verifiedUser.id) {
                 return NextResponse.json({ error: 'No puedes eliminar tu propia cuenta mientras estás logueado' }, { status: 400 });
             }
             // Delete from Auth (Triggers cascade to profiles usually, or we delete profile manually)
@@ -113,8 +146,8 @@ export async function POST(request: Request) {
 
         // 5. Log activity
         await supabaseAdmin.from('activity_logs').insert({
-            user_id: authData.user.id,
-            user_name: authData.user.user_metadata?.nombre || authData.user.email || 'Admin',
+            user_id: verifiedUser.id,
+            user_name: verifiedUser.user_metadata?.nombre || verifiedUser.email || 'Admin',
             action: 'delete',
             entity_type: type === 'document' ? 'documento' : type,
             entity_id: typeof id === 'number' ? id : null, // profile id is uuid string
