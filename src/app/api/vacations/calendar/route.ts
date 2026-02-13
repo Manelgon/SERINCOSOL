@@ -17,22 +17,25 @@ export async function GET(request: Request) {
 
         const dateFrom = `${month}-01`;
         const lastDay = new Date(parseInt(month.split('-')[0]), parseInt(month.split('-')[1]), 0).getDate();
-        const dateTo = `${month}-${lastDay}`;
+        // Use a more robust dateTo to cover any month length
+        const dateTo = `${month}-31`;
 
         // 1) Fetch Approved Requests in range
-        const { data: approved, error: approvedError } = await supabaseAdmin
+        const { data: approved, error } = await supabaseAdmin
             .from('vacation_requests')
-            .select('date_from, date_to, user_id')
+            .select('date_from, date_to')
             .eq('status', 'APROBADA')
-            .or(`date_from.lte.${dateTo},date_to.gte.${dateFrom}`);
+            .lte('date_from', dateTo)
+            .gte('date_to', dateFrom);
 
-        if (approvedError) throw approvedError;
+        if (error) throw error;
 
         // 2) Fetch Blocked Dates
         const { data: blocked, error: blockedError } = await supabaseAdmin
             .from('blocked_dates')
             .select('*')
-            .or(`date_from.lte.${dateTo},date_to.gte.${dateFrom}`);
+            .lte('date_from', dateTo)
+            .gte('date_to', dateFrom);
 
         if (blockedError) throw blockedError;
 
