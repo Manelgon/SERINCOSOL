@@ -90,12 +90,26 @@ export async function POST(request: Request) {
 
         // 2) Update Balance based on status transition
         const year = new Date(vReq.date_from).getFullYear();
-        const { data: balance } = await supabaseAdmin
+        let { data: balance } = await supabaseAdmin
             .from('vacation_balances')
             .select('*')
             .eq('user_id', vReq.user_id)
             .eq('year', year)
-            .single();
+            .maybeSingle();
+
+        // If no balance exists, create it now
+        if (!balance) {
+            const { data: newBalance, error: createError } = await supabaseAdmin
+                .from('vacation_balances')
+                .insert({
+                    user_id: vReq.user_id,
+                    year: year
+                })
+                .select()
+                .single();
+            if (createError) throw createError;
+            balance = newBalance;
+        }
 
         if (balance) {
             const column = vReq.type === 'VACACIONES' ? 'vacaciones_usados' :
@@ -114,10 +128,11 @@ export async function POST(request: Request) {
             }
 
             if (newUsed !== balance[column]) {
-                await supabaseAdmin
+                const { error: updError } = await supabaseAdmin
                     .from('vacation_balances')
                     .update({ [column]: newUsed })
                     .eq('id', balance.id);
+                if (updError) throw updError;
             }
         }
 

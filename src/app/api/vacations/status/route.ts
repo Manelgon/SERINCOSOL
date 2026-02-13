@@ -51,43 +51,63 @@ export async function GET(request: Request) {
 
         if (policyError) throw policyError;
 
-        // 4) Fetch Pending Counts to calculate "Reserved"
-        const { data: pendingRequests, error: pendingError } = await supabaseAdmin
+        // 4) RECONCILIATION: Fetch ALL requests (PENDIENTE & APROBADA) to verify balance
+        const { data: allRequests, error: reqsError } = await supabaseAdmin
             .from('vacation_requests')
-            .select('type, days_count')
+            .select('type, status, days_count')
             .eq('user_id', userId)
-            .eq('status', 'PENDIENTE');
+            .in('status', ['PENDIENTE', 'APROBADA']);
 
-        if (pendingError) throw pendingError;
+        if (reqsError) throw reqsError;
 
-        const reserved = {
-            VACACIONES: 0,
-            RETRIBUIDO: 0,
-            NO_RETRIBUIDO: 0
+        const sync = {
+            VACACIONES: { used: 0, pending: 0 },
+            RETRIBUIDO: { used: 0, pending: 0 },
+            NO_RETRIBUIDO: { used: 0, pending: 0 }
         };
 
-        pendingRequests?.forEach(r => {
-            if (r.type === 'VACACIONES') reserved.VACACIONES += Number(r.days_count);
-            if (r.type === 'RETRIBUIDO') reserved.RETRIBUIDO += Number(r.days_count);
-            if (r.type === 'NO_RETRIBUIDO') reserved.NO_RETRIBUIDO += Number(r.days_count);
+        allRequests?.forEach(r => {
+            const key = (r.type === 'VACACIONES' ? 'VACACIONES' : r.type === 'RETRIBUIDO' ? 'RETRIBUIDO' : 'NO_RETRIBUIDO') as keyof typeof sync;
+            if (r.status === 'APROBADA') sync[key].used += Number(r.days_count);
+            else if (r.status === 'PENDIENTE') sync[key].pending += Number(r.days_count);
         });
+
+        // 5) If any "used" value in balance mismatch sync results, FIX IT automatically
+        const needsUpdate =
+            finalBalance.vacaciones_usados !== sync.VACACIONES.used ||
+            finalBalance.retribuidos_usados !== sync.RETRIBUIDO.used ||
+            finalBalance.no_retribuidos_usados !== sync.NO_RETRIBUIDO.used;
+
+        if (needsUpdate) {
+            const { data: updatedBalance } = await supabaseAdmin
+                .from('vacation_balances')
+                .update({
+                    vacaciones_usados: sync.VACACIONES.used,
+                    retribuidos_usados: sync.RETRIBUIDO.used,
+                    no_retribuidos_usados: sync.NO_RETRIBUIDO.used
+                })
+                .eq('id', finalBalance.id)
+                .select()
+                .single();
+            if (updatedBalance) finalBalance = updatedBalance;
+        }
 
         return NextResponse.json({
             balance: {
                 vacaciones: {
                     total: finalBalance.vacaciones_total,
                     used: finalBalance.vacaciones_usados,
-                    pending: reserved.VACACIONES
+                    pending: sync.VACACIONES.pending
                 },
                 retribuidos: {
                     total: finalBalance.retribuidos_total,
                     used: finalBalance.retribuidos_usados,
-                    pending: reserved.RETRIBUIDO
+                    pending: sync.RETRIBUIDO.pending
                 },
                 noRetribuidos: {
                     total: finalBalance.no_retribuidos_total,
                     used: finalBalance.no_retribuidos_usados,
-                    pending: reserved.NO_RETRIBUIDO
+                    pending: sync.NO_RETRIBUIDO.pending
                 }
             },
             policy: policy || { max_approved_per_day: 1, count_holidays: false, count_weekends: false }

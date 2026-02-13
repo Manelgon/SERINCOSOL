@@ -25,29 +25,52 @@ export default function VacationDashboard() {
     const [userId, setUserId] = useState<string | null>(null);
 
     useEffect(() => {
-        fetchData();
+        const checkSession = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+                setUserId(session.user.id);
+                fetchData(session.user.id);
+            } else {
+                setLoading(false);
+            }
+        };
+
+        checkSession();
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            if (session?.user) {
+                setUserId(session.user.id);
+                fetchData(session.user.id);
+            } else {
+                setUserId(null);
+                setHistory([]);
+                setStatus(null);
+            }
+        });
+
+        return () => subscription.unsubscribe();
     }, []);
 
     useEffect(() => {
         fetchCalendar();
     }, [activeMonth]);
 
-    const fetchData = async () => {
-        try {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session?.user) return;
-            setUserId(session.user.id);
+    const fetchData = async (uid?: string) => {
+        const idToUse = uid || userId;
+        if (!idToUse) return;
 
+        setLoading(true);
+        try {
             const [statusRes, historyRes] = await Promise.all([
-                fetch(`/api/vacations/status?userId=${session.user.id}`),
-                fetch(`/api/vacations/requests?userId=${session.user.id}`)
+                fetch(`/api/vacations/status?userId=${idToUse}`),
+                fetch(`/api/vacations/requests?userId=${idToUse}`)
             ]);
 
             const statusData = await statusRes.json();
             const historyData = await historyRes.json();
 
-            setStatus(statusData);
-            setHistory(historyData);
+            if (statusRes.ok) setStatus(statusData);
+            if (historyRes.ok) setHistory(historyData);
         } catch (error) {
             toast.error("Error al cargar datos de vacaciones");
         } finally {
