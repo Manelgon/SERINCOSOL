@@ -20,7 +20,7 @@ export default function VariosFacturasPage() {
                         <ArrowLeft className="w-5 h-5" />
                     </Link>
                     <div>
-                        <h1 className="text-xl font-bold text-neutral-900">Varios Facturas Suplidos</h1>
+                        <h1 className="text-xl font-bold text-neutral-900">Certificados de estar al dia y Factura</h1>
                         <p className="text-sm text-neutral-600 mt-1">
                             Genera factura y certificado de pago en un solo documento.
                         </p>
@@ -75,7 +75,7 @@ export default function VariosFacturasPage() {
                         {/* Modal Header */}
                         <div className="px-6 sm:px-8 pt-6 sm:pt-7 pb-4 border-b border-slate-100 flex justify-between items-center">
                             <h2 className="text-lg font-semibold text-slate-900">
-                                Nuevo Documento Varios
+                                Nuevo Certificado de estar al dia / Factura
                             </h2>
                             <button
                                 onClick={() => setShowForm(false)}

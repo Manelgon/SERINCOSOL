@@ -8,6 +8,7 @@ import DataTable, { Column } from '@/components/DataTable';
 import SearchableSelect from '@/components/SearchableSelect';
 import { logActivity } from '@/lib/logActivity';
 import EmployeeResume from '@/components/fichaje/EmployeeResume';
+import VacationManager from './VacationManager';
 
 interface TimeEntryWithProfile {
     id: number;
@@ -36,7 +37,7 @@ export default function FichajeAdminPage() {
     const [profiles, setProfiles] = useState<Profile[]>([]);
     const [loading, setLoading] = useState(true);
     const [isAdmin, setIsAdmin] = useState(false);
-    const [activeTab, setActiveTab] = useState<'control' | 'reports'>('control');
+    const [activeTab, setActiveTab] = useState<'control' | 'reports' | 'vacations'>('control');
     const [selectedUserForReport, setSelectedUserForReport] = useState<string | null>(null);
 
     // Filters
@@ -344,6 +345,12 @@ export default function FichajeAdminPage() {
                 >
                     Informes y Exportación
                 </button>
+                <button
+                    onClick={() => setActiveTab('vacations')}
+                    className={`px-6 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === 'vacations' ? 'border-yellow-400 text-yellow-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                >
+                    Gestión de Vacaciones
+                </button>
             </div>
 
             {activeTab === 'control' ? (
@@ -539,7 +546,7 @@ export default function FichajeAdminPage() {
                         emptyMessage="No hay fichajes que coincidan con los filtros"
                     />
                 </>
-            ) : (
+            ) : activeTab === 'reports' ? (
                 <div className="space-y-6">
                     <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
                         <label className="block text-sm font-medium text-gray-700 mb-2">Seleccionar Empleado</label>
@@ -558,6 +565,8 @@ export default function FichajeAdminPage() {
                         <EmployeeResume userId={selectedUserForReport} allowExport={true} />
                     )}
                 </div>
+            ) : (
+                <VacationManager />
             )}
 
             {/* CONFIRMATION MODAL */}

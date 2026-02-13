@@ -45,8 +45,11 @@ export async function POST(request: Request) {
         let entityName = "Desconocido";
         let entityDetails = {};
 
-        if (type === 'incidencia') {
-            const { data } = await supabaseAdmin.from('incidencias').select('nombre_cliente').eq('id', id).single();
+        if (type === 'incidencia' || type === 'sofia_incidencia') {
+            const client = type === 'sofia_incidencia' ? (await import('@/lib/supabaseAdminSecondary')).supabaseAdminSecondary : supabaseAdmin;
+            const tableName = type === 'sofia_incidencia' ? 'incidencias_serincobot' : 'incidencias';
+
+            const { data } = await client.from(tableName).select('nombre_cliente').eq('id', id).single();
             entityName = data?.nombre_cliente || `Ticket #${id}`;
         } else if (type === 'morosidad') {
             const { data } = await supabaseAdmin.from('morosidad').select('nombre_cliente, titulo').eq('id', id).single();
@@ -72,8 +75,11 @@ export async function POST(request: Request) {
         // 4. Perform Deletion based on type
         let deleteError = null;
 
-        if (type === 'incidencia') {
-            const { error } = await supabaseAdmin.from('incidencias').delete().eq('id', id);
+        if (type === 'incidencia' || type === 'sofia_incidencia') {
+            const client = type === 'sofia_incidencia' ? (await import('@/lib/supabaseAdminSecondary')).supabaseAdminSecondary : supabaseAdmin;
+            const tableName = type === 'sofia_incidencia' ? 'incidencias_serincobot' : 'incidencias';
+
+            const { error } = await client.from(tableName).delete().eq('id', id);
             deleteError = error;
         } else if (type === 'morosidad') {
             const { error } = await supabaseAdmin.from('morosidad').delete().eq('id', id);

@@ -1,0 +1,42 @@
+﻿ M src/app/api/admin/universal-delete/route.ts
+ M src/app/api/documentos/certificado-renta/generate/route.ts
+ M src/app/api/documentos/suplidos/generate/route.ts
+ M src/app/api/documentos/varios/generate/route.ts
+ M src/app/api/facturas-comunidades/upload/route.ts
+ M src/app/api/incidencias/export/route.ts
+ M src/app/dashboard/comunidades/page.tsx
+ M src/app/dashboard/deudas/page.tsx
+ M src/app/dashboard/fichaje/admin/page.tsx
+ M src/app/dashboard/fichaje/page.tsx
+ M src/app/dashboard/incidencias/page.tsx
+ M src/app/dashboard/page.tsx
+ M src/app/dashboard/perfiles/page.tsx
+ M src/app/dashboard/proveedores/page.tsx
+ M src/components/Sidebar.tsx
+ M src/components/TimelineChat.tsx
+ M src/lib/logActivity.ts
+ M supabase/migrations/20240114_time_tracking.sql
+ M supabase/migrations/20240120_time_entries_view.sql
+?? git_status.txt
+?? git_status_utf8.txt
+?? src/app/api/admin/vacations/
+?? src/app/api/onedrive/
+?? src/app/api/reports/
+?? src/app/api/sofia/
+?? src/app/api/storage/
+?? src/app/api/vacations/
+?? src/app/dashboard/fichaje/admin/AdminSettingsPanel.tsx
+?? src/app/dashboard/fichaje/admin/UserBalancesPanel.tsx
+?? src/app/dashboard/fichaje/admin/VacationManager.tsx
+?? src/app/dashboard/informes/
+?? src/app/dashboard/sofia/
+?? src/components/DeleteConfirmationModal.tsx
+?? src/components/vacations/
+?? src/lib/storage.ts
+?? src/lib/supabaseAdminSecondary.ts
+?? src/lib/supabaseSecondaryClient.ts
+?? supabase/migrations/20260210_secure_storage.sql
+?? supabase/migrations/20260210_secure_tables.sql
+?? supabase/migrations/20260211_email_reports.sql
+?? supabase/migrations/20260212_audit_indexes.sql
+?? supabase/migrations/20260212_vacations.sql

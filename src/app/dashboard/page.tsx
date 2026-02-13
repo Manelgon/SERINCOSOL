@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { supabaseSecondary } from '@/lib/supabaseSecondaryClient';
 import KPICard from '@/components/KPICard';
 import SearchableSelect from '@/components/SearchableSelect';
 import { Building, AlertCircle, FileText, CheckCircle, TrendingUp, Users, Filter } from 'lucide-react';
@@ -126,7 +127,15 @@ export default function DashboardPage() {
 
             // 4. Fetch Profiles (to ensure all users are shown in performance table)
             const { data: profiles, error: profError } = await supabase.from('profiles').select('nombre');
-            // Don't throw on profile error, just continue
+
+            // 5. Fetch Sofia Stats from Secondary
+            const { data: sofiaData } = await supabaseSecondary
+                .from('incidencias_serincobot')
+                .select('resuelto');
+
+            const sofiaTotal = sofiaData?.length || 0;
+            const sofiaResueltas = sofiaData?.filter(i => i.resuelto).length || 0;
+            const sofiaPendientes = sofiaTotal - sofiaResueltas;
 
             // --- Process Data ---
 
@@ -140,8 +149,8 @@ export default function DashboardPage() {
 
             setStats({
                 totalComunidades: countComunidades || 0,
-                incidenciasPendientes: pendientes,
-                incidenciasResueltas: resueltas,
+                incidenciasPendientes: pendientes + sofiaPendientes,
+                incidenciasResueltas: resueltas + sofiaResueltas,
                 totalDeuda,
                 deudaRecuperada: deudaPagada
             });
@@ -238,12 +247,19 @@ export default function DashboardPage() {
                 userMap.set(userName, current);
             });
 
-            const userPerformance = Array.from(userMap.entries()).map(([name, data]) => ({
-                name,
-                ...data,
-                pending: data.assigned - data.resolved,
-                efficiency: data.assigned > 0 ? Math.round((data.resolved / data.assigned) * 100) : 0
-            }));
+            const userPerformance = Array.from(userMap.entries()).map(([name, data]) => {
+                let finalData = { ...data };
+                if (name === 'Sofia-Bot') {
+                    finalData.assigned += sofiaTotal;
+                    finalData.resolved += sofiaResueltas;
+                }
+                return {
+                    name,
+                    ...finalData,
+                    pending: finalData.assigned - finalData.resolved,
+                    efficiency: finalData.assigned > 0 ? Math.round((finalData.resolved / finalData.assigned) * 100) : 0
+                };
+            });
 
             // Charts: Debt by Community
             const debtByCom = new Map<string, number>();

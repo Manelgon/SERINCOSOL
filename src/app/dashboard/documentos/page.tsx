@@ -67,7 +67,7 @@ export default function DocumentosPage() {
         },
         {
             key: "varios",
-            title: "Varios Facturas Suplidos",
+            title: "Certificados de estar al dia y Factura",
             desc: "Genera facturas varias y certificado de pagos al día en un único PDF.",
             href: "/dashboard/documentos/varios",
             settingsHref: "#",
@@ -158,7 +158,7 @@ export default function DocumentosPage() {
                         <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 flex justify-between items-center bg-white flex-shrink-0 rounded-t-xl">
                             <h2 className="text-lg font-semibold text-slate-900">
                                 {activeModal === "suplidos" && "Registrar Nuevo Suplido"}
-                                {activeModal === "varios" && "Registrar Facturas Varios"}
+                                {activeModal === "varios" && "Registrar Certificado de estar al dia y Factura"}
                                 {activeModal === "certificado_renta" && "Registrar Certificado Renta"}
                             </h2>
                             <button

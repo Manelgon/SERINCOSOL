@@ -1,5 +1,7 @@
 -- Create a view to aggregate time entries by day and month
-create or replace view public.time_entries_monthly as
+create or replace view public.time_entries_monthly
+with (security_invoker = true)
+as
 select
   user_id,
   date_trunc('month', start_at) as month,

@@ -4,7 +4,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { Plus, Trash2, X, Edit2, Eye, MapPin, Hash, Building2, Clock } from 'lucide-react';
+import { Plus, Trash2, X, Edit2, Eye, MapPin, Hash, Building2, Clock, Loader2 } from 'lucide-react';
+import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
 import DataTable, { Column } from '@/components/DataTable';
 import { logActivity } from '@/lib/logActivity';
 
@@ -173,9 +174,8 @@ export default function ComunidadesPage() {
         setDeletePassword('');
     };
 
-    const handleDeleteConfirm = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (deleteId === null || !deleteEmail || !deletePassword) return;
+    const handleConfirmDelete = async ({ email, password }: any) => {
+        if (deleteId === null || !email || !password) return;
 
         setIsDeleting(true);
         try {
@@ -184,8 +184,8 @@ export default function ComunidadesPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     id: deleteId,
-                    email: deleteEmail,
-                    password: deletePassword,
+                    email,
+                    password,
                     type: 'comunidad'
                 })
             });
@@ -198,8 +198,6 @@ export default function ComunidadesPage() {
             setComunidades(comunidades.filter(c => c.id !== deleteId));
             setShowDeleteModal(false);
             setDeleteId(null);
-            setDeleteEmail('');
-            setDeletePassword('');
 
             // Log activity
             const deleted = comunidades.find(c => c.id === deleteId);
@@ -208,7 +206,7 @@ export default function ComunidadesPage() {
                 entityType: 'comunidad',
                 entityId: deleteId,
                 entityName: deleted?.nombre_cdad,
-                details: { codigo: deleted?.codigo, deleted_by_admin: deleteEmail }
+                details: { codigo: deleted?.codigo, deleted_by_admin: email }
             });
 
         } catch (error: any) {
@@ -671,63 +669,16 @@ export default function ComunidadesPage() {
             )}
 
             {/* Delete Confirmation Modal */}
-            {showDeleteModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] backdrop-blur-sm">
-                    <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
-                        <h3 className="text-lg font-bold mb-4 text-neutral-900">Confirmar Eliminación</h3>
-                        <p className="text-gray-600 mb-4">
-                            Esta acción no se puede deshacer. Para confirmar, ingresa credenciales de administrador:
-                        </p>
-                        <form onSubmit={handleDeleteConfirm} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Email Administrador</label>
-                                <input
-                                    type="email"
-                                    required
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
-                                    placeholder="admin@ejemplo.com"
-                                    value={deleteEmail}
-                                    onChange={(e) => setDeleteEmail(e.target.value)}
-                                    autoComplete="off"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña Administrador</label>
-                                <input
-                                    type="password"
-                                    required
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
-                                    placeholder="••••••••"
-                                    value={deletePassword}
-                                    onChange={(e) => setDeletePassword(e.target.value)}
-                                    autoComplete="new-password"
-                                />
-                            </div>
-                            <div className="flex gap-3 justify-end pt-2">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setShowDeleteModal(false);
-                                        setDeletePassword('');
-                                        setDeleteEmail('');
-                                        setDeleteId(null);
-                                    }}
-                                    className="px-4 py-2 border border-gray-300 text-neutral-700 rounded-lg hover:bg-gray-50 transition font-medium"
-                                >
-                                    Cancelar
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={isDeleting}
-                                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium shadow-sm disabled:opacity-50"
-                                >
-                                    {isDeleting ? 'Eliminando...' : 'Eliminar Comunidad'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+            <DeleteConfirmationModal
+                isOpen={showDeleteModal}
+                onClose={() => {
+                    setShowDeleteModal(false);
+                    setDeleteId(null);
+                }}
+                onConfirm={handleConfirmDelete}
+                itemType="comunidad"
+                isDeleting={isDeleting}
+            />
         </div>
     );
 }

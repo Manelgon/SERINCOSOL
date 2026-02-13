@@ -135,7 +135,9 @@ using (public.is_admin());
 -- 4) VIEW: monthly_hours
 -- =========================================
 
-create or replace view public.monthly_hours as
+create or replace view public.monthly_hours 
+with (security_invoker = true)
+as
 select
   te.user_id,
   date_trunc('month', te.start_at) as month,

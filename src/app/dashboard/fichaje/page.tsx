@@ -6,6 +6,7 @@ import { toast } from 'react-hot-toast';
 import { Clock, Play, Square, Calendar, Users } from 'lucide-react';
 import { logActivity } from '@/lib/logActivity';
 import EmployeeResume from '@/components/fichaje/EmployeeResume';
+import VacationDashboard from '@/components/vacations/VacationDashboard';
 
 interface TimeEntry {
     id: number;
@@ -23,7 +24,7 @@ export default function FichajePage() {
     const [note, setNote] = useState('');
     const [elapsedTime, setElapsedTime] = useState(0);
     const [isAdmin, setIsAdmin] = useState(false);
-    const [activeTab, setActiveTab] = useState<'daily' | 'resume'>('daily');
+    const [activeTab, setActiveTab] = useState<'daily' | 'resume' | 'vacations'>('daily');
 
     useEffect(() => {
         checkAdminStatus();
@@ -260,6 +261,12 @@ export default function FichajePage() {
                 >
                     Resumen Mensual
                 </button>
+                <button
+                    onClick={() => setActiveTab('vacations')}
+                    className={`px-6 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === 'vacations' ? 'border-yellow-400 text-yellow-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                >
+                    Vacaciones
+                </button>
             </div>
 
             {activeTab === 'daily' ? (
@@ -394,8 +401,10 @@ export default function FichajePage() {
                         </div>
                     </div>
                 </>
-            ) : (
+            ) : activeTab === 'resume' ? (
                 <EmployeeResume />
+            ) : (
+                <VacationDashboard />
             )}
         </div>
     );

@@ -1,0 +1,80 @@
+import { createClient } from '@supabase/supabase-js';
+import { NextResponse } from 'next/server';
+
+const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+export async function GET(request: Request) {
+    try {
+        const { searchParams } = new URL(request.url);
+        const month = searchParams.get('month'); // YYYY-MM
+
+        if (!month) {
+            return NextResponse.json({ error: 'Falta month' }, { status: 400 });
+        }
+
+        const dateFrom = `${month}-01`;
+        const lastDay = new Date(parseInt(month.split('-')[0]), parseInt(month.split('-')[1]), 0).getDate();
+        const dateTo = `${month}-${lastDay}`;
+
+        // 1) Fetch Approved Requests in range
+        const { data: approved, error: approvedError } = await supabaseAdmin
+            .from('vacation_requests')
+            .select('date_from, date_to, user_id')
+            .eq('status', 'APROBADA')
+            .or(`date_from.lte.${dateTo},date_to.gte.${dateFrom}`);
+
+        if (approvedError) throw approvedError;
+
+        // 2) Fetch Blocked Dates
+        const { data: blocked, error: blockedError } = await supabaseAdmin
+            .from('blocked_dates')
+            .select('*')
+            .or(`date_from.lte.${dateTo},date_to.gte.${dateFrom}`);
+
+        if (blockedError) throw blockedError;
+
+        // 3) Fetch Policy
+        const { data: policy } = await supabaseAdmin
+            .from('vacation_policies')
+            .select('max_approved_per_day')
+            .eq('is_active', true)
+            .maybeSingle();
+
+        const maxDaily = policy?.max_approved_per_day || 1;
+
+        // 4) Process daily colors
+        const days: Record<string, { color: 'green' | 'amber' | 'red'; count: number; reason?: string }> = {};
+
+        for (let i = 1; i <= lastDay; i++) {
+            const dayStr = `${month}-${i.toString().padStart(2, '0')}`;
+
+            // Count approved
+            const count = approved?.filter(r => dayStr >= r.date_from && dayStr <= r.date_to).length || 0;
+
+            // Check blocked
+            const block = blocked?.find(b => dayStr >= b.date_from && dayStr <= b.date_to);
+
+            let color: 'green' | 'amber' | 'red' = 'green';
+            if (block || count >= maxDaily) {
+                color = 'red';
+            } else if (count > 0) {
+                color = 'amber';
+            }
+
+            days[dayStr] = {
+                color,
+                count,
+                reason: block?.reason
+            };
+        }
+
+        return NextResponse.json({ days, maxDaily });
+
+    } catch (error: any) {
+        console.error('Calendar API error:', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}
