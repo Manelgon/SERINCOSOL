@@ -319,77 +319,9 @@ export default function InformesEmailPage() {
                         </select>
                     </div>
 
-                    {/* Table */}
-                    {/* Mobile View: Cards (Visible only on small screens) */}
-                    <div className="md:hidden space-y-4">
-                        {loadingHistory ? (
-                            <div className="bg-white p-8 rounded-xl border border-neutral-200 text-center text-neutral-400">
-                                <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
-                                Cargando histórico...
-                            </div>
-                        ) : sortedAndFilteredReports.length === 0 ? (
-                            <div className="bg-white p-8 rounded-xl border border-neutral-200 text-center text-neutral-400">
-                                No hay informes generados.
-                            </div>
-                        ) : (
-                            sortedAndFilteredReports.map((report) => (
-                                <div key={report.id} className="bg-white p-5 rounded-xl border border-neutral-200 shadow-sm space-y-4">
-                                    <div className="flex justify-between items-start">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-lg bg-yellow-50 flex items-center justify-center shrink-0">
-                                                <Building className="w-5 h-5 text-yellow-600" />
-                                            </div>
-                                            <div>
-                                                <h3 className="text-sm font-bold text-neutral-900 leading-none">{report.community_name}</h3>
-                                                <p className="text-[10px] text-neutral-400 mt-1">
-                                                    {new Date(report.created_at).toLocaleDateString()} - {new Date(report.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-1.5">
-                                            <button
-                                                onClick={() => handleViewPdf(report.pdf_path)}
-                                                className="p-2 rounded-lg bg-blue-50 text-blue-600"
-                                            >
-                                                <Eye className="w-4 h-4" />
-                                            </button>
-                                            <button
-                                                onClick={() => handleDownloadPdf(report.pdf_path, report.title)}
-                                                className="p-2 rounded-lg bg-emerald-50 text-emerald-600"
-                                            >
-                                                <Download className="w-4 h-4" />
-                                            </button>
-                                            {isAdmin && (
-                                                <button
-                                                    onClick={() => handleDeleteReport(report.id)}
-                                                    className="p-2 rounded-lg bg-red-50 text-red-600"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4 pt-2 border-t border-neutral-50">
-                                        <div>
-                                            <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">Periodo</span>
-                                            <span className="text-xs text-neutral-600 font-medium">
-                                                {new Date(report.period_start).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' })} - {new Date(report.period_end).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' })}
-                                            </span>
-                                        </div>
-                                        <div>
-                                            <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">Volumen</span>
-                                            <span className="text-xs text-neutral-600 font-medium">{report.emails_count} correos</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-
-                    {/* Desktop View: Table (Hidden on small screens) */}
-                    <div className="hidden md:block bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden overflow-x-auto">
-                        <table className="w-full text-left border-collapse min-w-[800px]">
+                    {/* History Table with Horizontal Scroll */}
+                    <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-x-auto">
+                        <table className="w-full text-left border-collapse min-w-[700px]">
                             <thead className="bg-neutral-50 border-b border-neutral-200">
                                 <tr>
                                     <th
