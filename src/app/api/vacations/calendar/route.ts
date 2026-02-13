@@ -17,8 +17,7 @@ export async function GET(request: Request) {
 
         const dateFrom = `${month}-01`;
         const lastDay = new Date(parseInt(month.split('-')[0]), parseInt(month.split('-')[1]), 0).getDate();
-        // Use a more robust dateTo to cover any month length
-        const dateTo = `${month}-31`;
+        const dateTo = `${month}-${String(lastDay).padStart(2, '0')}`;
 
         // 1) Fetch Approved Requests in range
         const { data: approved, error } = await supabaseAdmin
@@ -54,11 +53,19 @@ export async function GET(request: Request) {
         for (let i = 1; i <= lastDay; i++) {
             const dayStr = `${month}-${i.toString().padStart(2, '0')}`;
 
-            // Count approved
-            const count = approved?.filter(r => dayStr >= r.date_from && dayStr <= r.date_to).length || 0;
+            // Count approved - truncate date fields to 10 chars (YYYY-MM-DD)
+            const count = approved?.filter(r => {
+                const start = String(r.date_from).substring(0, 10);
+                const end = String(r.date_to).substring(0, 10);
+                return dayStr >= start && dayStr <= end;
+            }).length || 0;
 
             // Check blocked
-            const block = blocked?.find(b => dayStr >= b.date_from && dayStr <= b.date_to);
+            const block = blocked?.find(b => {
+                const start = String(b.date_from).substring(0, 10);
+                const end = String(b.date_to).substring(0, 10);
+                return dayStr >= start && dayStr <= end;
+            });
 
             let color: 'green' | 'amber' | 'red' = 'green';
             if (block || count >= maxDaily) {
