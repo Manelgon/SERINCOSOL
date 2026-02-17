@@ -82,8 +82,13 @@ export default function SofiaPage() {
 
     const handleRowClick = (incidencia: Incidencia) => {
         setSelectedDetailIncidencia(incidencia);
-        setNewComunidadId(incidencia.comunidad_id || '');
-        setNewGestorId(incidencia.gestor_asignado || '');
+
+        // Check if the IDs coming from Sofia DB exist in our Panel DB lists
+        const communityMatch = comunidades.find(c => c.id === incidencia.comunidad_id);
+        const gestorMatch = profiles.find(p => p.user_id === incidencia.gestor_asignado);
+
+        setNewComunidadId(communityMatch ? incidencia.comunidad_id : '');
+        setNewGestorId(gestorMatch ? incidencia.gestor_asignado : '');
         setShowDetailModal(true);
     };
 
@@ -273,6 +278,54 @@ export default function SofiaPage() {
         }
     };
 
+    const handleDeleteAttachment = async (urlToDelete: string) => {
+        if (!selectedDetailIncidencia) return;
+
+        const isConfirmed = window.confirm('¿Estás seguro de que deseas eliminar este documento?');
+        if (!isConfirmed) return;
+
+        setIsUpdatingRecord(true);
+        const loadingToast = toast.loading('Eliminando archivo...');
+
+        try {
+            const updatedAdjuntos = (selectedDetailIncidencia.adjuntos || []).filter(url => url !== urlToDelete);
+
+            const { error: updateError } = await supabaseSecondary
+                .from('incidencias_serincobot')
+                .update({ adjuntos: updatedAdjuntos })
+                .eq('id', selectedDetailIncidencia.id);
+
+            if (updateError) throw updateError;
+
+            setSelectedDetailIncidencia({
+                ...selectedDetailIncidencia,
+                adjuntos: updatedAdjuntos
+            });
+
+            setIncidencias(prev => prev.map(i => i.id === selectedDetailIncidencia.id ? { ...i, adjuntos: updatedAdjuntos } : i));
+
+            // Log activity in primary
+            await logActivity({
+                action: 'update',
+                entityType: 'sofia_incidencia',
+                entityId: selectedDetailIncidencia.id,
+                entityName: `Sofia - ${selectedDetailIncidencia.nombre_cliente}`,
+                details: {
+                    id: selectedDetailIncidencia.id,
+                    action: 'eliminar_archivo',
+                    url: urlToDelete
+                }
+            });
+
+            toast.success('Archivo eliminado', { id: loadingToast });
+        } catch (error: any) {
+            console.error(error);
+            toast.error('Error al eliminar archivo', { id: loadingToast });
+        } finally {
+            setIsUpdatingRecord(false);
+        }
+    };
+
     const toggleResuelto = async (id: number, currentStatus: boolean) => {
         if (isUpdatingStatus === id) return;
         setIsUpdatingStatus(id);
@@ -448,7 +501,10 @@ export default function SofiaPage() {
     };
 
     const handleUpdateGestor = async () => {
-        if (!selectedDetailIncidencia || !newGestorId) return;
+        if (!selectedDetailIncidencia || !newGestorId || !newComunidadId) {
+            toast.error('Selecciona una comunidad y un gestor');
+            return;
+        }
 
         setIsUpdatingGestor(true);
         const loadingToast = toast.loading('Transfiriendo ticket a gestión...');
@@ -752,26 +808,38 @@ export default function SofiaPage() {
                                     <h4 className="text-sm font-black text-neutral-900 uppercase tracking-widest border-l-4 border-neutral-900 pl-4">Anexos y Documentación Adjunta</h4>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         {selectedDetailIncidencia.adjuntos.map((url: string, i: number) => (
-                                            <a
-                                                key={i}
-                                                href={getSecureUrl(url)}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="group flex items-center justify-between bg-white border border-neutral-200 p-4 rounded-xl hover:border-neutral-900 transition-all shadow-sm"
-                                            >
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-10 h-10 rounded-lg bg-neutral-50 flex items-center justify-center text-neutral-400 group-hover:bg-neutral-900 group-hover:text-white transition-colors">
-                                                        <FileText className="w-5 h-5" />
+                                            <div key={i} className="group relative">
+                                                <a
+                                                    href={getSecureUrl(url)}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex items-center justify-between bg-white border border-neutral-200 p-4 rounded-xl hover:border-neutral-900 transition-all shadow-sm pr-12"
+                                                >
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-10 h-10 rounded-lg bg-neutral-50 flex items-center justify-center text-neutral-400 group-hover:bg-neutral-900 group-hover:text-white transition-colors">
+                                                            <FileText className="w-5 h-5" />
+                                                        </div>
+                                                        <div className="flex flex-col">
+                                                            <span className="text-sm font-normal text-neutral-900 truncate max-w-[150px] md:max-w-xs">
+                                                                Documento Adjunto {i + 1}
+                                                            </span>
+                                                            <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-tight">Ver archivo oficial</span>
+                                                        </div>
                                                     </div>
-                                                    <div className="flex flex-col">
-                                                        <span className="text-sm font-normal text-neutral-900 truncate max-w-[150px] md:max-w-xs">
-                                                            Documento Adjunto {i + 1}
-                                                        </span>
-                                                        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-tight">Ver archivo oficial</span>
-                                                    </div>
-                                                </div>
-                                                <Download className="w-4 h-4 text-neutral-300 group-hover:text-neutral-900" />
-                                            </a>
+                                                    <Download className="w-4 h-4 text-neutral-300 group-hover:text-neutral-900" />
+                                                </a>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        handleDeleteAttachment(url);
+                                                    }}
+                                                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-red-600 transition-colors"
+                                                    title="Eliminar documento"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
                                         ))}
                                     </div>
                                 </div>
@@ -789,9 +857,9 @@ export default function SofiaPage() {
                                 <button
                                     onClick={handleUpdateGestor}
                                     disabled={!newGestorId || !newComunidadId || isUpdatingGestor}
-                                    className={`h-12 px-8 rounded-xl font-black text-xs uppercase shadow-lg transition-all flex items-center gap-2 ${(!newGestorId || !newComunidadId) ? 'bg-neutral-100 text-neutral-400 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}
+                                    className={`h-12 px-8 rounded-xl font-black text-xs uppercase shadow-lg transition-all flex items-center gap-2 ${(!newGestorId || !newComunidadId || isUpdatingGestor) ? 'bg-neutral-100 text-neutral-400 cursor-not-allowed opacity-70' : 'bg-green-600 text-white hover:bg-green-700 active:scale-95'}`}
                                 >
-                                    {isUpdatingGestor ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                    {isUpdatingGestor ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
                                     TRAPASAR A GESTIÓN
                                 </button>
                                 <button onClick={() => toggleResuelto(selectedDetailIncidencia.id, selectedDetailIncidencia.resuelto)} className={`h-12 px-8 rounded-xl font-black text-xs uppercase transition-all ${selectedDetailIncidencia.resuelto ? 'bg-white border-2 border-neutral-900' : 'bg-amber-400 hover:bg-amber-500'}`}>
