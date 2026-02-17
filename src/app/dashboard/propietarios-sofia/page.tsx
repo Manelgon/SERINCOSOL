@@ -31,6 +31,18 @@ export default function PropietariosSofiaPage() {
     const [propietarios, setPropietarios] = useState<Propietario[]>([]);
     const [comunidades, setComunidades] = useState<Comunidad[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isLocal, setIsLocal] = useState(true);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const local = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            setIsLocal(local);
+            if (!local) {
+                window.location.href = '/dashboard';
+            }
+        }
+    }, []);
+
     const [isUpdatingStatus, setIsUpdatingStatus] = useState<number | null>(null);
     const [showForm, setShowForm] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);

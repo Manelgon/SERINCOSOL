@@ -47,6 +47,18 @@ export default function SofiaPage() {
     const [incidencias, setIncidencias] = useState<Incidencia[]>([]);
     const [comunidades, setComunidades] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isLocal, setIsLocal] = useState(true);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const local = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            setIsLocal(local);
+            if (!local) {
+                window.location.href = '/dashboard';
+            }
+        }
+    }, []);
+
     const [filterEstado, setFilterEstado] = useState('pendiente');
     const [filterGestor, setFilterGestor] = useState('all');
     const [filterComunidad, setFilterComunidad] = useState('all');
@@ -88,7 +100,7 @@ export default function SofiaPage() {
         const gestorMatch = profiles.find(p => p.user_id === incidencia.gestor_asignado);
 
         setNewComunidadId(communityMatch ? incidencia.comunidad_id : '');
-        setNewGestorId(gestorMatch ? incidencia.gestor_asignado : '');
+        setNewGestorId(gestorMatch ? (incidencia.gestor_asignado || '') : '');
         setShowDetailModal(true);
     };
 

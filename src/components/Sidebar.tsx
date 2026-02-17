@@ -18,7 +18,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     const [userName, setUserName] = useState('');
     const [userEmail, setUserEmail] = useState('');
 
+    const [isLocal, setIsLocal] = useState(false);
+
     useEffect(() => {
+        if (typeof window !== 'undefined') {
+            setIsLocal(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+        }
+
         const checkRole = async () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user) {
@@ -56,6 +62,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         { name: 'Documentos', href: '/dashboard/documentos', icon: FileText },
         { name: 'Facturas Comunidades', href: '/dashboard/facturas-comunidades', icon: Folder },
         { name: 'Avisos', href: '/dashboard/avisos', icon: AlertCircle },
+        ...(isLocal ? [
+            { name: 'Sofia (Local)', href: '/dashboard/sofia', icon: AlertCircle },
+            { name: 'Propietarios Sofia', href: '/dashboard/propietarios-sofia', icon: Users }
+        ] : []),
         ...(isAdmin ? [
             { name: 'Actividad', href: '/dashboard/actividad', icon: Activity },
             { name: 'Perfiles', href: '/dashboard/perfiles', icon: Users }
