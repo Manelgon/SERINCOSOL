@@ -95,6 +95,10 @@ export default function IncidenciasPage() {
     const [showExportModal, setShowExportModal] = useState(false);
     const [pendingExportParams, setPendingExportParams] = useState<{ type: 'csv' | 'pdf', ids?: number[], includeNotes?: boolean } | null>(null);
 
+    // Document Delete Confirmation
+    const [showDeleteDocConfirm, setShowDeleteDocConfirm] = useState(false);
+    const [urlToConfirmDelete, setUrlToConfirmDelete] = useState<string | null>(null);
+
     const handleRowClick = (incidencia: Incidencia) => {
         setSelectedDetailIncidencia(incidencia);
         setShowDetailModal(true);
@@ -404,16 +408,27 @@ export default function IncidenciasPage() {
             setIncidencias(prev => prev.map(i => i.id === selectedDetailIncidencia.id ? { ...i, adjuntos: updatedAdjuntos } : i));
 
             // Log activity
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                // record_messages log
+                await supabase.from('record_messages').insert([{
+                    entity_type: 'incidencia',
+                    entity_id: selectedDetailIncidencia.id,
+                    user_id: user.id,
+                    content: `📎 SE HAN ADJUNTO ${newUrls.length} NUEVOS DOCUMENTOS AL TICKET.`
+                }]);
+            }
+
             await logActivity({
                 action: 'update',
                 entityType: 'incidencia',
                 entityId: selectedDetailIncidencia.id,
                 entityName: `Incidencia - ${selectedDetailIncidencia.nombre_cliente}`,
                 details: {
-                    id: selectedDetailIncidencia.id,
-                    action: 'adjuntar_archivos',
-                    archivos_nuevos: newUrls.length,
-                    total_archivos: updatedAdjuntos.length
+                    acción: 'Documentos adjuntos añadidos',
+                    cantidad_nuevos: newUrls.length,
+                    total_documentos: updatedAdjuntos.length,
+                    comunidad: selectedDetailIncidencia.comunidades?.nombre_cdad || selectedDetailIncidencia.comunidad || 'N/A'
                 }
             });
 
@@ -421,6 +436,96 @@ export default function IncidenciasPage() {
         } catch (error: any) {
             console.error(error);
             toast.error('Error al subir archivos', { id: loadingToast });
+        } finally {
+            setIsUpdatingRecord(false);
+        }
+    };
+
+    const handleDeleteAttachment = async () => {
+        if (!selectedDetailIncidencia || !urlToConfirmDelete) return;
+
+        setShowDeleteDocConfirm(false);
+        const urlToDelete = urlToConfirmDelete;
+        setUrlToConfirmDelete(null);
+
+        setIsUpdatingRecord(true);
+        const loadingToast = toast.loading('Eliminando archivo...');
+
+        try {
+            // 1. Extract bucket and path from URL if it's our proxy URL
+            let bucket = 'documentos';
+            let path = '';
+
+            if (urlToDelete.includes('/api/storage/view')) {
+                const urlObj = new URL(urlToDelete, window.location.origin);
+                bucket = urlObj.searchParams.get('bucket') || 'documentos';
+                path = urlObj.searchParams.get('path') || '';
+            } else if (urlToDelete.includes('.supabase.co/storage/v1/object/public/')) {
+                const parts = urlToDelete.split('/object/public/')[1].split('/');
+                bucket = parts[0];
+                path = parts.slice(1).join('/');
+            }
+
+            // 2. Delete from storage if we have a path
+            if (path) {
+                const res = await fetch('/api/storage/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ bucket, path })
+                });
+
+                if (!res.ok) {
+                    const error = await res.json();
+                    console.warn('[Storage Delete] Could not delete file from storage:', error.error);
+                }
+            }
+
+            // 3. Update database
+            const currentAdjuntos = selectedDetailIncidencia.adjuntos || [];
+            const updatedAdjuntos = currentAdjuntos.filter(url => url !== urlToDelete);
+
+            const { error: updateError } = await supabase
+                .from('incidencias')
+                .update({ adjuntos: updatedAdjuntos })
+                .eq('id', selectedDetailIncidencia.id);
+
+            if (updateError) throw updateError;
+
+            // 4. Update local state
+            setSelectedDetailIncidencia({
+                ...selectedDetailIncidencia,
+                adjuntos: updatedAdjuntos
+            });
+
+            setIncidencias(prev => prev.map(i => i.id === selectedDetailIncidencia.id ? { ...i, adjuntos: updatedAdjuntos } : i));
+
+            // Log activity
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                // record_messages log
+                await supabase.from('record_messages').insert([{
+                    entity_type: 'incidencia',
+                    entity_id: selectedDetailIncidencia.id,
+                    user_id: user.id,
+                    content: `🗑️ SE HA ELIMINADO UN DOCUMENTO ADJUNTO DEL TICKET.`
+                }]);
+            }
+
+            await logActivity({
+                action: 'update',
+                entityType: 'incidencia',
+                entityId: selectedDetailIncidencia.id,
+                entityName: `Incidencia - ${selectedDetailIncidencia.nombre_cliente}`,
+                details: {
+                    acción: 'Documento adjunto eliminado',
+                    comunidad: selectedDetailIncidencia.comunidades?.nombre_cdad || selectedDetailIncidencia.comunidad || 'N/A'
+                }
+            });
+
+            toast.success('Documento eliminado', { id: loadingToast });
+        } catch (error: any) {
+            console.error(error);
+            toast.error('Error al eliminar el documento', { id: loadingToast });
         } finally {
             setIsUpdatingRecord(false);
         }
@@ -1607,11 +1712,8 @@ export default function IncidenciasPage() {
                                         <h4 className="text-sm font-black text-neutral-900 uppercase tracking-widest border-l-4 border-neutral-900 pl-4">Anexos y Documentación Adjunta</h4>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             {selectedDetailIncidencia.adjuntos.map((url: string, i: number) => (
-                                                <a
+                                                <div
                                                     key={i}
-                                                    href={getSecureUrl(url)}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
                                                     className="group flex items-center justify-between bg-white border border-neutral-200 p-4 rounded-xl hover:border-neutral-900 transition-all shadow-sm"
                                                 >
                                                     <div className="flex items-center gap-4">
@@ -1622,11 +1724,33 @@ export default function IncidenciasPage() {
                                                             <span className="text-sm font-normal text-neutral-900 truncate max-w-[150px] md:max-w-xs">
                                                                 Documento Adjunto {i + 1}
                                                             </span>
-                                                            <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-tight">Ver archivo oficial</span>
+                                                            <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-tight">Archivo Oficial</span>
                                                         </div>
                                                     </div>
-                                                    <Download className="w-4 h-4 text-neutral-300 group-hover:text-neutral-900" />
-                                                </a>
+                                                    <div className="flex items-center gap-2">
+                                                        <a
+                                                            href={getSecureUrl(url)}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-neutral-900 transition-colors"
+                                                            title="Ver / Descargar"
+                                                        >
+                                                            <Download className="w-4 h-4" />
+                                                        </a>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                setUrlToConfirmDelete(url);
+                                                                setShowDeleteDocConfirm(true);
+                                                            }}
+                                                            disabled={isUpdatingRecord}
+                                                            className="p-2 hover:bg-red-50 rounded-lg text-neutral-400 hover:text-red-600 transition-colors disabled:opacity-50"
+                                                            title="Eliminar documento"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                </div>
                                             ))}
                                         </div>
                                     </div>
@@ -1719,6 +1843,43 @@ export default function IncidenciasPage() {
                         >
                             Aceptar
                         </button>
+                    </div>
+                </div>
+            )}
+            {/* Document Delete Confirmation Modal */}
+            {showDeleteDocConfirm && (
+                <div
+                    className="fixed inset-0 bg-neutral-900/60 z-[110] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200"
+                >
+                    <div
+                        className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 relative flex flex-col items-center text-center animate-in zoom-in-95 duration-200"
+                    >
+                        <div className="w-16 h-16 bg-yellow-50 rounded-full flex items-center justify-center mb-4">
+                            <Trash2 className="w-8 h-8 text-yellow-600" />
+                        </div>
+                        <h3 className="text-xl font-bold text-neutral-900 mb-2">
+                            ¿Eliminar documento?
+                        </h3>
+                        <p className="text-neutral-500 mb-6">
+                            Esta acción no se puede deshacer. El archivo será eliminado permanentemente del sistema.
+                        </p>
+                        <div className="flex gap-3 w-full">
+                            <button
+                                onClick={() => {
+                                    setShowDeleteDocConfirm(false);
+                                    setUrlToConfirmDelete(null);
+                                }}
+                                className="flex-1 py-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 rounded-xl font-bold transition-all"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleDeleteAttachment}
+                                className="flex-1 py-3 bg-yellow-400 hover:bg-yellow-500 text-neutral-900 rounded-xl font-bold transition-transform active:scale-[0.98] shadow-lg shadow-yellow-100"
+                            >
+                                Eliminar
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
