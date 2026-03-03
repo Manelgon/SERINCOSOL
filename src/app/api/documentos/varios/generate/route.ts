@@ -713,7 +713,7 @@ export async function POST(req: Request) {
         }
 
         // Clean String
-        const clean = (s: string) => String(s || "").replace(/[^a-zA-Z0-9À-ÿ \-_.]/g, "").trim();
+        const clean = (s: string) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9\-_.]/g, "_").replace(/_+/g, "_").replace(/^_|_$/g, "");
         const now = new Date();
         const dateStr = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
 

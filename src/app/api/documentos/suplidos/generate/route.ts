@@ -401,7 +401,7 @@ export async function POST(req: Request) {
         // 3) Subir
         // Format: SUP_<Codigo Comunidad> <Nombre Comunidad>_<Descripcion>
         // We use "Nombre Cliente" as it likely contains the community info info or we fallback to it.
-        const clean = (s: string) => String(s || "").replace(/[^a-zA-Z0-9À-ÿ \-_.]/g, "").trim();
+        const clean = (s: string) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9\-_.]/g, "_").replace(/_+/g, "_").replace(/^_|_$/g, "");
 
         const clienteSafe = clean(payload["Nombre Cliente"] || "Cliente");
         const descSafe = clean(payload["Descripcion"] || "Suplido");

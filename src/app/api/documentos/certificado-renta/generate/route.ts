@@ -299,7 +299,7 @@ export async function POST(req: Request) {
         const pdfBytes = await buildRentaCertificatePdf(payload, { logoBytes, selloBytes });
 
         // 3) Subir a Storage (documento generado)
-        const clean = (s: string) => String(s || "").replace(/[^a-zA-Z0-9À-ÿ \-_.]/g, "").trim();
+        const clean = (s: string) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9\-_.]/g, "_").replace(/_+/g, "_").replace(/^_|_$/g, "");
         const now = new Date();
         const dateStr = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
 
