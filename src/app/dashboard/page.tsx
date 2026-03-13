@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { supabaseSecondary } from '@/lib/supabaseSecondaryClient';
 import KPICard from '@/components/KPICard';
 import SearchableSelect from '@/components/SearchableSelect';
-import { Building, AlertCircle, FileText, CheckCircle, TrendingUp, Users, Filter } from 'lucide-react';
+import { Building, AlertCircle, FileText, CheckCircle, TrendingUp, Users, Filter, X, Mail, CreditCard, TicketCheck, Pause } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, Legend } from 'recharts';
 import { toast } from 'react-hot-toast';
 import * as htmlToImage from 'html-to-image';
@@ -15,6 +15,7 @@ export default function DashboardPage() {
     const [stats, setStats] = useState({
         totalComunidades: 0,
         incidenciasPendientes: 0,
+        incidenciasAplazadas: 0,
         incidenciasResueltas: 0,
         totalDeuda: 0,
         deudaRecuperada: 0,
@@ -107,7 +108,7 @@ export default function DashboardPage() {
                 query = query.eq('comunidad_id', selectedCommunity);
             }
 
-            const { data: incidencias, error: incError } = await query;
+            const { data: incidencias, error: incError } = await query.limit(5000);
             if (incError) throw incError;
 
             // 3. Fetch Morosidad
@@ -139,10 +140,40 @@ export default function DashboardPage() {
 
             // --- Process Data ---
 
-            // KPIs
+            // KPIs - Count pendientes (estado=Pendiente, excl. aplazadas) and aplazadas separately
+            let pendientesQuery = supabase
+                .from('incidencias')
+                .select('*', { count: 'exact', head: true })
+                .eq('resuelto', false)
+                .or('estado.eq.Pendiente,estado.is.null');
+
+            let aplazadasQuery = supabase
+                .from('incidencias')
+                .select('*', { count: 'exact', head: true })
+                .eq('resuelto', false)
+                .eq('estado', 'Aplazado');
+
+            if (period !== 'all') {
+                const dateFilter = new Date();
+                dateFilter.setDate(dateFilter.getDate() - parseInt(period));
+                pendientesQuery = pendientesQuery.gte('created_at', dateFilter.toISOString());
+                aplazadasQuery = aplazadasQuery.gte('created_at', dateFilter.toISOString());
+            }
+
+            if (selectedCommunity !== 'all') {
+                pendientesQuery = pendientesQuery.eq('comunidad_id', selectedCommunity);
+                aplazadasQuery = aplazadasQuery.eq('comunidad_id', selectedCommunity);
+            }
+
+            const [{ count: countPendientes }, { count: countAplazadas }] = await Promise.all([
+                pendientesQuery,
+                aplazadasQuery
+            ]);
+
             const totalIncidencias = incidencias?.length || 0;
             const resueltas = incidencias?.filter(i => i.resuelto).length || 0;
-            const pendientes = totalIncidencias - resueltas;
+            const pendientes = countPendientes || 0;
+            const aplazadas = countAplazadas || 0;
 
             const totalDeuda = morosidad?.filter(m => m.estado === 'Pendiente').reduce((acc, curr) => acc + (curr.importe || 0), 0) || 0;
             const deudaPagada = morosidad?.filter(m => m.estado === 'Pagado').reduce((acc, curr) => acc + (curr.importe || 0), 0) || 0;
@@ -150,6 +181,7 @@ export default function DashboardPage() {
             setStats({
                 totalComunidades: countComunidades || 0,
                 incidenciasPendientes: pendientes + sofiaPendientes,
+                incidenciasAplazadas: aplazadas,
                 incidenciasResueltas: resueltas + sofiaResueltas,
                 totalDeuda,
                 deudaRecuperada: deudaPagada
@@ -187,21 +219,36 @@ export default function DashboardPage() {
 
             evolutionData.reverse();
 
-            // Charts: Urgency & Sentiment Distribution (Pending only)
+            // Charts: Fetch pending tickets separately to avoid row limit issues
+            let pendingChartQuery = supabase
+                .from('incidencias')
+                .select('urgencia, sentimiento, comunidad_id, comunidades(nombre_cdad)')
+                .eq('resuelto', false);
+
+            if (period !== 'all') {
+                const dateChart = new Date();
+                dateChart.setDate(dateChart.getDate() - parseInt(period));
+                pendingChartQuery = pendingChartQuery.gte('created_at', dateChart.toISOString());
+            }
+            if (selectedCommunity !== 'all') {
+                pendingChartQuery = pendingChartQuery.eq('comunidad_id', selectedCommunity);
+            }
+
+            const { data: pendingTickets } = await pendingChartQuery;
+
+            // Charts: Urgency & Sentiment Distribution (from dedicated pending query)
             const urgencyMap = { 'Alta': 0, 'Media': 0, 'Baja': 0 };
             const sentimentMap: Record<string, number> = {};
 
-            incidencias?.forEach(inc => {
-                if (!inc.resuelto) {
-                    // Urgency
-                    if (inc.urgencia && urgencyMap.hasOwnProperty(inc.urgencia)) {
-                        // @ts-ignore
-                        urgencyMap[inc.urgencia]++;
-                    }
-                    // Sentiment
-                    const sent = inc.sentimiento || 'Neutral';
-                    sentimentMap[sent] = (sentimentMap[sent] || 0) + 1;
+            pendingTickets?.forEach(inc => {
+                // Urgency
+                if (inc.urgencia && urgencyMap.hasOwnProperty(inc.urgencia)) {
+                    // @ts-ignore
+                    urgencyMap[inc.urgencia]++;
                 }
+                // Sentiment
+                const sent = inc.sentimiento || 'Neutral';
+                sentimentMap[sent] = (sentimentMap[sent] || 0) + 1;
             });
             const urgencyData = Object.entries(urgencyMap).map(([name, value]) => ({ name, value }));
             const sentimentData = Object.entries(sentimentMap)
@@ -210,12 +257,10 @@ export default function DashboardPage() {
 
             // Charts: Top Comunidades (Most Pending Incidents)
             const comMap = new Map<string, number>();
-            incidencias?.forEach(inc => {
-                if (!inc.resuelto) {
-                    // @ts-ignore
-                    const name = inc.comunidades?.nombre_cdad || 'Desconocida';
-                    comMap.set(name, (comMap.get(name) || 0) + 1);
-                }
+            pendingTickets?.forEach(inc => {
+                // @ts-ignore
+                const name = inc.comunidades?.nombre_cdad || 'Desconocida';
+                comMap.set(name, (comMap.get(name) || 0) + 1);
             });
             const topComunidades = Array.from(comMap.entries())
                 .map(([name, count]) => ({ name, count }))
@@ -318,7 +363,6 @@ export default function DashboardPage() {
                 const element = document.getElementById(id);
                 if (!element) return null;
                 try {
-                    // html-to-image works better with SVGs (Recharts)
                     return await htmlToImage.toPng(element, {
                         quality: 0.95,
                         backgroundColor: '#ffffff',
@@ -391,6 +435,11 @@ export default function DashboardPage() {
         } finally {
             setIsGeneratingPDF(false);
         }
+    };
+
+    // Handler for the "Descargar PDF" button
+    const handleDownloadClick = () => {
+        generatePDFReport();
     };
 
     useEffect(() => {
@@ -471,7 +520,7 @@ export default function DashboardPage() {
 
                     {/* PDF Download Button */}
                     <button
-                        onClick={generatePDFReport}
+                        onClick={handleDownloadClick}
                         disabled={loading || isGeneratingPDF}
                         className="flex items-center gap-2 bg-neutral-900 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-neutral-800 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto justify-center"
                     >
@@ -486,7 +535,7 @@ export default function DashboardPage() {
             </div>
 
             {/* KPI Cards Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
                 <KPICard
                     title="Comunidades"
                     value={
@@ -506,6 +555,13 @@ export default function DashboardPage() {
                     value={stats.incidenciasPendientes}
                     icon={AlertCircle}
                     color="text-red-500"
+                    href="/dashboard/incidencias"
+                />
+                <KPICard
+                    title="Aplazadas"
+                    value={stats.incidenciasAplazadas}
+                    icon={Pause}
+                    color="text-orange-500"
                     href="/dashboard/incidencias"
                 />
                 <KPICard
@@ -896,6 +952,7 @@ export default function DashboardPage() {
                     </div>
                 </div>
             </div>
+
         </div>
     );
 }

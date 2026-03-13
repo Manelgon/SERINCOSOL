@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { Trash2, FileText, Check, Plus, Paperclip, Download, X, RotateCcw, Building, Users, Clock, Search, Filter, Loader2, AlertCircle, Eye, RefreshCw, Send, Save, Share2, MoreHorizontal, MessageSquare, ChevronDown, UserCog } from 'lucide-react';
+import { Trash2, FileText, Check, Plus, Paperclip, Download, X, RotateCcw, Building, Users, Clock, Search, Filter, Loader2, AlertCircle, Eye, RefreshCw, Send, Save, Share2, MoreHorizontal, MessageSquare, ChevronDown, UserCog, Pause, CalendarClock } from 'lucide-react';
 import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
 import DataTable, { Column } from '@/components/DataTable';
 import SearchableSelect from '@/components/SearchableSelect';
@@ -20,6 +20,8 @@ interface Incidencia {
     mensaje: string;
     urgencia?: 'Baja' | 'Media' | 'Alta'; // Optional, not set during creation
     resuelto: boolean;
+    estado?: 'Pendiente' | 'Resuelto' | 'Aplazado' | 'Cancelado';
+    fecha_recordatorio?: string;
     created_at: string;
     comunidades?: { nombre_cdad: string; codigo?: string };
 
@@ -98,6 +100,11 @@ export default function IncidenciasPage() {
     // Document Delete Confirmation
     const [showDeleteDocConfirm, setShowDeleteDocConfirm] = useState(false);
     const [urlToConfirmDelete, setUrlToConfirmDelete] = useState<string | null>(null);
+
+    // Aplazar (Postpone) Modal State
+    const [showAplazarModal, setShowAplazarModal] = useState(false);
+    const [aplazarIncidenciaId, setAplazarIncidenciaId] = useState<number | null>(null);
+    const [aplazarDate, setAplazarDate] = useState('');
 
     const handleRowClick = (incidencia: Incidencia) => {
         setSelectedDetailIncidencia(incidencia);
@@ -536,12 +543,16 @@ export default function IncidenciasPage() {
         setIsUpdatingStatus(id);
         try {
             const { data: { user } } = await supabase.auth.getUser();
+            const newResuelto = !currentStatus;
+            const newEstado = newResuelto ? 'Resuelto' : 'Pendiente';
             const { error } = await supabase
                 .from('incidencias')
                 .update({
-                    resuelto: !currentStatus,
-                    dia_resuelto: !currentStatus ? new Date().toISOString() : null,
-                    resuelto_por: !currentStatus ? user?.id : null
+                    resuelto: newResuelto,
+                    estado: newEstado,
+                    dia_resuelto: newResuelto ? new Date().toISOString() : null,
+                    resuelto_por: newResuelto ? user?.id : null,
+                    fecha_recordatorio: null // Clear reminder if resolving/reopening
                 })
                 .eq('id', id);
 
@@ -549,19 +560,13 @@ export default function IncidenciasPage() {
 
             toast.success(currentStatus ? 'Marcado como pendiente' : 'Marcado como resuelto');
 
-            // Get resolver name if marking as resolved
-            let resolverName = '';
-            if (!currentStatus && user) {
-                // Try to find name in profiles array if available, or fetch it? 
-                // Actually fetchIncidencias re-runs on realtime, but for immediate optimistic update likely need name. 
-                // Simpler: Just rely on fetchIncidencias or simple optimistic update with null/undefined for now and let realtime catch up.
-            }
-
             setIncidencias(prev => prev.map(i => i.id === id ? {
                 ...i,
-                resuelto: !currentStatus,
-                dia_resuelto: !currentStatus ? new Date().toISOString() : undefined,
-                resuelto_por: !currentStatus ? user?.id : undefined
+                resuelto: newResuelto,
+                estado: newEstado as any,
+                dia_resuelto: newResuelto ? new Date().toISOString() : undefined,
+                resuelto_por: newResuelto ? user?.id : undefined,
+                fecha_recordatorio: undefined
             } : i));
 
             // Log activity
@@ -574,22 +579,19 @@ export default function IncidenciasPage() {
                 details: {
                     id: id,
                     comunidad: incidencia?.comunidades?.nombre_cdad,
-                    resuelto: !currentStatus
+                    resuelto: newResuelto,
+                    estado: newEstado
                 }
             });
 
             // Trigger Resolved Webhook
-            if (!currentStatus) {
+            if (newResuelto) {
                 setTimeout(() => {
                     try {
                         fetch('/api/webhooks/trigger-resolved-ticket', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                id: id,
-                                // Backend now fetches fresh data, but we can pass resolver info if needed immediately
-                                // though backend fetching handles joined profiles too.
-                            })
+                            body: JSON.stringify({ id: id })
                         }).catch(e => console.error('Resolved Webhook Error:', e));
                     } catch (e) {
                         console.error('Resolved Webhook Trigger Error:', e);
@@ -601,6 +603,90 @@ export default function IncidenciasPage() {
             toast.error('Error al actualizar estado');
         } finally {
             setIsUpdatingStatus(null);
+        }
+    };
+
+    const openAplazarModal = (id: number) => {
+        setAplazarIncidenciaId(id);
+        // Default: tomorrow
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const dateStr = tomorrow.toISOString().slice(0, 10); // yyyy-MM-dd
+        setAplazarDate(dateStr);
+        setShowAplazarModal(true);
+    };
+
+    const aplazarTicket = async () => {
+        if (!aplazarIncidenciaId || !aplazarDate) return;
+
+        const loadingToast = toast.loading('Aplazando ticket...');
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+
+            const { error } = await supabase
+                .from('incidencias')
+                .update({
+                    estado: 'Aplazado',
+                    resuelto: false,
+                    fecha_recordatorio: aplazarDate
+                })
+                .eq('id', aplazarIncidenciaId);
+
+            if (error) throw error;
+
+            const fechaFormateada = new Date(aplazarDate + 'T00:00:00').toLocaleDateString('es-ES', {
+                day: '2-digit', month: '2-digit', year: 'numeric'
+            });
+
+            // Record in timeline chat
+            if (user) {
+                await supabase.from('record_messages').insert([{
+                    entity_type: 'incidencia',
+                    entity_id: aplazarIncidenciaId,
+                    user_id: user.id,
+                    content: `⏱️ TICKET APLAZADO HASTA: ${fechaFormateada}`
+                }]);
+            }
+
+            // Log activity
+            const incidencia = incidencias.find(i => i.id === aplazarIncidenciaId);
+            await logActivity({
+                action: 'update',
+                entityType: 'incidencia',
+                entityId: aplazarIncidenciaId,
+                entityName: `Incidencia - ${incidencia?.nombre_cliente}`,
+                details: {
+                    acción: 'Ticket aplazado',
+                    fecha_recordatorio: fechaFormateada,
+                    comunidad: incidencia?.comunidades?.nombre_cdad || incidencia?.comunidad || 'N/A'
+                }
+            });
+
+            // Optimistic update
+            setIncidencias(prev => prev.map(i => i.id === aplazarIncidenciaId ? {
+                ...i,
+                estado: 'Aplazado' as any,
+                resuelto: false,
+                fecha_recordatorio: aplazarDate
+            } : i));
+
+            // Update detail modal if open
+            if (selectedDetailIncidencia && selectedDetailIncidencia.id === aplazarIncidenciaId) {
+                setSelectedDetailIncidencia({
+                    ...selectedDetailIncidencia,
+                    estado: 'Aplazado',
+                    resuelto: false,
+                    fecha_recordatorio: aplazarDate
+                });
+            }
+
+            toast.success(`Ticket aplazado hasta ${fechaFormateada}`, { id: loadingToast });
+            setShowAplazarModal(false);
+            setAplazarIncidenciaId(null);
+            setAplazarDate('');
+        } catch (error: any) {
+            console.error(error);
+            toast.error('Error al aplazar el ticket', { id: loadingToast });
         }
     };
 
@@ -809,8 +895,12 @@ export default function IncidenciasPage() {
     };
 
     const filteredIncidencias = incidencias.filter(inc => {
-        const matchesEstado = filterEstado === 'pendiente' ? !inc.resuelto :
-            filterEstado === 'resuelto' ? inc.resuelto : true;
+        const estado = inc.estado || (inc.resuelto ? 'Resuelto' : 'Pendiente');
+        const matchesEstado =
+            filterEstado === 'pendiente' ? estado === 'Pendiente' :
+            filterEstado === 'resuelto' ? estado === 'Resuelto' :
+            filterEstado === 'aplazado' ? estado === 'Aplazado' :
+            true; // 'all'
 
         const matchesGestor = filterGestor === 'all' ? true : inc.gestor_asignado === filterGestor;
         const matchesComunidad = filterComunidad === 'all' ? true : inc.comunidad_id === Number(filterComunidad);
@@ -828,7 +918,7 @@ export default function IncidenciasPage() {
             label: 'Código',
             render: (row) => (
                 <div className="flex items-start gap-3">
-                    <span className={`mt-1 h-3.5 w-1.5 rounded-full ${row.resuelto ? 'bg-neutral-900' : 'bg-yellow-400'}`} />
+                    <span className={`mt-1 h-3.5 w-1.5 rounded-full ${(row.estado || (row.resuelto ? 'Resuelto' : 'Pendiente')) === 'Resuelto' ? 'bg-neutral-900' : (row.estado === 'Aplazado' ? 'bg-orange-400' : 'bg-yellow-400')}`} />
                     <span className="font-semibold">{row.comunidades?.codigo || '-'}</span>
                 </div>
             ),
@@ -963,15 +1053,27 @@ export default function IncidenciasPage() {
         {
             key: 'resuelto',
             label: 'Estado',
-            render: (row) => (
-                <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold ${row.resuelto
-                    ? 'bg-neutral-900 text-white'
-                    : 'bg-yellow-400 text-neutral-950'
-                    }`}
-                >
-                    {row.resuelto ? 'Resuelto' : 'Pendiente'}
-                </span>
-            ),
+            render: (row) => {
+                const estado = row.estado || (row.resuelto ? 'Resuelto' : 'Pendiente');
+                return (
+                    <div className="flex flex-col items-start gap-1">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
+                            estado === 'Resuelto' ? 'bg-neutral-900 text-white' :
+                            estado === 'Aplazado' ? 'bg-orange-100 text-orange-700 border border-orange-200' :
+                            'bg-yellow-400 text-neutral-950'
+                        }`}>
+                            {estado === 'Aplazado' && <Pause className="w-3 h-3" />}
+                            {estado}
+                        </span>
+                        {estado === 'Aplazado' && row.fecha_recordatorio && (
+                            <span className="text-[10px] text-orange-500 font-medium flex items-center gap-1">
+                                <CalendarClock className="w-3 h-3" />
+                                {new Date(row.fecha_recordatorio).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+                            </span>
+                        )}
+                    </div>
+                );
+            },
             sortable: false,
         },
         {
@@ -989,40 +1091,61 @@ export default function IncidenciasPage() {
         {
             key: 'actions',
             label: 'Acciones',
-            render: (row) => (
-                <div className="flex gap-1" onClick={e => e.stopPropagation()}>
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            toggleResuelto(row.id, row.resuelto);
-                        }}
-                        disabled={isUpdatingStatus === row.id}
-                        title={row.resuelto ? 'Reabrir incidencia' : 'Resolver incidencia'}
-                        className={`p-1.5 rounded-full transition-colors ${row.resuelto
-                            ? 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                            : 'bg-green-100 text-green-600 hover:bg-green-200'
+            render: (row) => {
+                const estado = row.estado || (row.resuelto ? 'Resuelto' : 'Pendiente');
+                return (
+                    <div className="flex gap-1" onClick={e => e.stopPropagation()}>
+                        {/* Resolver / Reabrir */}
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                toggleResuelto(row.id, row.resuelto);
+                            }}
+                            disabled={isUpdatingStatus === row.id}
+                            title={estado === 'Resuelto' ? 'Reabrir incidencia' : (estado === 'Aplazado' ? 'Volver a Pendiente' : 'Resolver incidencia')}
+                            className={`p-1.5 rounded-full transition-colors ${
+                                estado === 'Resuelto'
+                                    ? 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    : estado === 'Aplazado'
+                                        ? 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                                        : 'bg-green-100 text-green-600 hover:bg-green-200'
                             } ${isUpdatingStatus === row.id ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    >
-                        {isUpdatingStatus === row.id ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : row.resuelto ? (
-                            <RotateCcw className="w-4 h-4" />
-                        ) : (
-                            <Check className="w-4 h-4" />
+                        >
+                            {isUpdatingStatus === row.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : estado === 'Resuelto' ? (
+                                <RotateCcw className="w-4 h-4" />
+                            ) : (
+                                <Check className="w-4 h-4" />
+                            )}
+                        </button>
+                        {/* Aplazar */}
+                        {estado !== 'Resuelto' && estado !== 'Aplazado' && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    openAplazarModal(row.id);
+                                }}
+                                title="Aplazar ticket"
+                                className="p-1.5 rounded-full bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors"
+                            >
+                                <Pause className="w-4 h-4" />
+                            </button>
                         )}
-                    </button>
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteClick(row.id);
-                        }}
-                        title="Eliminar incidencia"
-                        className="p-1.5 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
-                    >
-                        <Trash2 className="w-4 h-4" />
-                    </button>
-                </div>
-            ),
+                        {/* Eliminar */}
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteClick(row.id);
+                            }}
+                            title="Eliminar incidencia"
+                            className="p-1.5 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                        </button>
+                    </div>
+                );
+            },
         }
     ];
 
@@ -1047,6 +1170,13 @@ export default function IncidenciasPage() {
                         className={`px-3 py-1 rounded-full text-sm font-medium transition ${filterEstado === 'pendiente' ? 'bg-yellow-400 text-neutral-950' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
                     >
                         Pendientes
+                    </button>
+                    <button
+                        onClick={() => setFilterEstado('aplazado')}
+                        className={`px-3 py-1 rounded-full text-sm font-medium transition flex items-center gap-1.5 ${filterEstado === 'aplazado' ? 'bg-orange-400 text-white' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
+                    >
+                        <Pause className="w-3 h-3" />
+                        Aplazadas
                     </button>
                     <button
                         onClick={() => setFilterEstado('resuelto')}
@@ -1781,10 +1911,27 @@ export default function IncidenciasPage() {
                                 className="flex items-center gap-2 text-neutral-400 hover:text-red-600 transition-all font-bold text-xs uppercase tracking-widest px-4 py-2 hover:bg-red-50 rounded-lg"
                             >
                                 <Trash2 className="w-4 h-4" />
-                                <span>Eliminar Registro del Sistema</span>
+                                <span>Eliminar</span>
                             </button>
 
                             <div className="flex items-center gap-3 w-full sm:w-auto">
+                                {/* Aplazar Button - Only for Pendiente tickets */}
+                                {(selectedDetailIncidencia.estado || (selectedDetailIncidencia.resuelto ? 'Resuelto' : 'Pendiente')) === 'Pendiente' && (
+                                    <button
+                                        onClick={() => openAplazarModal(selectedDetailIncidencia.id)}
+                                        className="flex-1 sm:flex-none h-12 px-6 rounded-xl font-black text-xs uppercase tracking-[0.15em] transition-all shadow-lg flex items-center justify-center gap-3 bg-orange-100 text-orange-700 border-2 border-orange-300 hover:bg-orange-200 shadow-orange-100/50"
+                                    >
+                                        <Pause className="w-4 h-4" />
+                                        APLAZAR
+                                    </button>
+                                )}
+                                {/* Show Aplazado info if ticket is postponed */}
+                                {(selectedDetailIncidencia.estado === 'Aplazado') && (
+                                    <div className="flex-1 sm:flex-none h-12 px-6 rounded-xl font-bold text-xs uppercase tracking-[0.1em] flex items-center justify-center gap-2 bg-orange-50 text-orange-600 border border-orange-200">
+                                        <CalendarClock className="w-4 h-4" />
+                                        Aplazado hasta {selectedDetailIncidencia.fecha_recordatorio ? new Date(selectedDetailIncidencia.fecha_recordatorio).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '...'}
+                                    </div>
+                                )}
                                 <button
                                     onClick={() => {
                                         toggleResuelto(selectedDetailIncidencia.id, selectedDetailIncidencia.resuelto);
@@ -1794,7 +1941,9 @@ export default function IncidenciasPage() {
                                             setSelectedDetailIncidencia({
                                                 ...selectedDetailIncidencia,
                                                 resuelto: !selectedDetailIncidencia.resuelto,
-                                                dia_resuelto: !selectedDetailIncidencia.resuelto ? new Date().toISOString() : undefined
+                                                estado: !selectedDetailIncidencia.resuelto ? 'Resuelto' : 'Pendiente',
+                                                dia_resuelto: !selectedDetailIncidencia.resuelto ? new Date().toISOString() : undefined,
+                                                fecha_recordatorio: undefined
                                             });
                                         }
                                     }}
@@ -1878,6 +2027,55 @@ export default function IncidenciasPage() {
                                 className="flex-1 py-3 bg-yellow-400 hover:bg-yellow-500 text-neutral-900 rounded-xl font-bold transition-transform active:scale-[0.98] shadow-lg shadow-yellow-100"
                             >
                                 Eliminar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Aplazar Date Picker Modal */}
+            {showAplazarModal && (
+                <div
+                    className="fixed inset-0 bg-neutral-900/60 z-[110] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200"
+                    onClick={() => setShowAplazarModal(false)}
+                >
+                    <div
+                        className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 relative flex flex-col items-center text-center animate-in zoom-in-95 duration-200"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mb-4">
+                            <Pause className="w-8 h-8 text-orange-600" />
+                        </div>
+                        <h3 className="text-xl font-bold text-neutral-900 mb-2">
+                            Aplazar Ticket
+                        </h3>
+                        <p className="text-neutral-500 mb-6 text-sm">
+                            Selecciona la fecha en la que quieres que el ticket vuelva a estar pendiente.
+                        </p>
+                        <input
+                            type="date"
+                            value={aplazarDate}
+                            onChange={(e) => setAplazarDate(e.target.value)}
+                            min={new Date().toISOString().slice(0, 10)}
+                            className="w-full border-2 border-neutral-200 rounded-xl px-4 py-3 text-sm font-medium text-neutral-900 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all mb-6"
+                        />
+                        <div className="flex gap-3 w-full">
+                            <button
+                                onClick={() => {
+                                    setShowAplazarModal(false);
+                                    setAplazarIncidenciaId(null);
+                                    setAplazarDate('');
+                                }}
+                                className="flex-1 py-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 rounded-xl font-bold transition-all"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={aplazarTicket}
+                                disabled={!aplazarDate}
+                                className="flex-1 py-3 bg-orange-400 hover:bg-orange-500 text-white rounded-xl font-bold transition-transform active:scale-[0.98] shadow-lg shadow-orange-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                <Pause className="w-4 h-4" />
+                                Aplazar
                             </button>
                         </div>
                     </div>
