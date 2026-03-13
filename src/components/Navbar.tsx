@@ -14,7 +14,7 @@ export default function Navbar() {
     const fetchStats = async () => {
         const [com, inc, mor, sofia] = await Promise.all([
             supabase.from('comunidades').select('id', { count: 'exact', head: true }),
-            supabase.from('incidencias').select('id', { count: 'exact', head: true }).eq('resuelto', false),
+            supabase.from('incidencias').select('id', { count: 'exact', head: true }).eq('resuelto', false).or('estado.neq.Resuelto,estado.is.null'),
             supabase.from('morosidad').select('id', { count: 'exact', head: true }).eq('estado', 'Pendiente'),
             supabaseSecondary.from('incidencias_serincobot').select('id', { count: 'exact', head: true }).eq('resuelto', false),
         ]);

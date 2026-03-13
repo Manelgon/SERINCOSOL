@@ -141,12 +141,12 @@ export default function DashboardPage() {
 
             // --- Process Data ---
 
-            // KPIs - pendientes = all non-resolved excluding aplazadas; aplazadas counted separately
+            // KPIs - pendientes = non-resolved, excluding aplazadas and records with inconsistent estado='Resuelto'
             let pendientesQuery = supabase
                 .from('incidencias')
                 .select('*', { count: 'exact', head: true })
                 .eq('resuelto', false)
-                .or('estado.neq.Aplazado,estado.is.null');
+                .or('and(estado.neq.Aplazado,estado.neq.Resuelto),estado.is.null');
 
             let aplazadasQuery = supabase
                 .from('incidencias')
