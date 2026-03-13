@@ -134,6 +134,7 @@ export default function DashboardPage() {
                 .from('incidencias_serincobot')
                 .select('resuelto, estado');
 
+            const sofiaTotal = sofiaData?.length || 0;
             const sofiaResueltas = sofiaData?.filter((i: any) => i.resuelto).length || 0;
             const sofiaAplazadas = sofiaData?.filter((i: any) => !i.resuelto && i.estado === 'Aplazado').length || 0;
             const sofiaPendientes = (sofiaData?.filter((i: any) => !i.resuelto && i.estado !== 'Aplazado').length) || 0;
