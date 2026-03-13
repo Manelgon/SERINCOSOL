@@ -132,20 +132,20 @@ export default function DashboardPage() {
             // 5. Fetch Sofia Stats from Secondary
             const { data: sofiaData } = await supabaseSecondary
                 .from('incidencias_serincobot')
-                .select('resuelto');
+                .select('resuelto, estado');
 
-            const sofiaTotal = sofiaData?.length || 0;
-            const sofiaResueltas = sofiaData?.filter(i => i.resuelto).length || 0;
-            const sofiaPendientes = sofiaTotal - sofiaResueltas;
+            const sofiaResueltas = sofiaData?.filter((i: any) => i.resuelto).length || 0;
+            const sofiaAplazadas = sofiaData?.filter((i: any) => !i.resuelto && i.estado === 'Aplazado').length || 0;
+            const sofiaPendientes = (sofiaData?.filter((i: any) => !i.resuelto && i.estado !== 'Aplazado').length) || 0;
 
             // --- Process Data ---
 
-            // KPIs - Count pendientes (estado=Pendiente, excl. aplazadas) and aplazadas separately
+            // KPIs - pendientes = all non-resolved excluding aplazadas; aplazadas counted separately
             let pendientesQuery = supabase
                 .from('incidencias')
                 .select('*', { count: 'exact', head: true })
                 .eq('resuelto', false)
-                .or('estado.eq.Pendiente,estado.is.null');
+                .or('estado.neq.Aplazado,estado.is.null');
 
             let aplazadasQuery = supabase
                 .from('incidencias')
@@ -181,7 +181,7 @@ export default function DashboardPage() {
             setStats({
                 totalComunidades: countComunidades || 0,
                 incidenciasPendientes: pendientes + sofiaPendientes,
-                incidenciasAplazadas: aplazadas,
+                incidenciasAplazadas: aplazadas + sofiaAplazadas,
                 incidenciasResueltas: resueltas + sofiaResueltas,
                 totalDeuda,
                 deudaRecuperada: deudaPagada

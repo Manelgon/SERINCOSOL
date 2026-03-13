@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { supabaseSecondary } from '@/lib/supabaseSecondaryClient';
 
 export default function Navbar() {
     const [stats, setStats] = useState({ comunidades: 0, incidencias: 0, morosidad: 0 });
@@ -11,15 +12,16 @@ export default function Navbar() {
     }, []);
 
     const fetchStats = async () => {
-        const [com, inc, mor] = await Promise.all([
+        const [com, inc, mor, sofia] = await Promise.all([
             supabase.from('comunidades').select('id', { count: 'exact', head: true }),
             supabase.from('incidencias').select('id', { count: 'exact', head: true }).eq('resuelto', false),
             supabase.from('morosidad').select('id', { count: 'exact', head: true }).eq('estado', 'Pendiente'),
+            supabaseSecondary.from('incidencias_serincobot').select('id', { count: 'exact', head: true }).eq('resuelto', false),
         ]);
 
         setStats({
             comunidades: com.count || 0,
-            incidencias: inc.count || 0,
+            incidencias: (inc.count || 0) + (sofia.count || 0),
             morosidad: mor.count || 0,
         });
     };
